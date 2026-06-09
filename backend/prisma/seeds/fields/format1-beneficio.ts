@@ -4,7 +4,7 @@ import {
   autoField,
   cncField,
   cncNaField,
-  dayScheduleField,
+  dayScheduleTableField,
   itemChecklistField,
   numberField,
   readonlyField,
@@ -32,17 +32,8 @@ export function getFormat1Fields(slug: string): FieldDef[] {
     case 'zona-sangria':
       return [
         readonlyField('empresa', 'Empresa', 'COLBEEF S.A.S', 1),
-        dayScheduleField('puntos_inspeccionados', 'Puntos inspeccionados', DAY_SCHEDULE_PUNTOS_INSPECCIONADOS, 2, 'Control cloro'),
-        timeField('cloro_hora', 'Hora', 3, { groupName: 'Control cloro', required: true }),
-        textField('cloro_punto_toma', 'Punto de toma', 4, { groupName: 'Control cloro', required: true }),
-        autoField('cloro_ph', 'pH', AutoFillRule.FIXED_VALUE, 5, 'Control cloro', { value: '7.0' }),
-        numberField('cloro_residual', 'Cloro residual (0.3 - 2 ppm)', 6, { groupName: 'Control cloro', required: true, min: 0.3, max: 2 }),
-        cncField('cloro_cnc', 'C / NC', 7, { groupName: 'Control cloro', required: true }),
-        textareaField('cloro_observaciones', 'Observaciones', 8, { groupName: 'Control cloro' }),
-        dayScheduleField('puntos_esterilizadores', 'Puntos de inspección', DAY_SCHEDULE_PUNTOS_ESTERILIZADORES, 10, 'Esterilizadores'),
-        numberField('valores_encontrados', 'Valores encontrados (°C)', 11, { groupName: 'Esterilizadores', required: true }),
-        cncField('esterilizadores_cnc', 'C / NC', 12, { groupName: 'Esterilizadores', required: true }),
-        textareaField('esterilizadores_observaciones', 'Observaciones', 13, { groupName: 'Esterilizadores' }),
+        dayScheduleTableField('cloro_registros', 'Control cloro residual', DAY_SCHEDULE_PUNTOS_INSPECCIONADOS, 2, 'Control cloro', 'cloro'),
+        dayScheduleTableField('esterilizadores_registros', 'Esterilizadores', DAY_SCHEDULE_PUNTOS_ESTERILIZADORES, 10, 'Esterilizadores', 'esterilizadores'),
         itemChecklistField('areas_comunes', 'Áreas comunes', AREAS_COMUNES.map((l, i) => ({ key: `ac_${i}`, label: l })), 20, { groupName: 'Áreas comunes' }),
         itemChecklistField('zona_sangria', 'Zona insensibilización y sangría', ZONA_SANGRIA_ITEMS.map((l, i) => ({ key: `zs_${i}`, label: l })), 21, { groupName: 'Zona sangría' }),
       ];

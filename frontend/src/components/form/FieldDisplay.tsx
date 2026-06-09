@@ -17,6 +17,24 @@ export default function FieldDisplay({ field, value }: Props) {
     return <img src={value} alt={field.label} className="max-h-32 rounded border border-gray-200" />;
   }
 
+  if (field.fieldType === 'CHECKLIST' && opts.layout === 'day_schedule_table') {
+    const data = value as Record<string, { cloro_residual?: string; temperatura?: string; cnc?: string; observaciones?: string }>;
+    const rows = Object.entries(data ?? {});
+    if (rows.length === 0) return <span className="text-gray-400">—</span>;
+    return (
+      <div className="space-y-1 text-xs">
+        {rows.map(([key, row]) => (
+          <div key={key} className="border-l-2 border-primary-300 pl-2">
+            <span className="font-medium capitalize">{key.replace(/_/g, ' ')}</span>
+            {row.cloro_residual && <span className="ml-2">Cloro: {row.cloro_residual} ppm</span>}
+            {row.temperatura && <span className="ml-2">Temp: {row.temperatura}°C</span>}
+            {row.cnc && <span className={`ml-2 px-1 rounded font-bold ${row.cnc === 'C' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{row.cnc}</span>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (field.fieldType === 'CHECKLIST' && opts.items) {
     const data = value as Record<string, ChecklistItemData>;
     const items = opts.items ?? [];

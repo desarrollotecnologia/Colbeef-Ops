@@ -1,14 +1,9 @@
 import type { FormatField } from '@/types';
 import { groupFields } from '@/lib/formUtils';
 import FormField from './FormField';
-import InspectionTable from './InspectionTable';
 import ItemChecklist from './ItemChecklist';
+import DayScheduleTable from './DayScheduleTable';
 import type { ChecklistItemData } from '@/types';
-
-const TABLE_GROUPS: Record<string, string | undefined> = {
-  'Control cloro': 'Cloro residual libre (0.3 – 2 ppm) y pH',
-  'Esterilizadores': 'Funcionamiento, temperatura (82,5°C) o solución desinfectante aprobada',
-};
 
 const HEADER_ONLY_KEYS = new Set(['empresa']);
 
@@ -16,10 +11,11 @@ interface Props {
   fields: FormatField[];
   sheetData: Record<string, unknown>;
   onUpdate: (key: string, value: unknown) => void;
+  workDate: string;
   disabled?: boolean;
 }
 
-export default function SheetFields({ fields, sheetData, onUpdate, disabled }: Props) {
+export default function SheetFields({ fields, sheetData, onUpdate, workDate, disabled }: Props) {
   const groups = groupFields(fields);
 
   return (
@@ -28,19 +24,34 @@ export default function SheetFields({ fields, sheetData, onUpdate, disabled }: P
         const visibleFields = group.fields.filter((f) => !HEADER_ONLY_KEYS.has(f.fieldKey));
         if (visibleFields.length === 0) return null;
 
-        const tableSubtitle = group.name ? TABLE_GROUPS[group.name] : undefined;
+        const dayTableField = visibleFields.find(
+          (f) => f.fieldType === 'CHECKLIST' && f.options?.layout === 'day_schedule_table'
+        );
 
-        if (group.name && TABLE_GROUPS[group.name]) {
+        if (dayTableField) {
+          const subtitles: Record<string, string> = {
+            cloro: 'Cloro residual libre (0.3 – 2 ppm) y pH — los puntos se asignan automáticamente según el día',
+            esterilizadores: 'Funcionamiento, temperatura (82,5°C) o solución desinfectante aprobada',
+          };
+          const tableType = dayTableField.options?.tableType ?? 'cloro';
           return (
-            <InspectionTable
-              key={gi}
-              title={group.name}
-              subtitle={tableSubtitle}
-              fields={visibleFields}
-              sheetData={sheetData}
-              onUpdate={onUpdate}
-              disabled={disabled}
-            />
+            <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
+              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+                <h3 className="text-xs font-bold uppercase text-gray-900">
+                  {group.name ?? dayTableField.label}
+                </h3>
+                <p className="text-[11px] text-gray-600 mt-0.5">{subtitles[tableType]}</p>
+              </div>
+              <div className="p-0">
+                <DayScheduleTable
+                  options={dayTableField.options ?? {}}
+                  value={(sheetData[dayTableField.fieldKey] as Record<string, unknown>) ?? {}}
+                  onChange={(v) => onUpdate(dayTableField.fieldKey, v)}
+                  workDate={workDate}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
           );
         }
 
@@ -50,13 +61,13 @@ export default function SheetFields({ fields, sheetData, onUpdate, disabled }: P
 
         if (checklistField && visibleFields.length === 1) {
           return (
-            <div key={gi} className="border border-gray-400 rounded-lg overflow-hidden">
-              <div className="bg-gray-200 px-3 py-2 border-b border-gray-400">
-                <h3 className="text-xs font-bold uppercase text-gray-800">
+            <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
+              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+                <h3 className="text-xs font-bold uppercase text-gray-900">
                   {group.name ?? checklistField.label}
                 </h3>
               </div>
-              <div className="p-2">
+              <div className="p-0">
                 <ItemChecklist
                   options={checklistField.options ?? {}}
                   value={(sheetData[checklistField.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
@@ -93,7 +104,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, disabled }: P
 
       <div className="text-xs text-gray-500 border-t pt-3 space-y-0.5">
         <p><strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>AC:</strong> Acción correctiva</p>
-        <p className="text-blue-600">Campos marcados <strong>Auto</strong> se llenan solos según el día o reglas del formato.</p>
+        <p className="text-blue-600">Los <strong>puntos inspeccionados</strong> y el <strong>pH (7.0)</strong> se asignan solos según el día de la semana.</p>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import prisma from '../lib/prisma';
 import { authenticate, requireRole } from '../middleware/auth';
 import { paramId } from '../utils/params';
 import { assertWorkDateAllowed, parseWorkDate } from '../utils/workDate';
+import { isFieldValueEmpty } from '../utils/fieldValidation';
 
 const router = Router();
 
@@ -195,11 +196,7 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
 
     for (const field of formatSheet.fields) {
       const value = sheetData[field.fieldKey];
-      const isEmpty =
-        value === undefined ||
-        value === null ||
-        value === '' ||
-        (Array.isArray(value) && value.length === 0);
+      const isEmpty = isFieldValueEmpty(field, value, submission.workDate);
 
       if (isEmpty) {
         missingFields.push({

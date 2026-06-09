@@ -81,6 +81,9 @@ export interface FieldConfig {
 }
 
 export interface FieldOptions {
+  layout?: 'day_schedule_table';
+  tableType?: 'cloro' | 'esterilizadores';
+  schedule?: Record<string, string[]>;
   mode?: 'cnc' | 'cnc_na';
   choices?: string[];
   multi?: boolean;

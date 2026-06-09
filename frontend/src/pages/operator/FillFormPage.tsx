@@ -192,6 +192,7 @@ export default function FillFormPage() {
               fields={fields}
               sheetData={sheetData}
               onUpdate={updateField}
+              workDate={submission.workDate?.split('T')[0] ?? workDate}
               disabled={!canEdit}
             />
           )}

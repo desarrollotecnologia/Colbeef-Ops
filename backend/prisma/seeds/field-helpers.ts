@@ -287,6 +287,32 @@ export function hourlyMatrixField(
   };
 }
 
+/** Tabla con una fila por punto del día (cloro / esterilizadores) */
+export function dayScheduleTableField(
+  fieldKey: string,
+  label: string,
+  schedule: Record<string, string[]>,
+  sortOrder: number,
+  groupName: string,
+  tableType: 'cloro' | 'esterilizadores'
+): FieldDef {
+  return {
+    fieldKey,
+    label,
+    fieldType: FieldType.CHECKLIST,
+    manualOnly: true,
+    required: true,
+    sortOrder,
+    groupName,
+    options: {
+      layout: 'day_schedule_table',
+      schedule,
+      tableType,
+    },
+    config: { schedule },
+  };
+}
+
 /** Puntos automáticos por día de la semana */
 export function dayScheduleField(
   fieldKey: string,
