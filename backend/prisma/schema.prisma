@@ -1,0 +1,187 @@
+// Prisma schema para Colbeef-Ops
+// Documentación detallada en docs/DATABASE.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Usuarios y roles ───────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  OPERARIO
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         UserRole @default(OPERARIO)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  submissionsCreated FormSubmission[] @relation("OperatorSubmissions")
+  submissionsReviewed FormSubmission[] @relation("ReviewerSubmissions")
+  signatures         Signature[]
+
+  @@map("users")
+}
+
+// ─── Catálogo de formatos ───────────────────────────────────────────
+
+model Format {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  description  String?  @db.Text
+  documentCode String?  @map("document_code")
+  sheetCount   Int      @map("sheet_count")
+  noSunday     Boolean  @default(true) @map("no_sunday")
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sheets      FormatSheet[]
+  submissions FormSubmission[]
+
+  @@map("formats")
+}
+
+model FormatSheet {
+  id         String @id @default(uuid())
+  formatId   String @map("format_id")
+  sheetOrder Int    @map("sheet_order") // 1, 2, 3...
+  name       String // ej: Zona 1, Zona 2
+  slug       String // ej: zona-1 (para URLs)
+
+  format Format        @relation(fields: [formatId], references: [id], onDelete: Cascade)
+  fields FormatField[]
+  sheetData FormSubmissionSheet[]
+
+  @@unique([formatId, sheetOrder])
+  @@unique([formatId, slug])
+  @@map("format_sheets")
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  TIME
+  DATETIME
+  CHECKBOX
+  CHECKLIST
+  SELECT
+  MULTI_SELECT
+  RADIO
+  SIGNATURE
+  AUTO
+  READONLY
+  REPEATER
+  PHOTO
+}
+
+enum AutoFillRule {
+  CURRENT_DATE
+  CURRENT_TIME
+  CURRENT_DATETIME
+  CURRENT_USER
+  CURRENT_USER_NAME
+  FIXED_VALUE
+  DAY_SCHEDULE
+  CALC_MAP
+}
+
+model FormatField {
+  id           String        @id @default(uuid())
+  sheetId      String        @map("sheet_id")
+  fieldKey     String        @map("field_key") // clave única dentro de la hoja
+  label        String
+  fieldType    FieldType     @map("field_type")
+  required     Boolean       @default(false)
+  manualOnly   Boolean       @default(true) @map("manual_only") // true = operario debe llenar a mano
+  autoFillRule AutoFillRule? @map("auto_fill_rule")
+  options      Json?
+  config       Json?
+  placeholder  String?
+  defaultValue String?       @map("default_value")
+  sortOrder    Int           @default(0) @map("sort_order")
+  groupName    String?       @map("group_name") // agrupar campos visualmente
+  helpText     String?       @map("help_text") @db.Text
+
+  sheet FormatSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+
+  @@unique([sheetId, fieldKey])
+  @@map("format_fields")
+}
+
+// ─── Envíos / instancias llenadas ───────────────────────────────────
+
+enum SubmissionStatus {
+  DRAFT           // operario aún llenando
+  PENDING_REVIEW  // entregado, esperando firma del admin
+  APPROVED        // firmado y guardado
+  REJECTED        // devuelto al operario para corrección
+}
+
+model FormSubmission {
+  id              String           @id @default(uuid())
+  formatId        String           @map("format_id")
+  operatorId      String           @map("operator_id")
+  workDate        DateTime         @map("work_date") @db.Date // fecha del turno/día
+  status          SubmissionStatus @default(DRAFT)
+  submittedAt     DateTime?        @map("submitted_at")
+  reviewedAt      DateTime?        @map("reviewed_at")
+  reviewedById    String?          @map("reviewed_by_id")
+  reviewNotes     String?          @map("review_notes") @db.Text
+  pdfPath         String?          @map("pdf_path")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  format     Format              @relation(fields: [formatId], references: [id])
+  operator   User                @relation("OperatorSubmissions", fields: [operatorId], references: [id])
+  reviewedBy User?               @relation("ReviewerSubmissions", fields: [reviewedById], references: [id])
+  sheets     FormSubmissionSheet[]
+  signature  Signature?
+
+  @@index([workDate])
+  @@index([status])
+  @@index([formatId, workDate])
+  @@map("form_submissions")
+}
+
+model FormSubmissionSheet {
+  id           String @id @default(uuid())
+  submissionId String @map("submission_id")
+  sheetId      String @map("sheet_id")
+  data         Json   // { "field_key": "valor", ... }
+
+  submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  sheet      FormatSheet    @relation(fields: [sheetId], references: [id])
+
+  @@unique([submissionId, sheetId])
+  @@map("form_submission_sheets")
+}
+
+model Signature {
+  id           String   @id @default(uuid())
+  submissionId String   @unique @map("submission_id")
+  adminId      String   @map("admin_id")
+  signedAt     DateTime @default(now()) @map("signed_at")
+  notes        String?  @db.Text
+
+  submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  admin      User           @relation(fields: [adminId], references: [id])
+
+  @@map("signatures")
+}

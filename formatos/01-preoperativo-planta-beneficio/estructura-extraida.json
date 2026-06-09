@@ -1,0 +1,883 @@
+{
+  "1-Zona sangria": [
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Cajon de noqueo",
+      "row": 28
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Plataformas Fijas",
+      "row": 29
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Inspeccion de cabezas",
+      "row": 30
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Desendedor de cabezas",
+      "row": 31
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Esterilizadores de Plataforma",
+      "row": 32
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Lavamanos No manual plataforma",
+      "row": 33
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Riel para cabezas",
+      "row": 34
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Descornadora",
+      "row": 35
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Estimulador electrico",
+      "row": 36
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Colector de sangre",
+      "row": 37
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Mangueras",
+      "row": 38
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Anudador de esófago",
+      "row": 39
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Lavamanos No manual piso",
+      "row": 40
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Esterilizadores de piso",
+      "row": 41
+    }
+  ],
+  "2-Zona intermedia": [
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Gancho de izado",
+      "row": 8
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Activador para izado y trasporte",
+      "row": 9
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Grilletes",
+      "row": 10
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Pistola de Noqueo",
+      "row": 12
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Paredes",
+      "row": 13
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Pisos",
+      "row": 14
+    },
+    {
+      "area": "ZONA INSENSIBILIZACION Y SANGRIA",
+      "item": "Canalinas y cajas Cifonadas",
+      "row": 15
+    },
+    {
+      "area": "Puerta de ingreso a la zona",
+      "item": "Esterilizador(s)",
+      "row": 17
+    },
+    {
+      "area": "Puerta de ingreso a la zona",
+      "item": "lavamanos No manual",
+      "row": 18
+    },
+    {
+      "area": "Puerta de ingreso a la zona",
+      "item": "Tijeras hidraulicas para corte de patas",
+      "row": 19
+    },
+    {
+      "area": "Puerta de ingreso a la zona",
+      "item": "Mesas de Acero inoxidable",
+      "row": 20
+    },
+    {
+      "area": "Puerta de ingreso a la zona",
+      "item": "Sistema para transporte de pieles",
+      "row": 21
+    },
+    {
+      "area": "Puerta de ingreso a la zona",
+      "item": "Máquina desolladora",
+      "row": 22
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "Sierra de esternón o pecho",
+      "row": 24
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "sistema de transporte de visceras blancas",
+      "row": 25
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "Base superior elevador",
+      "row": 28
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "Base inferior elevador",
+      "row": 29
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "Debajo de la plataforma",
+      "row": 30
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "Cepillo",
+      "row": 31
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "Esterilizador(s)",
+      "row": 32
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "lavamanos No manual",
+      "row": 33
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "Lavadelantales",
+      "row": 34
+    },
+    {
+      "area": "Cuarto de zona intermedia",
+      "item": "Barra de contacto",
+      "row": 35
+    }
+  ],
+  "3-Zona limpia": [
+    {
+      "area": "ZONA INTERMEDIA",
+      "item": "llave azul para agua",
+      "row": 8
+    },
+    {
+      "area": "ZONA INTERMEDIA",
+      "item": "Mangueras",
+      "row": 9
+    },
+    {
+      "area": "ZONA INTERMEDIA",
+      "item": "Pisos",
+      "row": 10
+    },
+    {
+      "area": "ZONA INTERMEDIA",
+      "item": "Paredes",
+      "row": 11
+    },
+    {
+      "area": "ZONA INTERMEDIA",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 12
+    },
+    {
+      "area": "ZONA INTERMEDIA",
+      "item": "Control",
+      "row": 13
+    },
+    {
+      "area": "ZONA INTERMEDIA",
+      "item": "Freno de mano",
+      "row": 14
+    },
+    {
+      "area": "ZONA LIMPIA",
+      "item": "Sierra Canal",
+      "row": 16
+    },
+    {
+      "area": "Puerta de ingreso a zona",
+      "item": "Hidrolavadora",
+      "row": 18
+    },
+    {
+      "area": "Puerta de ingreso a zona",
+      "item": "Aspiradora a vapor",
+      "row": 19
+    },
+    {
+      "area": "Puerta de ingreso a zona",
+      "item": "Manguera auxiliar",
+      "row": 20
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Puerta de retenidos",
+      "row": 22
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Esterilizadores",
+      "row": 23
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Lava manos No manual",
+      "row": 24
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Puerta de Oreo",
+      "row": 25
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Base superior elevador",
+      "row": 28
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Base inferior elevador",
+      "row": 29
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Debajo de la plataforma",
+      "row": 30
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Esterilizador(s)",
+      "row": 31
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "lavamanos No manual",
+      "row": 32
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Lavadelantales",
+      "row": 33
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Barra de contacto",
+      "row": 34
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "llave azul para agua",
+      "row": 35
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Mangueras",
+      "row": 36
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Pisos",
+      "row": 37
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Paredes",
+      "row": 38
+    },
+    {
+      "area": "Cuarto de lavado y esterilizacion de poleas y grilletes",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 39
+    }
+  ],
+  "4-SUB-P": [
+    {
+      "area": "CUARTO DE AFILADO Y TANQUE DE SANGRE",
+      "item": "Mangueras",
+      "row": 7
+    },
+    {
+      "area": "CUARTO DE AFILADO Y TANQUE DE SANGRE",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 8
+    },
+    {
+      "area": "CUARTO DE AFILADO Y TANQUE DE SANGRE",
+      "item": "Tanque de sangre",
+      "row": 9
+    },
+    {
+      "area": "CUARTO DE AFILADO Y TANQUE DE SANGRE",
+      "item": "meson de acero inoxidable",
+      "row": 10
+    },
+    {
+      "area": "CUARTO DE AFILADO Y TANQUE DE SANGRE",
+      "item": "Piso",
+      "row": 11
+    },
+    {
+      "area": "CUARTO DE AFILADO Y TANQUE DE SANGRE",
+      "item": "Paredes",
+      "row": 12
+    },
+    {
+      "area": "CUARTO DE AFILADO Y TANQUE DE SANGRE",
+      "item": "Puerta de ingreso",
+      "row": 13
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Puerta de ingreso",
+      "row": 14
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Plataforma de desposte",
+      "row": 15
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Mesones de acero inoxidable",
+      "row": 16
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Guillotina",
+      "row": 17
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Estibas de acero",
+      "row": 18
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 19
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Mangueras",
+      "row": 20
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Pisos",
+      "row": 21
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Paredes",
+      "row": 22
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Puertas",
+      "row": 23
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Lavamanos de piso",
+      "row": 24
+    },
+    {
+      "area": "CUARTO DE CABEZAS",
+      "item": "Rieles de cabezas",
+      "row": 25
+    }
+  ],
+  "5-sub": [
+    {
+      "area": "CUARTO DE REFRIGERACION CABEZAS PATAS Y MANOS",
+      "item": "Carros de uso general de acero",
+      "row": 7
+    },
+    {
+      "area": "CUARTO DE REFRIGERACION CABEZAS PATAS Y MANOS",
+      "item": "Carros percheros",
+      "row": 8
+    },
+    {
+      "area": "CUARTO DE REFRIGERACION CABEZAS PATAS Y MANOS",
+      "item": "Estibas de acero",
+      "row": 9
+    },
+    {
+      "area": "CUARTO DE REFRIGERACION CABEZAS PATAS Y MANOS",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 10
+    },
+    {
+      "area": "CUARTO DE REFRIGERACION CABEZAS PATAS Y MANOS",
+      "item": "Pisos",
+      "row": 11
+    },
+    {
+      "area": "CUARTO DE REFRIGERACION CABEZAS PATAS Y MANOS",
+      "item": "Paredes",
+      "row": 12
+    },
+    {
+      "area": "CUARTO DE REFRIGERACION CABEZAS PATAS Y MANOS",
+      "item": "Cortinas",
+      "row": 13
+    },
+    {
+      "area": "CUARTO DE REFRIGERACION CABEZAS PATAS Y MANOS",
+      "item": "Puertas de ingreso",
+      "row": 14
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Descascadora",
+      "row": 15
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Mesones de acero",
+      "row": 16
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Escaldadoras",
+      "row": 17
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 18
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Lavamanos de piso",
+      "row": 19
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Maquina Pelapatas",
+      "row": 20
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Mangueras",
+      "row": 21
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Pisos",
+      "row": 22
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Canasta metalica",
+      "row": 23
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Carro porta canasta",
+      "row": 24
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Paredes",
+      "row": 25
+    },
+    {
+      "area": "PROCESO DE PATAS Y MANOS",
+      "item": "Puertas de ingreso",
+      "row": 26
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Maquina Lavacallos",
+      "row": 27
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Maquina lavalibros",
+      "row": 28
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Escaldadoras",
+      "row": 29
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Tinas de acero",
+      "row": 30
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Mesones de acero",
+      "row": 31
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Tuberia de agua",
+      "row": 32
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Mangueras",
+      "row": 33
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 34
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Lavamanos de piso",
+      "row": 35
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Pisos",
+      "row": 36
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "Paredes",
+      "row": 37
+    },
+    {
+      "area": "PROCESO  DE VISCERAS BLANCAS",
+      "item": "puertas de ingreso a zona",
+      "row": 38
+    }
+  ],
+  "6- SUB-P": [
+    {
+      "area": "CUARTO DE REFRIGERACIO DE VISCERAS ROJAS Y BLANCAS",
+      "item": "Carros percheros",
+      "row": 7
+    },
+    {
+      "area": "CUARTO DE REFRIGERACIO DE VISCERAS ROJAS Y BLANCAS",
+      "item": "Canastillas",
+      "row": 8
+    },
+    {
+      "area": "CUARTO DE REFRIGERACIO DE VISCERAS ROJAS Y BLANCAS",
+      "item": "Estibas de acero",
+      "row": 9
+    },
+    {
+      "area": "CUARTO DE REFRIGERACIO DE VISCERAS ROJAS Y BLANCAS",
+      "item": "Cajas cifonadas",
+      "row": 10
+    },
+    {
+      "area": "CUARTO DE REFRIGERACIO DE VISCERAS ROJAS Y BLANCAS",
+      "item": "Pisos",
+      "row": 11
+    },
+    {
+      "area": "CUARTO DE REFRIGERACIO DE VISCERAS ROJAS Y BLANCAS",
+      "item": "Carros de uso general",
+      "row": 12
+    },
+    {
+      "area": "CUARTO DE REFRIGERACIO DE VISCERAS ROJAS Y BLANCAS",
+      "item": "Paredes",
+      "row": 13
+    },
+    {
+      "area": "CUARTO DE REFRIGERACIO DE VISCERAS ROJAS Y BLANCAS",
+      "item": "puertas de ingreso",
+      "row": 15
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Riel de visceras",
+      "row": 16
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Carros perchero",
+      "row": 17
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Ganchos",
+      "row": 18
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Cuarto decomisos",
+      "row": 19
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Carros de uso general",
+      "row": 20
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Mesa de acero inoxidable",
+      "row": 21
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Mangueras",
+      "row": 22
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Pisos",
+      "row": 23
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Techo",
+      "row": 24
+    },
+    {
+      "area": "PROCESO E INSPECCION DE VISCERAS ROJAS",
+      "item": "Paredes",
+      "row": 25
+    },
+    {
+      "area": "CUARTO DE RETENIDOS",
+      "item": "Base inferior elevador de plataforma",
+      "row": 26
+    },
+    {
+      "area": "CUARTO DE RETENIDOS",
+      "item": "Base superior elevador de plataforma",
+      "row": 27
+    },
+    {
+      "area": "CUARTO DE RETENIDOS",
+      "item": "Debajo de la plataforma",
+      "row": 28
+    },
+    {
+      "area": "CUARTO DE RETENIDOS",
+      "item": "Cajas cifoadas",
+      "row": 29
+    },
+    {
+      "area": "CUARTO DE RETENIDOS",
+      "item": "Pisos",
+      "row": 30
+    },
+    {
+      "area": "CUARTO DE RETENIDOS",
+      "item": "Paredes",
+      "row": 31
+    },
+    {
+      "area": "CUARTO DE RETENIDOS",
+      "item": "Puerta de ingreso",
+      "row": 32
+    },
+    {
+      "area": "CUARTO DE RETENIDOS",
+      "item": "Puerta de ingreso a linea",
+      "row": 33
+    }
+  ],
+  "7-REFRIGERACION": [
+    {
+      "area": "CUARTO DE DECOMISOS",
+      "item": "Carros de uso general",
+      "row": 7
+    },
+    {
+      "area": "CUARTO DE DECOMISOS",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 8
+    },
+    {
+      "area": "CUARTO DE DECOMISOS",
+      "item": "Pisos",
+      "row": 9
+    },
+    {
+      "area": "CUARTO DE DECOMISOS",
+      "item": "Pardes",
+      "row": 10
+    },
+    {
+      "area": "CUARTO DE DECOMISOS",
+      "item": "Puertas de ingreso",
+      "row": 11
+    },
+    {
+      "area": "CUARTO DE DECOMISOS",
+      "item": "Mangueras",
+      "row": 12
+    },
+    {
+      "area": "CAVA # 3",
+      "item": "cortinas",
+      "row": 13
+    },
+    {
+      "area": "CAVA # 3",
+      "item": "Puerta de ingreso",
+      "row": 14
+    },
+    {
+      "area": "CAVA # 3",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 15
+    },
+    {
+      "area": "CAVA # 3",
+      "item": "Pisos",
+      "row": 16
+    },
+    {
+      "area": "CAVA # 3",
+      "item": "Paredes",
+      "row": 17
+    },
+    {
+      "area": "CUARTO DE CANECAS Y CANASTILLAS",
+      "item": "Canecas",
+      "row": 18
+    },
+    {
+      "area": "CUARTO DE CANECAS Y CANASTILLAS",
+      "item": "Canastillas",
+      "row": 19
+    },
+    {
+      "area": "CUARTO DE CANECAS Y CANASTILLAS",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 20
+    },
+    {
+      "area": "CUARTO DE CANECAS Y CANASTILLAS",
+      "item": "Puerta de ingreso",
+      "row": 21
+    },
+    {
+      "area": "CUARTO DE CANECAS Y CANASTILLAS",
+      "item": "Pisos",
+      "row": 22
+    },
+    {
+      "area": "CUARTO DE CANECAS Y CANASTILLAS",
+      "item": "Paredes",
+      "row": 23
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Tuberia de hierro",
+      "row": 26
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Paredes",
+      "row": 27
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Pisos",
+      "row": 28
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Canalinas y cajas cifonadas",
+      "row": 29
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Puerta de ingreso",
+      "row": 30
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Puerta de ingreso a muelle",
+      "row": 31
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Carro porta poleas",
+      "row": 32
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Riel de tranporte",
+      "row": 33
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Escalera de cargue",
+      "row": 34
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Lavamanos de piso",
+      "row": 35
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Puerta de muelle",
+      "row": 36
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "Manguera",
+      "row": 37
+    },
+    {
+      "area": "AREA DE REFRIGERACION",
+      "item": "sierra circular de cuarteo",
+      "row": 38
+    },
+    {
+      "area": "pasillos cavas",
+      "item": "Muelle   pre-refrigeración",
+      "row": 40
+    }
+  ],
+  "8-CAVAS": [
+    {
+      "area": "CONDENSACION",
+      "item": "AREA DE ALMACENAMIENTO",
+      "row": 6
+    }
+  ]
+}
