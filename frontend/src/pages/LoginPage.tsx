@@ -29,21 +29,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="login-page__overlay" aria-hidden />
-
-      <div className="relative w-full max-w-[420px] bg-white rounded-2xl shadow-2xl shadow-black/20 px-8 py-10">
-        <div className="text-center">
+    <div className="login-page min-h-screen flex items-center justify-center px-4 py-10 bg-white">
+      <div className="w-full max-w-[400px]">
+        <div className="text-center mb-8">
           <img
-            src="/colbeef-logo.svg"
-            alt="Colbeef"
-            className="mx-auto h-24 w-24 mb-4"
+            src="/colbeef-logo.png"
+            alt="Colbeef-Ops"
+            className="mx-auto h-44 w-auto object-contain"
           />
-          <h1 className="text-3xl font-bold text-[#166534] tracking-tight">Colbeef-Ops</h1>
-          <p className="text-gray-500 mt-2 text-sm">Sistema de formatos operativos</p>
+          <p className="text-gray-500 mt-4 text-sm">Sistema de formatos operativos</p>
         </div>
-
-        <hr className="my-8 border-gray-200" />
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
@@ -64,7 +59,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Ingrese su usuario"
-                className="login-input w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 outline-none transition-shadow"
+                className="login-input w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 outline-none transition-shadow"
                 required
                 autoFocus
               />
@@ -83,7 +78,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Ingrese su contraseña"
-                className="login-input w-full pl-11 pr-12 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 outline-none transition-shadow"
+                className="login-input w-full pl-11 pr-12 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 outline-none transition-shadow"
                 required
               />
               <button
@@ -100,7 +95,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="login-btn w-full py-3.5 rounded-xl text-white font-semibold text-base transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="login-btn w-full py-3.5 rounded-xl text-white font-semibold text-base transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
           >
             {loading && (
               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" aria-hidden>
