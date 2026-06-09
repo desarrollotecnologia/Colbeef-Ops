@@ -91,6 +91,7 @@ export interface FieldOptions {
   columns?:
     | ('cnc' | 'observation' | 'corrective' | 'platforms' | 'cavaColumns' | 'fr' | 'rev_cnc' | 'final_cnc' | 'responsible')[]
     | RepeaterColumn[];
+  columns_def?: RepeaterColumn[];
   platformCount?: number;
   cavaColumns?: string[];
   matrix?: boolean;
@@ -98,6 +99,7 @@ export interface FieldOptions {
   showProm?: boolean;
   minRows?: number;
   maxRows?: number;
+  note?: string;
 }
 
 export interface RepeaterColumn {

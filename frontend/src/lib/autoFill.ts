@@ -1,4 +1,4 @@
-import type { AutoFillRule, FieldConfig, FormatField } from '@/types';
+import type { FormatField } from '@/types';
 
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 

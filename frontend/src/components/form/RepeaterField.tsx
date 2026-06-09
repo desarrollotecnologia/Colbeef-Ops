@@ -135,7 +135,7 @@ export default function RepeaterField({ options, value, onChange, disabled }: Pr
   const columns = options.columns_def ?? [];
   const minRows = options.minRows ?? 1;
   const maxRows = options.maxRows ?? 50;
-  const rows = value.length >= minRows ? value : Array.from({ length: minRows }, () => ({}));
+  const rows = value.length >= minRows ? value : Array.from({ length: minRows }, (): Record<string, unknown> => ({}));
 
   const updateRow = (idx: number, key: string, val: unknown) => {
     const next = [...rows];

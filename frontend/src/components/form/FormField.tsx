@@ -286,7 +286,7 @@ export default function FormField({ field, value, onChange, disabled, compact }:
 
   return (
     <div>
-      <FieldLabel field={field} />
+      <FieldLabel field={field} show={showLabel} />
       <input
         type="text"
         value={String(value ?? '')}
