@@ -6,7 +6,9 @@ import Layout from '@/components/Layout';
 import Card, { CardBody, CardHeader } from '@/components/Card';
 import Button from '@/components/Button';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import type { FormSubmission } from '@/types';
+import FieldDisplay from '@/components/form/FieldDisplay';
+import { groupFields } from '@/lib/formUtils';
+import type { FormSubmission, FormatField } from '@/types';
 
 export default function AdminReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -75,27 +77,50 @@ export default function AdminReviewPage() {
         </div>
       </div>
 
-      {submission.sheets?.map((sheet) => (
-        <Card key={sheet.id} className="mb-4">
-          <CardHeader>
-            <h2 className="font-semibold">{sheet.sheet?.name}</h2>
-          </CardHeader>
-          <CardBody>
-            {Object.keys(sheet.data || {}).length === 0 ? (
-              <p className="text-gray-500 text-sm">Sin datos registrados en esta hoja</p>
-            ) : (
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {Object.entries(sheet.data as Record<string, unknown>).map(([key, value]) => (
-                  <div key={key}>
-                    <dt className="text-xs text-gray-500 uppercase">{key}</dt>
-                    <dd className="text-sm font-medium">{String(value)}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </CardBody>
-        </Card>
-      ))}
+      {submission.sheets?.map((sheet) => {
+        const fields = sheet.sheet?.fields ?? submission.format?.sheets?.find((s) => s.id === sheet.sheetId)?.fields ?? [];
+        const data = (sheet.data as Record<string, unknown>) ?? {};
+        const groups = groupFields(fields as FormatField[]);
+
+        return (
+          <Card key={sheet.id} className="mb-4">
+            <CardHeader>
+              <h2 className="font-semibold">{sheet.sheet?.name}</h2>
+            </CardHeader>
+            <CardBody>
+              {fields.length === 0 ? (
+                <p className="text-gray-500 text-sm">Sin campos configurados</p>
+              ) : (
+                <div className="space-y-5">
+                  {groups.map((group, gi) => (
+                    <div key={gi}>
+                      {group.name && (
+                        <h3 className="text-xs font-semibold text-primary-700 uppercase mb-2">{group.name}</h3>
+                      )}
+                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {group.fields.map((field) => (
+                          <div key={field.id} className={
+                            field.fieldType === 'CHECKLIST' && field.options?.items
+                              ? 'sm:col-span-2'
+                              : field.fieldType === 'REPEATER'
+                                ? 'sm:col-span-2'
+                                : ''
+                          }>
+                            <dt className="text-xs text-gray-500 mb-0.5">{field.label}</dt>
+                            <dd className="text-sm">
+                              <FieldDisplay field={field} value={data[field.fieldKey]} />
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        );
+      })}
 
       {submission.signature && (
         <Card className="mb-4 border-green-200">

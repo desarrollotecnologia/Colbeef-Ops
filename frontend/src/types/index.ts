@@ -19,6 +19,7 @@ export interface Format {
   code: string;
   name: string;
   description?: string;
+  documentCode?: string;
   sheetCount: number;
   sheets: FormatSheet[];
 }
@@ -41,6 +42,16 @@ export type FieldType =
   | 'REPEATER'
   | 'PHOTO';
 
+export type AutoFillRule =
+  | 'CURRENT_DATE'
+  | 'CURRENT_TIME'
+  | 'CURRENT_DATETIME'
+  | 'CURRENT_USER'
+  | 'CURRENT_USER_NAME'
+  | 'FIXED_VALUE'
+  | 'DAY_SCHEDULE'
+  | 'CALC_MAP';
+
 export interface FormatField {
   id: string;
   fieldKey: string;
@@ -48,11 +59,63 @@ export interface FormatField {
   fieldType: FieldType;
   required: boolean;
   manualOnly: boolean;
-  options?: unknown;
+  autoFillRule?: AutoFillRule | null;
+  options?: FieldOptions;
+  config?: FieldConfig;
   placeholder?: string;
   defaultValue?: string;
   groupName?: string;
   helpText?: string;
+  sortOrder?: number;
+}
+
+export interface FieldConfig {
+  min?: number;
+  max?: number;
+  value?: string;
+  schedule?: Record<string, string[]>;
+  map?: Record<string, string>;
+  sourceField?: string;
+  suffix?: string;
+  requiredIf?: 'nc_or_observation';
+}
+
+export interface FieldOptions {
+  mode?: 'cnc' | 'cnc_na';
+  choices?: string[];
+  multi?: boolean;
+  items?: { key: string; label: string; fr?: string }[];
+  columns?:
+    | ('cnc' | 'observation' | 'corrective' | 'platforms' | 'cavaColumns' | 'fr' | 'rev_cnc' | 'final_cnc' | 'responsible')[]
+    | RepeaterColumn[];
+  platformCount?: number;
+  cavaColumns?: string[];
+  matrix?: boolean;
+  rows?: string[];
+  showProm?: boolean;
+  minRows?: number;
+  maxRows?: number;
+}
+
+export interface RepeaterColumn {
+  key: string;
+  label: string;
+  type: FieldType | string;
+  options?: FieldOptions;
+  config?: FieldConfig;
+  required?: boolean;
+}
+
+/** Datos de un ítem en checklist por equipos/áreas */
+export interface ChecklistItemData {
+  cnc?: string;
+  rev_cnc?: string;
+  final_cnc?: string;
+  observation?: string;
+  corrective?: string;
+  responsible?: string;
+  platforms?: Record<string, string>;
+  cavas?: Record<string, string>;
 }
 
 export type SubmissionStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';

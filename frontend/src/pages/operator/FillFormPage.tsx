@@ -1,16 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Send, Save } from 'lucide-react';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
-import Card, { CardBody, CardHeader } from '@/components/Card';
+import Card, { CardBody } from '@/components/Card';
 import Button from '@/components/Button';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import type { FormSubmission, MissingField } from '@/types';
+import FormatSheetHeader from '@/components/form/FormatSheetHeader';
+import SheetFields from '@/components/form/SheetFields';
+import { useAuth } from '@/context/AuthContext';
+import { applyAutoFields, recalcDependentFields } from '@/lib/autoFill';
+import type { FormSubmission, FormatField, MissingField } from '@/types';
 
 export default function FillFormPage() {
   const { id, formatId } = useParams<{ id?: string; formatId?: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isNew = !!formatId;
 
   const [submission, setSubmission] = useState<FormSubmission | null>(null);
@@ -21,6 +26,17 @@ export default function FillFormPage() {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [missingFields, setMissingFields] = useState<MissingField[]>([]);
   const workDate = new Date().toISOString().split('T')[0];
+
+  const initSheetData = useCallback(
+    (fields: FormatField[], existing: Record<string, unknown>) => {
+      return applyAutoFields(fields, existing, {
+        workDate: submission?.workDate?.split('T')[0] ?? workDate,
+        userName: user?.fullName ?? '',
+        sheetData: existing,
+      });
+    },
+    [submission?.workDate, workDate, user?.fullName]
+  );
 
   useEffect(() => {
     async function init() {
@@ -37,14 +53,20 @@ export default function FillFormPage() {
 
       const initial: Record<string, Record<string, unknown>> = {};
       data.sheets?.forEach((s: { sheetId: string; data: Record<string, unknown> }) => {
-        initial[s.sheetId] = s.data || {};
+        const sheetDef = data.format?.sheets?.find((sh: { id: string }) => sh.id === s.sheetId);
+        const fields = sheetDef?.fields ?? [];
+        initial[s.sheetId] = applyAutoFields(fields, s.data || {}, {
+          workDate: data.workDate?.split('T')[0] ?? workDate,
+          userName: user?.fullName ?? '',
+          sheetData: s.data || {},
+        });
       });
       setFormData(initial);
       setLoading(false);
     }
 
     init().catch(() => setLoading(false));
-  }, [id, isNew, formatId, navigate, workDate]);
+  }, [id, isNew, formatId, navigate, workDate, user?.fullName]);
 
   if (loading || !submission) {
     return (
@@ -61,22 +83,27 @@ export default function FillFormPage() {
   const formatSheet = submission.format?.sheets?.find((s) => s.id === currentSheet?.id);
   const fields = formatSheet?.fields || [];
   const canEdit = submission.status === 'DRAFT' || submission.status === 'REJECTED';
+  const sheetData = formData[currentSheet?.id ?? ''] ?? {};
 
   const updateField = (fieldKey: string, value: unknown) => {
     if (!currentSheet) return;
-    setFormData((prev) => ({
-      ...prev,
-      [currentSheet.id]: { ...prev[currentSheet.id], [fieldKey]: value },
-    }));
+    setFormData((prev) => {
+      let updated = { ...prev[currentSheet.id], [fieldKey]: value };
+      updated = recalcDependentFields(fields, updated, {
+        workDate: submission.workDate?.split('T')[0] ?? workDate,
+        userName: user?.fullName ?? '',
+        sheetData: updated,
+      }, fieldKey);
+      return { ...prev, [currentSheet.id]: updated };
+    });
   };
 
   const saveCurrentSheet = async () => {
     if (!currentSheet) return;
     setSaving(true);
     try {
-      await api.put(`/submissions/${submission.id}/sheets/${currentSheet.id}`, {
-        data: formData[currentSheet.id] || {},
-      });
+      const dataToSave = initSheetData(fields, formData[currentSheet.id] || {});
+      await api.put(`/submissions/${submission.id}/sheets/${currentSheet.id}`, { data: dataToSave });
     } finally {
       setSaving(false);
     }
@@ -102,10 +129,16 @@ export default function FillFormPage() {
         <h1 className="text-xl sm:text-2xl font-bold">{submission.format?.name}</h1>
         <p className="text-gray-500 text-sm">
           Hoja {currentSheetIndex + 1} de {sheets.length}: {currentSheet?.name}
+          {' · '}
+          Fecha: {new Date(submission.workDate).toLocaleDateString('es-CO')}
         </p>
+        {submission.status === 'REJECTED' && submission.reviewNotes && (
+          <div className="mt-2 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-800">
+            <strong>Rechazado:</strong> {submission.reviewNotes}
+          </div>
+        )}
       </div>
 
-      {/* Navegación de hojas */}
       <div className="flex gap-2 overflow-x-auto pb-4 mb-4">
         {sheets.map((sheet, idx) => (
           <button
@@ -138,36 +171,29 @@ export default function FillFormPage() {
         </div>
       )}
 
+      <FormatSheetHeader
+        formatName={submission.format?.name ?? ''}
+        sheetName={currentSheet?.name ?? ''}
+        sheetIndex={currentSheetIndex}
+        sheetTotal={sheets.length}
+        documentCode={submission.format?.documentCode}
+        workDate={submission.workDate?.split('T')[0] ?? workDate}
+        operatorName={user?.fullName ?? ''}
+      />
+
       <Card>
-        <CardHeader>
-          <h2 className="font-semibold text-lg">{currentSheet?.name}</h2>
-        </CardHeader>
-        <CardBody>
+        <CardBody className="pt-6">
           {fields.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
-              Los campos de esta hoja se configurarán cuando recibamos el formato.
-              <br />
-              <span className="text-sm">(Placeholder — pendiente de definir campos)</span>
+              Esta hoja aún no tiene campos configurados.
             </p>
           ) : (
-            <div className="space-y-4">
-              {fields.map((field) => (
-                <div key={field.id}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  <input
-                    type="text"
-                    value={(formData[currentSheet!.id]?.[field.fieldKey] as string) || ''}
-                    onChange={(e) => updateField(field.fieldKey, e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none disabled:bg-gray-100"
-                    placeholder={field.placeholder}
-                  />
-                </div>
-              ))}
-            </div>
+            <SheetFields
+              fields={fields}
+              sheetData={sheetData}
+              onUpdate={updateField}
+              disabled={!canEdit}
+            />
           )}
         </CardBody>
       </Card>
