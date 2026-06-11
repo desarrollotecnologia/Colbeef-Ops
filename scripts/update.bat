@@ -30,6 +30,13 @@ cd ..
 echo.
 echo [3/6] Compilando backend...
 cd backend
+call npm run db:generate
+if %errorlevel% neq 0 (
+    echo ERROR: Fallo la generacion de Prisma Client.
+    cd ..
+    pause
+    exit /b 1
+)
 call npm run build
 if %errorlevel% neq 0 (
     echo ERROR: Fallo la compilacion del backend.

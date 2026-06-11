@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "create-user": "tsx scripts/create-user.ts",
+    "test:pdf": "tsx scripts/test-pdf.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

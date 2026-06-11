@@ -3,6 +3,8 @@ import path from 'path';
 import PDFDocument from 'pdfkit';
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
 
+type PdfDoc = InstanceType<typeof PDFDocument>;
+
 type FieldOptions = {
   layout?: string;
   tableType?: string;
@@ -63,11 +65,11 @@ function resolveLogoPath(): string | null {
   return null;
 }
 
-function pageSize(doc: PDFDocument) {
+function pageSize(doc: PdfDoc) {
   return { width: doc.page.width, height: doc.page.height };
 }
 
-function contentBottom(doc: PDFDocument) {
+function contentBottom(doc: PdfDoc) {
   return pageSize(doc).height - MARGIN - FOOTER_H;
 }
 
@@ -81,7 +83,7 @@ function needsLandscape(fields: FormatField[]): boolean {
 }
 
 function drawSheetHeader(
-  doc: PDFDocument,
+  doc: PdfDoc,
   submission: SubmissionForPdf,
   sheet: SheetWithFields,
   sheetIndex: number,
@@ -130,7 +132,7 @@ function drawSheetHeader(
 }
 
 function drawSignatures(
-  doc: PDFDocument,
+  doc: PdfDoc,
   submission: SubmissionForPdf,
   y: number
 ) {
@@ -151,23 +153,23 @@ function drawSignatures(
   return y + 32;
 }
 
-function ensureSpace(doc: PDFDocument, y: number, needed: number): number {
+function ensureSpace(doc: PdfDoc, y: number, needed: number): number {
   if (y + needed <= contentBottom(doc)) return y;
   return y;
 }
 
-function drawFieldLabel(doc: PDFDocument, label: string, x: number, y: number, maxW: number) {
+function drawFieldLabel(doc: PdfDoc, label: string, x: number, y: number, maxW: number) {
   doc.fontSize(8).font('Helvetica-Bold').fillColor('#333').text(label, x, y, { width: maxW });
   return doc.heightOfString(label, { width: maxW }) + y + 2;
 }
 
-function drawTextValue(doc: PDFDocument, text: string, x: number, y: number, maxW: number) {
+function drawTextValue(doc: PdfDoc, text: string, x: number, y: number, maxW: number) {
   doc.fontSize(8).font('Helvetica').fillColor('#111').text(text || '—', x, y, { width: maxW });
   return doc.heightOfString(text || '—', { width: maxW }) + y + 6;
 }
 
 function renderChecklistTable(
-  doc: PDFDocument,
+  doc: PdfDoc,
   field: FormatField,
   value: Record<string, ChecklistItemData>,
   startY: number
@@ -265,7 +267,7 @@ function renderChecklistTable(
 }
 
 function renderDaySchedule(
-  doc: PDFDocument,
+  doc: PdfDoc,
   field: FormatField,
   value: Record<string, Record<string, string>>,
   startY: number
@@ -314,7 +316,7 @@ function renderDaySchedule(
 }
 
 function renderField(
-  doc: PDFDocument,
+  doc: PdfDoc,
   field: FormatField,
   value: unknown,
   y: number
@@ -360,7 +362,7 @@ function renderField(
 }
 
 function renderSheetPage(
-  doc: PDFDocument,
+  doc: PdfDoc,
   submission: SubmissionForPdf,
   sheet: SheetWithFields,
   sheetData: Record<string, unknown>,
@@ -389,6 +391,13 @@ export function generateSubmissionPdf(submission: SubmissionForPdf): Promise<Buf
 
     const formatSheets = [...submission.format.sheets].sort((a, b) => a.sheetOrder - b.sheetOrder);
 
+    if (formatSheets.length === 0) {
+      doc.addPage({ size: 'A4', margin: MARGIN });
+      doc.fontSize(12).text('Formato sin hojas configuradas.', MARGIN, MARGIN);
+      doc.end();
+      return;
+    }
+
     formatSheets.forEach((sheet, index) => {
       const sheetData =
         (submission.sheets.find((s) => s.sheetId === sheet.id)?.data as Record<string, unknown>) ?? {};
@@ -406,7 +415,10 @@ export function generateSubmissionPdf(submission: SubmissionForPdf): Promise<Buf
 }
 
 export function buildPdfFilename(submission: SubmissionForPdf): string {
-  const date = submission.workDate.toISOString().slice(0, 10);
+  const date =
+    submission.workDate instanceof Date
+      ? submission.workDate.toISOString().slice(0, 10)
+      : String(submission.workDate).slice(0, 10);
   const code = submission.format.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 40);
   return `${code}_${date}.pdf`;
 }

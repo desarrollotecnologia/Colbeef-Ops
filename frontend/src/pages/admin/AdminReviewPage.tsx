@@ -47,6 +47,7 @@ export default function AdminReviewPage() {
 
   const [actionLoading, setActionLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
 
 
@@ -160,9 +161,15 @@ export default function AdminReviewPage() {
 
     setPdfLoading(true);
 
+    setPdfError(null);
+
     try {
 
       await downloadSubmissionPdf(submission.id);
+
+    } catch (err) {
+
+      setPdfError(err instanceof Error ? err.message : 'No se pudo descargar el PDF');
 
     } finally {
 
@@ -251,6 +258,10 @@ export default function AdminReviewPage() {
       />
 
 
+
+      {pdfError && (
+        <p className="mt-4 text-sm text-red-600">{pdfError}</p>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
 

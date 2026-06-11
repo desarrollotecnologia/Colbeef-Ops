@@ -273,9 +273,9 @@ export default function FillFormPage() {
 
       await downloadSubmissionPdf(submission.id);
 
-    } catch {
+    } catch (err) {
 
-      setSaveMessage('No se pudo descargar el PDF.');
+      setSaveMessage(err instanceof Error ? err.message : 'No se pudo descargar el PDF.');
 
     } finally {
 
