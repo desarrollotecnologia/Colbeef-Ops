@@ -6,6 +6,7 @@ import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
 import Button from '@/components/Button';
 import { formatWorkDateShort, toWorkDateString } from '@/lib/workDate';
+import { downloadSubmissionPdf } from '@/lib/downloadPdf';
 import type { FormSubmission } from '@/types';
 
 export default function AdminSearchPage() {
@@ -14,6 +15,7 @@ export default function AdminSearchPage() {
   const [results, setResults] = useState<FormSubmission[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -90,7 +92,19 @@ export default function AdminSearchPage() {
                       </p>
                     )}
                   </div>
-                  <Button variant="outline" size="sm" disabled title="PDF — próximamente">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    loading={pdfLoadingId === sub.id}
+                    onClick={async () => {
+                      setPdfLoadingId(sub.id);
+                      try {
+                        await downloadSubmissionPdf(sub.id);
+                      } finally {
+                        setPdfLoadingId(null);
+                      }
+                    }}
+                  >
                     <Download size={16} /> PDF
                   </Button>
                 </CardBody>

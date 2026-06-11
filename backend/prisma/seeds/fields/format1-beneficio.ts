@@ -131,36 +131,79 @@ export function getFormat1Fields(slug: string): FieldDef[] {
     case 'refrigeracion':
       return [
         itemChecklistField('decomisos', 'Cuarto de decomisos', [
-          'Carros uso general', 'Canalinas cajas cifonadas', 'Pisos', 'Paredes', 'Puertas ingreso', 'Mangueras',
-        ].map((l, i) => ({ key: `d_${i}`, label: l })), 1, { mode: 'cnc_na' }),
-        itemChecklistField('cava3', 'Cava #3', ['Cortinas', 'Puerta ingreso', 'Canalinas cajas cifonadas', 'Pisos', 'Paredes'].map((l, i) => ({ key: `c3_${i}`, label: l })), 2, { mode: 'cnc_na' }),
-        itemChecklistField('canecas', 'Cuarto canecas y canastillas', [
-          'Canecas', 'Canastillas', 'Canalinas cajas cifonadas', 'Puerta ingreso', 'Pisos', 'Paredes',
-        ].map((l, i) => ({ key: `cn_${i}`, label: l })), 3, { mode: 'cnc_na' }),
-        itemChecklistField('area_refri', 'Área refrigeración', [
-          'Tubería hierro', 'Paredes', 'Pisos', 'Canalinas cajas cifonadas', 'Puerta ingreso', 'Puerta ingreso muelle',
-          'Carro porta poleas', 'Riel transporte', 'Escalera cargue', 'Lavamanos piso', 'Puerta muelle', 'Manguera',
-          'Sierra circular cuarteo', 'Pasillos cavas', 'Muelle pre-refrigeración',
+          'Carros de uso general', 'Canalinas y cajas cifonadas', 'Pisos', 'Paredes',
+          'Puertas de ingreso', 'Mangueras',
+        ].map((l, i) => ({ key: `d_${i}`, label: l })), 1, {
+          mode: 'cnc_na',
+          groupName: 'Área de P.C. comestibles',
+          areaLabel: 'Área de P.C. comestibles',
+        }),
+        itemChecklistField('cava3', 'Cava #3', [
+          'Cortinas', 'Puerta de ingreso', 'Canalinas y cajas cifonadas', 'Pisos', 'Paredes',
+        ].map((l, i) => ({ key: `c3_${i}`, label: l })), 2, {
+          mode: 'cnc_na',
+          groupName: 'Área de P.C. comestibles',
+        }),
+        itemChecklistField('canecas', 'Cuarto de canecas y canastillas', [
+          'Canecas', 'Canastillas', 'Canalinas y cajas cifonadas', 'Puerta de ingreso', 'Pisos', 'Paredes',
+        ].map((l, i) => ({ key: `cn_${i}`, label: l })), 3, {
+          mode: 'cnc_na',
+          groupName: 'Área de P.C. comestibles',
+        }),
+        itemChecklistField('area_refri', 'Área de refrigeración', [
+          'Tubería de hierro', 'Paredes', 'Pisos', 'Canalinas y cajas cifonadas', 'Puerta de ingreso',
+          'Puerta de ingreso a muelle', 'Carro porta poleas', 'Riel de transporte', 'Escalera de cargue',
+          'Lavamanos de piso', 'Puerta de muelle', 'Manguera', 'Sierra circular de cuarteo',
+          'Pasillos cavas', 'Muelle pre-refrigeración',
         ].map((l, i) => ({ key: `ar_${i}`, label: l })), 4, {
           mode: 'cnc_na',
-          columns: ['cnc', 'observation', 'corrective', 'cavaColumns'],
-          cavaColumns: ['C#10', 'C#9', 'C#8', 'C#7'],
+          groupName: 'Área de refrigeración',
+          areaLabel: 'Área de refrigeración',
+          columns: ['cavaColumns', 'observation', 'corrective'],
+          cavaColumns: ['C#10', 'C#9'],
         }),
-        textareaField('observaciones', 'Observaciones', 10),
+        textareaField('observaciones', 'Observaciones generales', 10, { groupName: 'Observaciones' }),
       ];
 
-    case 'cavas':
+    case 'cavas': {
+      const STORAGE_COLUMN_DEFS: { key: string; mode: 'cnc' | 'cnc_na' }[] = [
+        { key: 'C#10', mode: 'cnc_na' },
+        { key: 'C#9', mode: 'cnc_na' },
+        { key: 'C#8', mode: 'cnc_na' },
+        { key: 'C#7', mode: 'cnc_na' },
+        { key: 'M7', mode: 'cnc' },
+        { key: 'C#6B', mode: 'cnc_na' },
+        { key: 'M6', mode: 'cnc' },
+        { key: 'C#6A', mode: 'cnc_na' },
+        { key: 'C#5', mode: 'cnc_na' },
+        { key: 'M5', mode: 'cnc' },
+        { key: 'C#4', mode: 'cnc_na' },
+        { key: 'M4', mode: 'cnc' },
+        { key: 'C#3', mode: 'cnc_na' },
+        { key: 'M#3', mode: 'cnc' },
+        { key: 'C#2', mode: 'cnc_na' },
+        { key: 'M#2', mode: 'cnc' },
+        { key: 'C#1', mode: 'cnc_na' },
+        { key: 'M#1', mode: 'cnc' },
+        { key: 'PRE', mode: 'cnc' },
+        { key: 'PVC', mode: 'cnc' },
+      ];
       return [
-        itemChecklistField('condensacion', 'Condensación / Área almacenamiento', [
+        itemChecklistField('condensacion', 'Verificación previa al inicio del beneficio — Condensación', [
           { key: 'almacenamiento', label: 'Área de almacenamiento' },
         ], 1, {
           mode: 'cnc_na',
-          columns: ['cnc', 'observation', 'corrective', 'cavaColumns'],
-          cavaColumns: ['C#10', 'C#9', 'C#8', 'C#7'],
+          groupName: 'Condensación',
+          areaLabel: 'Condensación',
+          columns: ['cavaColumns'],
+          columnDefs: STORAGE_COLUMN_DEFS,
+          helpText: 'C# = Cava · M# = Máquinas · PRE = Pre-refrigeración · PVC = Pasillo cavas',
         }),
-        textareaField('observaciones', 'Observaciones', 5),
-        textareaField('observaciones_generales', 'Observaciones generales', 6),
+        textareaField('observaciones', 'Observaciones', 2, { groupName: 'Observaciones y acciones' }),
+        textareaField('acciones_correctivas', 'Acciones correctivas', 3, { groupName: 'Observaciones y acciones' }),
+        textareaField('observaciones_generales', 'Observaciones generales', 4, { groupName: 'Observaciones generales' }),
       ];
+    }
 
     default:
       return [];

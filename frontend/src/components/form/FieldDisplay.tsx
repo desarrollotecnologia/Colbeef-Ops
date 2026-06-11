@@ -47,6 +47,9 @@ export default function FieldDisplay({ field, value }: Props) {
             <div key={item.key} className="text-sm border-l-2 border-primary-300 pl-2">
               <span className="font-medium">{item.label}</span>
               {d.cnc && <span className={`ml-2 px-1.5 py-0.5 rounded text-xs font-bold ${d.cnc === 'C' ? 'bg-green-100 text-green-800' : d.cnc === 'NC' ? 'bg-red-100 text-red-800' : 'bg-gray-100'}`}>{d.cnc}</span>}
+              {d.cavas && Object.entries(d.cavas).map(([cava, v]) => v ? (
+                <span key={cava} className="ml-1 px-1 rounded text-xs bg-gray-100">{cava}:{v}</span>
+              ) : null)}
               {d.observation && <p className="text-gray-600 text-xs mt-0.5">Obs: {d.observation}</p>}
               {d.corrective && <p className="text-gray-600 text-xs">Corr: {d.corrective}</p>}
             </div>

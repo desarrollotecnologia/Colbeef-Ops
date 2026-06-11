@@ -8,7 +8,8 @@ import {
   getTodayWorkDate,
   isSameWorkDate,
 } from '../utils/workDate';
-import { isFieldValueEmpty } from '../utils/fieldValidation';
+import { getSubmissionMissingFields } from '../utils/fieldValidation';
+import { buildPdfFilename, generateSubmissionPdf } from '../services/submissionPdf';
 
 const router = Router();
 
@@ -76,7 +77,7 @@ const submissionInclude = {
   operator: { select: { id: true, fullName: true } },
   reviewedBy: { select: { id: true, fullName: true } },
   sheets: { include: { sheet: true } },
-  signature: true,
+  signature: { include: { admin: { select: { id: true, fullName: true } } } },
 };
 
 // Crear borrador
@@ -121,6 +122,44 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
   });
 
   res.status(201).json(submission);
+});
+
+// Descargar PDF del formato completo (una página por hoja)
+router.get('/:id/pdf', async (req: Request, res: Response) => {
+  const submission = await prisma.formSubmission.findUnique({
+    where: { id: paramId(req.params.id) },
+    include: submissionInclude,
+  });
+
+  if (!submission) {
+    return res.status(404).json({ error: 'Envío no encontrado' });
+  }
+
+  const isAdmin = req.user!.role === UserRole.ADMIN;
+  if (!isAdmin && submission.operatorId !== req.user!.userId) {
+    return res.status(403).json({ error: 'No tiene acceso' });
+  }
+
+  const canDownload =
+    submission.status === SubmissionStatus.APPROVED ||
+    (isAdmin && submission.status === SubmissionStatus.PENDING_REVIEW);
+
+  if (!canDownload) {
+    return res.status(400).json({
+      error: 'El PDF está disponible cuando el formato está aprobado o pendiente de revisión (admin).',
+    });
+  }
+
+  try {
+    const pdfBuffer = await generateSubmissionPdf(submission);
+    const filename = buildPdfFilename(submission);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Error generando PDF:', err);
+    return res.status(500).json({ error: 'No se pudo generar el PDF' });
+  }
 });
 
 // Obtener envío con datos
@@ -195,7 +234,8 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
       format: {
         include: {
           sheets: {
-            include: { fields: { where: { required: true } } },
+            orderBy: { sheetOrder: 'asc' as const },
+            include: { fields: { orderBy: { sortOrder: 'asc' as const } } },
           },
         },
       },
@@ -220,30 +260,22 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
     submission.workDate = today;
   }
 
-  const missingFields: { sheet: string; field: string; label: string }[] = [];
-
-  for (const formatSheet of submission.format.sheets) {
-    const submissionSheet = submission.sheets.find((s) => s.sheetId === formatSheet.id);
-    const sheetData = (submissionSheet?.data as Record<string, unknown>) || {};
-
-    for (const field of formatSheet.fields) {
-      const value = sheetData[field.fieldKey];
-      const isEmpty = isFieldValueEmpty(field, value, submission.workDate);
-
-      if (isEmpty) {
-        missingFields.push({
-          sheet: formatSheet.name,
-          field: field.fieldKey,
-          label: field.label,
-        });
-      }
-    }
-  }
+  const missingFields = getSubmissionMissingFields(
+    submission.format.sheets.map((s) => ({
+      id: s.id,
+      name: s.name,
+      fields: s.fields,
+    })),
+    submission.sheets.map((s) => ({ sheetId: s.sheetId, data: s.data })),
+    submission.workDate
+  );
 
   if (missingFields.length > 0) {
+    const incompleteSheetNames = [...new Set(missingFields.map((f) => f.sheet))];
     return res.status(422).json({
-      error: 'Hay campos obligatorios sin completar',
+      error: `Debe completar todas las hojas del formato antes de entregar (${submission.format.sheets.length} hojas). Pendientes: ${incompleteSheetNames.join(', ')}`,
       missingFields,
+      incompleteSheets: incompleteSheetNames,
     });
   }
 
@@ -288,7 +320,10 @@ router.post('/:id/approve', requireRole(UserRole.ADMIN), async (req: Request, re
         },
       },
     },
-    include: { signature: true },
+    include: {
+      signature: { include: { admin: { select: { id: true, fullName: true } } } },
+      reviewedBy: { select: { id: true, fullName: true } },
+    },
   });
 
   res.json(updated);

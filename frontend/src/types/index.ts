@@ -94,6 +94,7 @@ export interface FieldOptions {
   columns_def?: RepeaterColumn[];
   platformCount?: number;
   cavaColumns?: string[];
+  columnDefs?: { key: string; mode?: 'cnc' | 'cnc_na' }[];
   matrix?: boolean;
   rows?: string[];
   showProm?: boolean;
@@ -139,7 +140,7 @@ export interface FormSubmission {
   operator?: { id: string; fullName: string };
   reviewedBy?: { id: string; fullName: string };
   sheets?: FormSubmissionSheet[];
-  signature?: { signedAt: string; notes?: string };
+  signature?: { signedAt: string; notes?: string; admin?: { fullName: string } };
 }
 
 export interface FormSubmissionSheet {

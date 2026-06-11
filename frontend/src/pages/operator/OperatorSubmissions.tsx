@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, Trash2, Download } from 'lucide-react';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
+import Button from '@/components/Button';
+import { downloadSubmissionPdf } from '@/lib/downloadPdf';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatWorkDateShort, getWorkDateString, toWorkDateString } from '@/lib/workDate';
 import type { FormSubmission } from '@/types';
@@ -20,6 +22,7 @@ export default function OperatorSubmissions() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FormSubmission | null>(null);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
 
   const loadSubmissions = () => {
     setLoading(true);
@@ -86,6 +89,24 @@ export default function OperatorSubmissions() {
                       <Icon size={14} />
                       {cfg.label}
                     </span>
+                    {sub.status === 'APPROVED' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        loading={pdfLoadingId === sub.id}
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          setPdfLoadingId(sub.id);
+                          try {
+                            await downloadSubmissionPdf(sub.id);
+                          } finally {
+                            setPdfLoadingId(null);
+                          }
+                        }}
+                      >
+                        <Download size={16} /> PDF
+                      </Button>
+                    )}
                     {sub.status === 'DRAFT' && (
                       <button
                         type="button"

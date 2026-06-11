@@ -1,24 +1,78 @@
 import { FormatField } from '@prisma/client';
 import { getDayKey, slugifyPoint } from './dayKey';
 
+type ChecklistItemData = {
+  cnc?: string;
+  rev_cnc?: string;
+  final_cnc?: string;
+  platforms?: Record<string, string>;
+  cavas?: Record<string, string>;
+};
+
 type FieldOptions = {
   layout?: string;
   tableType?: string;
   schedule?: Record<string, string[]>;
+  items?: { key: string }[];
+  columns?: string[];
+  columnDefs?: { key: string }[];
+  cavaColumns?: string[];
+  platformCount?: number;
+  minRows?: number;
+  columns_def?: { key: string; required?: boolean }[];
 };
 
+function isChecklistItemComplete(
+  itemData: ChecklistItemData,
+  options: FieldOptions
+): boolean {
+  const columns = options.columns ?? ['cnc'];
+
+  if (columns.includes('cavaColumns')) {
+    const defs =
+      options.columnDefs?.length
+        ? options.columnDefs
+        : (options.cavaColumns ?? []).map((key) => ({ key }));
+    return defs.every((col) => Boolean(itemData.cavas?.[col.key]));
+  }
+
+  if (columns.includes('platforms')) {
+    const count = options.platformCount ?? 5;
+    for (let i = 1; i <= count; i++) {
+      if (!itemData.platforms?.[String(i)]) return false;
+    }
+    return true;
+  }
+
+  if (columns.includes('rev_cnc') && !itemData.rev_cnc) return false;
+  if (columns.includes('final_cnc') && !itemData.final_cnc) return false;
+  if (columns.includes('cnc') && !itemData.cnc) return false;
+
+  return true;
+}
+
 export function isFieldValueEmpty(
-  field: Pick<FormatField, 'fieldKey' | 'fieldType' | 'options'>,
+  field: Pick<FormatField, 'fieldKey' | 'fieldType' | 'required' | 'options'>,
+  value: unknown,
+  workDate: Date
+): boolean {
+  return !isFieldComplete(field, value, workDate);
+}
+
+export function isFieldComplete(
+  field: Pick<FormatField, 'fieldKey' | 'fieldType' | 'required' | 'options'>,
   value: unknown,
   workDate: Date
 ): boolean {
   const options = (field.options ?? {}) as FieldOptions;
 
+  if (field.fieldKey === 'empresa') return true;
+
   if (options.layout === 'day_schedule_table') {
     const schedule = options.schedule ?? {};
     const dayKey = getDayKey(workDate);
     const points = schedule[dayKey] ?? [];
-    if (points.length === 0) return false;
+    if (points.length === 0) return true;
 
     const data = (value as Record<string, Record<string, string>>) ?? {};
     const tableType = options.tableType ?? 'cloro';
@@ -27,24 +81,69 @@ export function isFieldValueEmpty(
       const key = slugifyPoint(punto);
       const row = data[key] ?? {};
       if (tableType === 'cloro') {
-        if (!row.cloro_residual || !row.cnc) return true;
-      } else {
-        if (!row.temperatura || !row.cnc) return true;
+        if (!row.cloro_residual || !row.cnc) return false;
+      } else if (!row.temperatura || !row.cnc) {
+        return false;
       }
     }
-    return false;
+    return true;
   }
 
-  if (field.fieldType === 'CHECKLIST' && value && typeof value === 'object' && !Array.isArray(value)) {
-    const obj = value as Record<string, unknown>;
-    if (Object.keys(obj).length === 0) return true;
-    return false;
+  if (field.fieldType === 'CHECKLIST' && options.items?.length) {
+    const data = (value as Record<string, ChecklistItemData>) ?? {};
+    return options.items.every((item) =>
+      isChecklistItemComplete(data[item.key] ?? {}, options)
+    );
   }
 
-  return (
-    value === undefined ||
-    value === null ||
-    value === '' ||
-    (Array.isArray(value) && value.length === 0)
-  );
+  if (field.fieldType === 'REPEATER') {
+    const rows = Array.isArray(value) ? value : [];
+    const minRows = options.minRows ?? 1;
+    if (rows.length < minRows) return false;
+    return true;
+  }
+
+  if (field.required) {
+    return (
+      value !== undefined &&
+      value !== null &&
+      value !== '' &&
+      !(Array.isArray(value) && value.length === 0)
+    );
+  }
+
+  if (field.fieldType === 'CHECKLIST') {
+    return value !== undefined && value !== null && value !== '';
+  }
+
+  return true;
+}
+
+export function getSubmissionMissingFields(
+  formatSheets: {
+    id: string;
+    name: string;
+    fields: Pick<FormatField, 'fieldKey' | 'label' | 'fieldType' | 'required' | 'options'>[];
+  }[],
+  submissionSheets: { sheetId: string; data: unknown }[],
+  workDate: Date
+): { sheet: string; field: string; label: string }[] {
+  const missing: { sheet: string; field: string; label: string }[] = [];
+
+  for (const formatSheet of formatSheets) {
+    const submissionSheet = submissionSheets.find((s) => s.sheetId === formatSheet.id);
+    const sheetData = (submissionSheet?.data as Record<string, unknown>) || {};
+
+    for (const field of formatSheet.fields) {
+      if (!isFieldComplete(field, sheetData[field.fieldKey], workDate)) {
+        missing.push({
+          sheet: formatSheet.name,
+          field: field.fieldKey,
+          label: field.label,
+        });
+      }
+    }
+  }
+
+  return missing;
 }
