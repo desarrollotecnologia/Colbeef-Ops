@@ -157,15 +157,38 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
               </h3>
             )}
             <div className="space-y-4">
-              {visibleFields.map((field) => (
-                <FormField
-                  key={field.id}
-                  field={field}
-                  value={sheetData[field.fieldKey]}
-                  onChange={(v) => onUpdate(field.fieldKey, v)}
-                  disabled={disabled}
-                />
-              ))}
+              {visibleFields.map((field) => {
+                if (field.fieldType === 'CHECKLIST' && field.options?.items) {
+                  return (
+                    <div key={field.fieldKey} className="border border-gray-800 rounded-sm overflow-hidden">
+                      <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+                        <h3 className="text-xs font-bold uppercase text-gray-900">{field.label}</h3>
+                        {field.helpText && (
+                          <p className="text-[11px] text-gray-600 mt-0.5">{field.helpText}</p>
+                        )}
+                      </div>
+                      <div className="p-0">
+                        <ItemChecklist
+                          options={field.options ?? {}}
+                          value={(sheetData[field.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
+                          onChange={(v) => onUpdate(field.fieldKey, v)}
+                          disabled={disabled}
+                          tableMode
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <FormField
+                    key={field.id}
+                    field={field}
+                    value={sheetData[field.fieldKey]}
+                    onChange={(v) => onUpdate(field.fieldKey, v)}
+                    disabled={disabled}
+                  />
+                );
+              })}
             </div>
           </div>
         );

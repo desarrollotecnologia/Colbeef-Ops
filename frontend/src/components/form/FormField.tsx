@@ -50,6 +50,7 @@ export default function FormField({ field, value, onChange, disabled, compact }:
           value={(value as Record<string, ChecklistItemData>) ?? {}}
           onChange={onChange}
           disabled={disabled}
+          tableMode
         />
       </div>
     );

@@ -62,21 +62,21 @@ function AreaLabelCell({ label, rowSpan }: { label: string; rowSpan: number }) {
 }
 
 type ChecklistItem = NonNullable<FieldOptions['items']>[number];
-type TableRow =
-  | { type: 'section'; label: string }
-  | { type: 'item'; item: ChecklistItem; itemIdx: number };
 
-function buildTableRows(items: ChecklistItem[]): TableRow[] {
-  const rows: TableRow[] = [];
-  let lastSection: string | undefined;
-  items.forEach((item, itemIdx) => {
-    if (item.section && item.section !== lastSection) {
-      rows.push({ type: 'section', label: item.section });
-      lastSection = item.section;
-    }
-    rows.push({ type: 'item', item, itemIdx });
-  });
-  return rows;
+interface SectionGroup {
+  label: string;
+  items: ChecklistItem[];
+}
+
+function groupBySection(items: ChecklistItem[]): SectionGroup[] {
+  const groups: SectionGroup[] = [];
+  for (const item of items) {
+    const sec = item.section ?? '';
+    const last = groups[groups.length - 1];
+    if (last && last.label === sec) last.items.push(item);
+    else groups.push({ label: sec, items: [item] });
+  }
+  return groups;
 }
 
 export default function ItemChecklist({ options, value, onChange, disabled, tableMode = false }: Props) {
@@ -200,7 +200,7 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
     );
   }
 
-  if (tableMode && columns.includes('cavaColumns') && columnDefs.length > 0) {
+  if (tableMode && columns.includes('cavaColumns') && columnDefs.length > 0 && !columns.includes('cnc')) {
     const showObsCols = columns.includes('observation') || columns.includes('corrective');
     return (
       <div className="overflow-x-auto">
@@ -288,10 +288,10 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
     );
   }
 
-  if (tableMode && !columns.includes('platforms') && !columns.includes('cavaColumns') && !hasSanitary) {
-    const tableRows = buildTableRows(items);
-    const areaRowSpan = tableRows.length;
-    const sectionColSpan = 1 + cncSubCols.length + 2;
+  if (tableMode && !columns.includes('platforms') && !hasSanitary && (columns.includes('cnc') || (!columns.includes('cavaColumns') && columnDefs.length === 0))) {
+    const hasSections = items.some((item) => item.section);
+    const sectionGroups = hasSections ? groupBySection(items) : [{ label: '', items }];
+    let rowIdx = 0;
 
     return (
       <div className="overflow-x-auto">
@@ -299,6 +299,7 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
               {areaLabel && <th className={`${thClass} w-8`} />}
+              {hasSections && <th className={`${thClass} text-left w-28`}>Área</th>}
               <th className={`${thClass} text-left`}>Equipo o superficie</th>
               {cncSubCols.map((sub) => (
                 <th key={sub} className={`${thClass} w-12`}>{sub}</th>
@@ -308,58 +309,57 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
             </tr>
           </thead>
           <tbody>
-            {tableRows.map((row, rowIdx) => {
-              if (row.type === 'section') {
+            {sectionGroups.flatMap((group) =>
+              group.items.map((item, idxInGroup) => {
+                const data = value[item.key] ?? {};
+                const cnc = data.cnc ?? '';
+                const currentRow = rowIdx;
+                rowIdx += 1;
                 return (
-                  <tr key={`section-${row.label}`} className="bg-gray-100">
-                    {areaLabel && rowIdx === 0 && <AreaLabelCell label={areaLabel} rowSpan={areaRowSpan} />}
-                    <td
-                      colSpan={sectionColSpan}
-                      className="px-3 py-1.5 border-b border-gray-400 text-xs font-bold uppercase text-gray-800"
-                    >
-                      {row.label}
+                  <tr key={item.key} className={currentRow % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    {areaLabel && currentRow === 0 && (
+                      <AreaLabelCell label={areaLabel} rowSpan={items.length} />
+                    )}
+                    {hasSections && idxInGroup === 0 && (
+                      <td
+                        rowSpan={group.items.length}
+                        className={`${tdClass} px-2 py-2 text-xs font-bold uppercase text-gray-800 bg-gray-50 align-middle`}
+                      >
+                        {group.label}
+                      </td>
+                    )}
+                    <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>
+                      {item.label}
+                    </td>
+                    {cncSubCols.map((sub) => (
+                      <td key={sub} className={`${tdClass} text-center w-12 px-1`}>
+                        <CncToggle choice={sub} value={cnc} disabled={disabled} onChange={(v) => updateItem(item.key, { cnc: v })} />
+                      </td>
+                    ))}
+                    <td className={tdClass}>
+                      <input
+                        type="text"
+                        value={data.observation ?? ''}
+                        onChange={(e) => updateItem(item.key, { observation: e.target.value })}
+                        disabled={disabled}
+                        placeholder="—"
+                        className={`${INPUT_CLASS} text-xs py-1.5`}
+                      />
+                    </td>
+                    <td className="px-2 py-1 border-b border-gray-400">
+                      <input
+                        type="text"
+                        value={data.corrective ?? ''}
+                        onChange={(e) => updateItem(item.key, { corrective: e.target.value })}
+                        disabled={disabled}
+                        placeholder="—"
+                        className={`${INPUT_CLASS} text-xs py-1.5`}
+                      />
                     </td>
                   </tr>
                 );
-              }
-
-              const { item, itemIdx } = row;
-              const data = value[item.key] ?? {};
-              const cnc = data.cnc ?? '';
-              return (
-                <tr key={item.key} className={itemIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  {areaLabel && rowIdx === 0 && <AreaLabelCell label={areaLabel} rowSpan={areaRowSpan} />}
-                  <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>
-                    {item.label}
-                  </td>
-                  {cncSubCols.map((sub) => (
-                    <td key={sub} className={`${tdClass} text-center w-12 px-1`}>
-                      <CncToggle choice={sub} value={cnc} disabled={disabled} onChange={(v) => updateItem(item.key, { cnc: v })} />
-                    </td>
-                  ))}
-                  <td className={tdClass}>
-                    <input
-                      type="text"
-                      value={data.observation ?? ''}
-                      onChange={(e) => updateItem(item.key, { observation: e.target.value })}
-                      disabled={disabled}
-                      placeholder="—"
-                      className={`${INPUT_CLASS} text-xs py-1.5`}
-                    />
-                  </td>
-                  <td className="px-2 py-1 border-b border-gray-400">
-                    <input
-                      type="text"
-                      value={data.corrective ?? ''}
-                      onChange={(e) => updateItem(item.key, { corrective: e.target.value })}
-                      disabled={disabled}
-                      placeholder="—"
-                      className={`${INPUT_CLASS} text-xs py-1.5`}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
+              })
+            )}
           </tbody>
         </table>
       </div>
