@@ -45,7 +45,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
               <div className="p-0">
                 <DayScheduleTable
                   options={dayTableField.options ?? {}}
-                  value={(sheetData[dayTableField.fieldKey] as Record<string, unknown>) ?? {}}
+                  value={(sheetData[dayTableField.fieldKey] as Record<string, import('./DayScheduleTable').DayPointRow>) ?? {}}
                   onChange={(v) => onUpdate(dayTableField.fieldKey, v)}
                   workDate={workDate}
                   disabled={disabled}
