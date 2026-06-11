@@ -3,7 +3,11 @@ import { SubmissionStatus, UserRole } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { authenticate, requireRole } from '../middleware/auth';
 import { paramId } from '../utils/params';
-import { assertWorkDateAllowed, parseWorkDate } from '../utils/workDate';
+import {
+  assertWorkDateAllowed,
+  getTodayWorkDate,
+  isSameWorkDate,
+} from '../utils/workDate';
 import { isFieldValueEmpty } from '../utils/fieldValidation';
 
 const router = Router();
@@ -60,12 +64,27 @@ router.get('/pending', requireRole(UserRole.ADMIN), async (_req: Request, res: R
   res.json(pending);
 });
 
+const submissionInclude = {
+  format: {
+    include: {
+      sheets: {
+        orderBy: { sheetOrder: 'asc' as const },
+        include: { fields: { orderBy: { sortOrder: 'asc' as const } } },
+      },
+    },
+  },
+  operator: { select: { id: true, fullName: true } },
+  reviewedBy: { select: { id: true, fullName: true } },
+  sheets: { include: { sheet: true } },
+  signature: true,
+};
+
 // Crear borrador
 router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
-  const { formatId, workDate } = req.body;
+  const { formatId } = req.body;
 
-  if (!formatId || !workDate) {
-    return res.status(400).json({ error: 'formatId y workDate son obligatorios' });
+  if (!formatId) {
+    return res.status(400).json({ error: 'formatId es obligatorio' });
   }
 
   const format = await prisma.format.findUnique({
@@ -77,7 +96,7 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
     return res.status(404).json({ error: 'Formato no encontrado' });
   }
 
-  const parsedDate = parseWorkDate(workDate);
+  const parsedDate = getTodayWorkDate();
   const dateCheck = await assertWorkDateAllowed(prisma, formatId, parsedDate);
   if (!dateCheck.ok) {
     return res.status(400).json({ error: dateCheck.error });
@@ -106,22 +125,9 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
 
 // Obtener envío con datos
 router.get('/:id', async (req: Request, res: Response) => {
-  const submission = await prisma.formSubmission.findUnique({
+  let submission = await prisma.formSubmission.findUnique({
     where: { id: paramId(req.params.id) },
-    include: {
-      format: {
-        include: {
-          sheets: {
-            orderBy: { sheetOrder: 'asc' },
-            include: { fields: { orderBy: { sortOrder: 'asc' } } },
-          },
-        },
-      },
-      operator: { select: { id: true, fullName: true } },
-      reviewedBy: { select: { id: true, fullName: true } },
-      sheets: { include: { sheet: true } },
-      signature: true,
-    },
+    include: submissionInclude,
   });
 
   if (!submission) {
@@ -131,6 +137,18 @@ router.get('/:id', async (req: Request, res: Response) => {
   const isAdmin = req.user!.role === UserRole.ADMIN;
   if (!isAdmin && submission.operatorId !== req.user!.userId) {
     return res.status(403).json({ error: 'No tiene acceso a este envío' });
+  }
+
+  const isEditable =
+    submission.status === SubmissionStatus.DRAFT ||
+    submission.status === SubmissionStatus.REJECTED;
+
+  if (isEditable && !isAdmin && !isSameWorkDate(submission.workDate, getTodayWorkDate())) {
+    submission = await prisma.formSubmission.update({
+      where: { id: submission.id },
+      data: { workDate: getTodayWorkDate() },
+      include: submissionInclude,
+    });
   }
 
   res.json(submission);
@@ -150,6 +168,11 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
   if (submission.status !== SubmissionStatus.DRAFT && submission.status !== SubmissionStatus.REJECTED) {
     return res.status(400).json({ error: 'Este envío ya no se puede editar' });
   }
+
+  await prisma.formSubmission.update({
+    where: { id: submission.id },
+    data: { workDate: getTodayWorkDate() },
+  });
 
   const updated = await prisma.formSubmissionSheet.update({
     where: {
@@ -186,6 +209,15 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
 
   if (submission.status !== SubmissionStatus.DRAFT && submission.status !== SubmissionStatus.REJECTED) {
     return res.status(400).json({ error: 'Este envío ya fue entregado' });
+  }
+
+  const today = getTodayWorkDate();
+  if (!isSameWorkDate(submission.workDate, today)) {
+    await prisma.formSubmission.update({
+      where: { id: submission.id },
+      data: { workDate: today },
+    });
+    submission.workDate = today;
   }
 
   const missingFields: { sheet: string; field: string; label: string }[] = [];
@@ -260,6 +292,31 @@ router.post('/:id/approve', requireRole(UserRole.ADMIN), async (req: Request, re
   });
 
   res.json(updated);
+});
+
+// Eliminar borrador (solo el operario dueño)
+router.delete('/:id', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
+  const submission = await prisma.formSubmission.findUnique({
+    where: { id: paramId(req.params.id) },
+  });
+
+  if (!submission) {
+    return res.status(404).json({ error: 'Envío no encontrado' });
+  }
+
+  if (submission.operatorId !== req.user!.userId) {
+    return res.status(403).json({ error: 'No tiene acceso a este envío' });
+  }
+
+  if (submission.status !== SubmissionStatus.DRAFT) {
+    return res.status(400).json({ error: 'Solo se pueden eliminar borradores' });
+  }
+
+  await prisma.formSubmission.delete({
+    where: { id: submission.id },
+  });
+
+  res.status(204).send();
 });
 
 // Rechazar (admin)

@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
 import Button from '@/components/Button';
+import { formatWorkDateShort, toWorkDateString } from '@/lib/workDate';
 import type { FormSubmission } from '@/types';
 
 export default function AdminSearchPage() {
@@ -81,7 +82,7 @@ export default function AdminSearchPage() {
                       {sub.format?.name}
                     </Link>
                     <p className="text-sm text-gray-500">
-                      {sub.operator?.fullName} — {new Date(sub.workDate).toLocaleDateString('es-CO')}
+                      {sub.operator?.fullName} — {formatWorkDateShort(toWorkDateString(sub.workDate))}
                     </p>
                     {sub.signature && (
                       <p className="text-xs text-green-600">

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
+import { formatWorkDateShort, toWorkDateString } from '@/lib/workDate';
 import type { FormSubmission } from '@/types';
 
 export default function AdminPending() {
@@ -42,7 +43,7 @@ export default function AdminPending() {
                       Operario: {sub.operator?.fullName}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Fecha del turno: {new Date(sub.workDate).toLocaleDateString('es-CO')}
+                      Fecha del turno: {formatWorkDateShort(toWorkDateString(sub.workDate))}
                     </p>
                     <p className="text-sm text-gray-500">
                       Entregado: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('es-CO') : '-'}

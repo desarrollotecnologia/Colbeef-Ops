@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { formatWorkDateShort, getWorkDateString, toWorkDateString } from '@/lib/workDate';
 import type { FormSubmission } from '@/types';
 
 const statusConfig = {
@@ -16,10 +18,31 @@ const statusConfig = {
 export default function OperatorSubmissions() {
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FormSubmission | null>(null);
+
+  const loadSubmissions = () => {
+    setLoading(true);
+    api.get('/submissions').then(({ data }) => setSubmissions(data)).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    api.get('/submissions').then(({ data }) => setSubmissions(data)).finally(() => setLoading(false));
+    loadSubmissions();
   }, []);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    try {
+      await api.delete(`/submissions/${deleteTarget.id}`);
+      setSubmissions((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const today = getWorkDateString();
 
   return (
     <Layout>
@@ -43,27 +66,59 @@ export default function OperatorSubmissions() {
           {submissions.map((sub) => {
             const cfg = statusConfig[sub.status];
             const Icon = cfg.icon;
+            const workDateStr = toWorkDateString(sub.workDate);
+            const isOldDraft = sub.status === 'DRAFT' && workDateStr !== today;
+
             return (
-              <Link key={sub.id} to={`/submissions/${sub.id}`}>
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardBody className="flex items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-semibold">{sub.format?.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        Fecha: {new Date(sub.workDate).toLocaleDateString('es-CO')}
-                      </p>
-                    </div>
+              <Card key={sub.id} className="hover:shadow-md transition-shadow">
+                <CardBody className="flex items-center justify-between gap-4">
+                  <Link to={`/submissions/${sub.id}`} className="flex-1 min-w-0">
+                    <h3 className="font-semibold">{sub.format?.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      Fecha: {formatWorkDateShort(workDateStr)}
+                      {isOldDraft && (
+                        <span className="ml-2 text-amber-600 font-medium">· Borrador anterior</span>
+                      )}
+                    </p>
+                  </Link>
+                  <div className="flex items-center gap-2 shrink-0">
                     <span className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${cfg.color}`}>
                       <Icon size={14} />
                       {cfg.label}
                     </span>
-                  </CardBody>
-                </Card>
-              </Link>
+                    {sub.status === 'DRAFT' && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(sub)}
+                        disabled={deletingId === sub.id}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Eliminar borrador"
+                        aria-label="Eliminar borrador"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                </CardBody>
+              </Card>
             );
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="¿Eliminar borrador?"
+        message={
+          deleteTarget
+            ? `Se eliminará el borrador de "${deleteTarget.format?.name}" (${formatWorkDateShort(toWorkDateString(deleteTarget.workDate))}). Esta acción no se puede deshacer.`
+            : ''
+        }
+        confirmLabel="Sí, eliminar"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </Layout>
   );
 }

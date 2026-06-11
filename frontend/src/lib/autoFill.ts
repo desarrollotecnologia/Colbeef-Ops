@@ -9,8 +9,8 @@ export interface AutoFillContext {
 }
 
 export function getDayKey(dateStr: string): (typeof DAY_KEYS)[number] {
-  const d = new Date(dateStr + 'T12:00:00');
-  return DAY_KEYS[d.getDay()];
+  const d = new Date(dateStr + 'T12:00:00Z');
+  return DAY_KEYS[d.getUTCDay()];
 }
 
 export function resolveAutoValue(field: FormatField, ctx: AutoFillContext): unknown {

@@ -1,14 +1,5 @@
 import { FormatField } from '@prisma/client';
-
-const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-
-function getDayKey(date: Date): string {
-  return DAY_KEYS[date.getDay()];
-}
-
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/\s+/g, '_').replace(/[.]/g, '');
-}
+import { getDayKey, slugifyPoint } from './dayKey';
 
 type FieldOptions = {
   layout?: string;
@@ -33,7 +24,7 @@ export function isFieldValueEmpty(
     const tableType = options.tableType ?? 'cloro';
 
     for (const punto of points) {
-      const key = slugify(punto);
+      const key = slugifyPoint(punto);
       const row = data[key] ?? {};
       if (tableType === 'cloro') {
         if (!row.cloro_residual || !row.cnc) return true;

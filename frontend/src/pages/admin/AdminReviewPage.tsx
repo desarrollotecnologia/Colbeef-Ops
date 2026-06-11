@@ -8,6 +8,7 @@ import Button from '@/components/Button';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FieldDisplay from '@/components/form/FieldDisplay';
 import { groupFields } from '@/lib/formUtils';
+import { formatWorkDateShort, toWorkDateString } from '@/lib/workDate';
 import type { FormSubmission, FormatField } from '@/types';
 
 export default function AdminReviewPage() {
@@ -65,7 +66,7 @@ export default function AdminReviewPage() {
         <h1 className="text-2xl font-bold">{submission.format?.name}</h1>
         <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-2">
           <span>Operario: {submission.operator?.fullName}</span>
-          <span>Fecha: {new Date(submission.workDate).toLocaleDateString('es-CO')}</span>
+          <span>Fecha: {formatWorkDateShort(toWorkDateString(submission.workDate))}</span>
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
             submission.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
             submission.status === 'PENDING_REVIEW' ? 'bg-yellow-100 text-yellow-800' :

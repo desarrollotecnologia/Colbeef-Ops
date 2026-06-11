@@ -4,6 +4,7 @@ import { ClipboardCheck, FileCheck, Clock } from 'lucide-react';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
+import { formatWorkDateShort, toWorkDateString } from '@/lib/workDate';
 import type { FormSubmission } from '@/types';
 
 export default function AdminDashboard() {
@@ -77,7 +78,7 @@ export default function AdminDashboard() {
                     <div>
                       <h3 className="font-semibold">{sub.format?.name}</h3>
                       <p className="text-sm text-gray-500">
-                        {sub.operator?.fullName} — {new Date(sub.workDate).toLocaleDateString('es-CO')}
+                        {sub.operator?.fullName} — {formatWorkDateShort(toWorkDateString(sub.workDate))}
                       </p>
                     </div>
                     <span className="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
@@ -108,7 +109,7 @@ export default function AdminDashboard() {
                     <div>
                       <h3 className="font-semibold">{sub.format?.name}</h3>
                       <p className="text-sm text-gray-500">
-                        {new Date(sub.workDate).toLocaleDateString('es-CO')}
+                        {formatWorkDateShort(toWorkDateString(sub.workDate))}
                       </p>
                     </div>
                     <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full">

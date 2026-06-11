@@ -10,6 +10,7 @@ import FormatSheetHeader from '@/components/form/FormatSheetHeader';
 import SheetFields from '@/components/form/SheetFields';
 import { useAuth } from '@/context/AuthContext';
 import { applyAutoFields, recalcDependentFields } from '@/lib/autoFill';
+import { formatWorkDateShort, getWorkDateString, toWorkDateString } from '@/lib/workDate';
 import type { FormSubmission, FormatField, MissingField } from '@/types';
 
 export default function FillFormPage() {
@@ -25,23 +26,30 @@ export default function FillFormPage() {
   const [saving, setSaving] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [missingFields, setMissingFields] = useState<MissingField[]>([]);
-  const workDate = new Date().toISOString().split('T')[0];
+
+  const getEffectiveWorkDate = useCallback(
+    (sub: FormSubmission | null, editable: boolean) => {
+      if (editable || !sub?.workDate) return getWorkDateString();
+      return toWorkDateString(sub.workDate);
+    },
+    []
+  );
 
   const initSheetData = useCallback(
-    (fields: FormatField[], existing: Record<string, unknown>) => {
+    (fields: FormatField[], existing: Record<string, unknown>, dateStr: string) => {
       return applyAutoFields(fields, existing, {
-        workDate: submission?.workDate?.split('T')[0] ?? workDate,
+        workDate: dateStr,
         userName: user?.fullName ?? '',
         sheetData: existing,
       });
     },
-    [submission?.workDate, workDate, user?.fullName]
+    [user?.fullName]
   );
 
   useEffect(() => {
     async function init() {
       if (isNew && formatId) {
-        const { data } = await api.post('/submissions', { formatId, workDate });
+        const { data } = await api.post('/submissions', { formatId });
         navigate(`/submissions/${data.id}`, { replace: true });
         return;
       }
@@ -51,12 +59,15 @@ export default function FillFormPage() {
       const { data } = await api.get(`/submissions/${id}`);
       setSubmission(data);
 
+      const editable = data.status === 'DRAFT' || data.status === 'REJECTED';
+      const dateStr = getEffectiveWorkDate(data, editable);
+
       const initial: Record<string, Record<string, unknown>> = {};
       data.sheets?.forEach((s: { sheetId: string; data: Record<string, unknown> }) => {
         const sheetDef = data.format?.sheets?.find((sh: { id: string }) => sh.id === s.sheetId);
         const fields = sheetDef?.fields ?? [];
         initial[s.sheetId] = applyAutoFields(fields, s.data || {}, {
-          workDate: data.workDate?.split('T')[0] ?? workDate,
+          workDate: dateStr,
           userName: user?.fullName ?? '',
           sheetData: s.data || {},
         });
@@ -66,7 +77,7 @@ export default function FillFormPage() {
     }
 
     init().catch(() => setLoading(false));
-  }, [id, isNew, formatId, navigate, workDate, user?.fullName]);
+  }, [id, isNew, formatId, navigate, getEffectiveWorkDate, user?.fullName]);
 
   if (loading || !submission) {
     return (
@@ -83,6 +94,7 @@ export default function FillFormPage() {
   const formatSheet = submission.format?.sheets?.find((s) => s.id === currentSheet?.id);
   const fields = formatSheet?.fields || [];
   const canEdit = submission.status === 'DRAFT' || submission.status === 'REJECTED';
+  const effectiveWorkDate = getEffectiveWorkDate(submission, canEdit);
   const sheetData = formData[currentSheet?.id ?? ''] ?? {};
 
   const updateField = (fieldKey: string, value: unknown) => {
@@ -90,7 +102,7 @@ export default function FillFormPage() {
     setFormData((prev) => {
       let updated = { ...prev[currentSheet.id], [fieldKey]: value };
       updated = recalcDependentFields(fields, updated, {
-        workDate: submission.workDate?.split('T')[0] ?? workDate,
+        workDate: effectiveWorkDate,
         userName: user?.fullName ?? '',
         sheetData: updated,
       }, fieldKey);
@@ -102,7 +114,7 @@ export default function FillFormPage() {
     if (!currentSheet) return;
     setSaving(true);
     try {
-      const dataToSave = initSheetData(fields, formData[currentSheet.id] || {});
+      const dataToSave = initSheetData(fields, formData[currentSheet.id] || {}, effectiveWorkDate);
       await api.put(`/submissions/${submission.id}/sheets/${currentSheet.id}`, { data: dataToSave });
     } finally {
       setSaving(false);
@@ -130,7 +142,7 @@ export default function FillFormPage() {
         <p className="text-gray-500 text-sm">
           Hoja {currentSheetIndex + 1} de {sheets.length}: {currentSheet?.name}
           {' · '}
-          Fecha: {new Date(submission.workDate).toLocaleDateString('es-CO')}
+          Fecha: {formatWorkDateShort(effectiveWorkDate)}
         </p>
         {submission.status === 'REJECTED' && submission.reviewNotes && (
           <div className="mt-2 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-800">
@@ -177,7 +189,7 @@ export default function FillFormPage() {
         sheetIndex={currentSheetIndex}
         sheetTotal={sheets.length}
         documentCode={submission.format?.documentCode}
-        workDate={submission.workDate?.split('T')[0] ?? workDate}
+        workDate={effectiveWorkDate}
         operatorName={user?.fullName ?? ''}
       />
 
@@ -192,7 +204,7 @@ export default function FillFormPage() {
               fields={fields}
               sheetData={sheetData}
               onUpdate={updateField}
-              workDate={submission.workDate?.split('T')[0] ?? workDate}
+              workDate={effectiveWorkDate}
               disabled={!canEdit}
             />
           )}
