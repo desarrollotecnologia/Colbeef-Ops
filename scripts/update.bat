@@ -7,7 +7,11 @@ echo.
 
 cd /d "%~dp0\.."
 
-echo [1/6] Trayendo cambios de GitHub...
+echo [1/6] Deteniendo servidor anterior...
+call "%~dp0stop.bat"
+
+echo.
+echo [2/6] Trayendo cambios de GitHub...
 git pull origin master
 if %errorlevel% neq 0 (
     echo ERROR: No se pudo traer los cambios. Verifique la conexion.
@@ -16,7 +20,7 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/6] Compilando frontend...
+echo [3/6] Compilando frontend...
 cd frontend
 call npm run build
 if %errorlevel% neq 0 (
@@ -28,7 +32,7 @@ if %errorlevel% neq 0 (
 cd ..
 
 echo.
-echo [3/6] Compilando backend...
+echo [4/6] Compilando backend...
 cd backend
 call npm run db:generate
 if %errorlevel% neq 0 (
@@ -47,7 +51,7 @@ if %errorlevel% neq 0 (
 cd ..
 
 echo.
-echo [4/6] Actualizando campos del formato en base de datos...
+echo [5/6] Actualizando campos del formato en base de datos...
 cd backend
 call npm run db:seed
 if %errorlevel% neq 0 (
@@ -57,10 +61,6 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 cd ..
-
-echo.
-echo [5/6] Deteniendo servidor anterior...
-call "%~dp0stop.bat"
 
 echo.
 echo [6/6] Iniciando servidor actualizado...
