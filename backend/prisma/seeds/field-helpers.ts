@@ -192,6 +192,7 @@ export function itemChecklistField(
     columns?: ('cnc' | 'observation' | 'corrective' | 'platforms')[];
     platformCount?: number;
     cavaColumns?: string[];
+    areaLabel?: string;
   }
 ): FieldDef {
   const mode = opts?.mode ?? 'cnc';
@@ -211,6 +212,7 @@ export function itemChecklistField(
       columns: opts?.columns ?? ['cnc', 'observation', 'corrective'],
       platformCount: opts?.platformCount,
       cavaColumns: opts?.cavaColumns,
+      areaLabel: opts?.areaLabel,
     },
   };
 }

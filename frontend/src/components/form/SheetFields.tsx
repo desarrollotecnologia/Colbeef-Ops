@@ -55,27 +55,36 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
           );
         }
 
-        const checklistField = visibleFields.find(
+        const checklistFields = visibleFields.filter(
           (f) => f.fieldType === 'CHECKLIST' && f.options?.items
         );
 
-        if (checklistField && visibleFields.length === 1) {
+        if (checklistFields.length > 0 && checklistFields.length === visibleFields.length) {
           return (
-            <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
-              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
-                <h3 className="text-xs font-bold uppercase text-gray-900">
-                  {group.name ?? checklistField.label}
-                </h3>
-              </div>
-              <div className="p-0">
-                <ItemChecklist
-                  options={checklistField.options ?? {}}
-                  value={(sheetData[checklistField.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
-                  onChange={(v) => onUpdate(checklistField.fieldKey, v)}
-                  disabled={disabled}
-                  tableMode
-                />
-              </div>
+            <div key={gi} className="space-y-4">
+              {checklistFields.map((checklistField) => (
+                <div key={checklistField.fieldKey} className="border border-gray-800 rounded-sm overflow-hidden">
+                  <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+                    <h3 className="text-xs font-bold uppercase text-gray-900">
+                      {checklistField.label}
+                    </h3>
+                    {checklistField.options?.platformCount && (
+                      <p className="text-[11px] text-gray-600 mt-0.5">
+                        PLAT 1 – {checklistField.options.platformCount} · C / NC por plataforma
+                      </p>
+                    )}
+                  </div>
+                  <div className="p-0">
+                    <ItemChecklist
+                      options={checklistField.options ?? {}}
+                      value={(sheetData[checklistField.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
+                      onChange={(v) => onUpdate(checklistField.fieldKey, v)}
+                      disabled={disabled}
+                      tableMode
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           );
         }
@@ -102,9 +111,10 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
         );
       })}
 
-      <div className="text-xs text-gray-500 border-t pt-3 space-y-0.5">
-        <p><strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>AC:</strong> Acción correctiva</p>
-        <p className="text-blue-600">Cada <strong>punto inspeccionado</strong> aparece en su propia fila según el día. El <strong>pH (7.0)</strong> es automático.</p>
+      <div className="text-xs text-gray-500 border-t pt-3">
+        <p>
+          <strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>PLAT:</strong> Plataforma &nbsp; <strong>AC:</strong> Acción correctiva (obligatoria si hay NC u observación)
+        </p>
       </div>
     </div>
   );

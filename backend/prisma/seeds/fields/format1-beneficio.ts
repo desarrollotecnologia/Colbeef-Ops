@@ -38,23 +38,32 @@ export function getFormat1Fields(slug: string): FieldDef[] {
         itemChecklistField('zona_sangria', 'Zona insensibilización y sangría', ZONA_SANGRIA_ITEMS.map((l, i) => ({ key: `zs_${i}`, label: l })), 21, { groupName: 'Zona sangría' }),
       ];
 
-    case 'zona-intermedia':
-      return [
-        itemChecklistField('zona_intermedia_sangria', 'Zona insensibilización y sangría', [
-          'Gancho de izado', 'Activador para izado y transporte', 'Grilletes', 'Pistola de noqueo',
-          'Paredes', 'Pisos', 'Canalinas y cajas cifonadas',
-        ].map((l, i) => ({ key: `i_${i}`, label: l })), 1, { groupName: 'Zona intermedia' }),
-        itemChecklistField('zona_intermedia_area', 'Zona intermedia', [
-          'Puerta de ingreso a la zona', 'Esterilizador(s)', 'Lavamanos no manual',
-          'Tijeras hidráulicas para corte de patas', 'Mesas de acero inoxidable',
-          'Sistema para transporte de pieles', 'Máquina desolladora', 'Cuarto de zona intermedia',
-          'Sierra de esternón o pecho', 'Sistema de transporte de vísceras blancas',
-        ].map((l, i) => ({ key: `a_${i}`, label: l })), 2, { groupName: 'Zona intermedia' }),
-        itemChecklistField('plataformas', 'Plataformas (PLAT 1-5)', [
-          'Base superior elevador', 'Base inferior elevador', 'Debajo de la plataforma', 'Cepillo',
-          'Esterilizador(s)', 'Lavamanos no manual', 'Lavadelantales', 'Barra de contacto',
-        ].map((l, i) => ({ key: `p_${i}`, label: l })), 3, { columns: ['cnc', 'observation', 'corrective', 'platforms'], platformCount: 5 }),
+    case 'zona-intermedia': {
+      const ZONA_INTERMEDIA_EQUIPOS = [
+        'Gancho de izado', 'Activador para izado y transporte', 'Grilletes', 'Pistola de noqueo',
+        'Paredes', 'Pisos', 'Canalinas y cajas cifonadas',
+        'Puerta de ingreso a la zona', 'Esterilizador(s)', 'Lavamanos no manual',
+        'Tijeras hidráulicas para corte de patas', 'Mesas de acero inoxidable',
+        'Sistema para transporte de pieles', 'Máquina desolladora', 'Cuarto de zona intermedia',
+        'Sierra de esternón o pecho', 'Sistema de transporte de vísceras blancas',
       ];
+      const PLATAFORMAS_ITEMS = [
+        'Base superior elevador', 'Base inferior elevador', 'Debajo de la plataforma', 'Cepillo',
+        'Esterilizador(s)', 'Lavamanos no manual', 'Lavadelantales', 'Barra de contacto',
+      ];
+      return [
+        itemChecklistField('zona_intermedia_equipos', 'Zona insensibilización y sangría', ZONA_INTERMEDIA_EQUIPOS.map((l, i) => ({ key: `eq_${i}`, label: l })), 1, {
+          groupName: 'Zona insensibilización y sangría',
+          areaLabel: 'Zona insensibilización y sangría',
+        }),
+        itemChecklistField('plataformas', 'Zona intermedia — Plataformas', PLATAFORMAS_ITEMS.map((l, i) => ({ key: `p_${i}`, label: l })), 2, {
+          groupName: 'Zona intermedia — Plataformas',
+          columns: ['platforms', 'observation', 'corrective'],
+          platformCount: 9,
+          areaLabel: 'Zona intermedia',
+        }),
+      ];
+    }
 
     case 'zona-limpia':
       return [
@@ -69,7 +78,11 @@ export function getFormat1Fields(slug: string): FieldDef[] {
           'Base superior elevador', 'Base inferior elevador', 'Debajo de la plataforma', 'Esterilizador(s)',
           'Lavamanos no manual', 'Lavadelantales', 'Barra de contacto', 'Llave azul para agua', 'Mangueras',
           'Pisos', 'Paredes', 'Canalinas y cajas cifonadas',
-        ].map((l, i) => ({ key: `p_${i}`, label: l })), 3, { columns: ['cnc', 'observation', 'corrective', 'platforms'], platformCount: 5 }),
+        ].map((l, i) => ({ key: `p_${i}`, label: l })), 3, {
+          groupName: 'Plataformas (PLAT 1-5)',
+          columns: ['platforms', 'observation', 'corrective'],
+          platformCount: 5,
+        }),
       ];
 
     case 'sub-p-4':

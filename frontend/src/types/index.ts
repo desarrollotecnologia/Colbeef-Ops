@@ -100,6 +100,7 @@ export interface FieldOptions {
   minRows?: number;
   maxRows?: number;
   note?: string;
+  areaLabel?: string;
 }
 
 export interface RepeaterColumn {
