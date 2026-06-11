@@ -203,6 +203,7 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
   if (tableMode && hasSanitary) {
     const hasSections = items.some((item) => item.section);
     const sectionGroups = hasSections ? groupBySection(items) : [{ label: '', items }];
+    const totalCols = 1 + 1 + cncSubCols.length + 1 + 1 + cncSubCols.length + 1;
     let rowIdx = 0;
 
     return (
@@ -210,7 +211,6 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
         <table className="w-full text-sm min-w-[960px]">
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
-              {hasSections && <th className={`${thClass} text-left w-28`} rowSpan={2}>Sección</th>}
               <th className={`${thClass} text-left`} rowSpan={2}>Operación sanitaria</th>
               <th className={`${thClass} w-10`} rowSpan={2}>FR</th>
               <th className={thClass} colSpan={2}>Rev.</th>
@@ -220,30 +220,31 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
               <th className={`${thClass} text-left min-w-[90px]`} rowSpan={2}>Responsable</th>
             </tr>
             <tr className="bg-white border-b-2 border-gray-800">
-              {cncSubCols.map((sub) => (
-                <th key={`rev-${sub}`} className={`${thClass} w-10`}>{sub}</th>
-              ))}
-              {cncSubCols.map((sub) => (
-                <th key={`final-${sub}`} className={`${thClass} w-10`}>{sub}</th>
-              ))}
+              <th className={`${thClass} w-10`}>C</th>
+              <th className={`${thClass} w-10`}>NC</th>
+              <th className={`${thClass} w-10`}>C</th>
+              <th className={`${thClass} w-10`}>NC</th>
             </tr>
           </thead>
           <tbody>
-            {sectionGroups.flatMap((group) =>
-              group.items.map((item, idxInGroup) => {
+            {sectionGroups.flatMap((group) => {
+              const sectionRow = group.label ? (
+                <tr key={`section-${group.label}`} className="bg-gray-200">
+                  <td
+                    colSpan={totalCols}
+                    className="px-3 py-1.5 border-b border-gray-400 text-xs font-bold uppercase text-gray-900 text-center"
+                  >
+                    {group.label}
+                  </td>
+                </tr>
+              ) : null;
+
+              const itemRows = group.items.map((item) => {
                 const data = value[item.key] ?? {};
                 const currentRow = rowIdx;
                 rowIdx += 1;
                 return (
                   <tr key={item.key} className={currentRow % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    {hasSections && idxInGroup === 0 && (
-                      <td
-                        rowSpan={group.items.length}
-                        className={`${tdClass} px-2 py-2 text-xs font-bold uppercase text-gray-800 bg-gray-50 align-middle`}
-                      >
-                        {group.label}
-                      </td>
-                    )}
                     <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>{item.label}</td>
                     <td className={`${tdClass} text-center text-xs font-mono text-gray-600`}>{item.fr ?? '—'}</td>
                     {cncSubCols.map((sub) => (
@@ -298,8 +299,10 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
                     </td>
                   </tr>
                 );
-              })
-            )}
+              });
+
+              return sectionRow ? [sectionRow, ...itemRows] : itemRows;
+            })}
           </tbody>
         </table>
       </div>

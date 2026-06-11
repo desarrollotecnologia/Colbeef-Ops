@@ -4,6 +4,8 @@ import FormField from './FormField';
 import ItemChecklist from './ItemChecklist';
 import DayScheduleTable from './DayScheduleTable';
 import FormalMeasureTable from './FormalMeasureTable';
+import Format2Hoja1 from './Format2Hoja1';
+import Format2SanitarySheet from './Format2SanitarySheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const HEADER_ONLY_KEYS = new Set(['empresa']);
@@ -24,6 +26,35 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
       {groups.map((group, gi) => {
         const visibleFields = group.fields.filter((f) => !HEADER_ONLY_KEYS.has(f.fieldKey));
         if (visibleFields.length === 0) return null;
+
+        const isFormat2Hoja1 =
+          visibleFields.some((f) => f.fieldKey === 'especie') &&
+          visibleFields.some((f) => f.options?.layout === 'formal_measure_table');
+
+        if (isFormat2Hoja1) {
+          return (
+            <Format2Hoja1
+              key={gi}
+              fields={visibleFields}
+              sheetData={sheetData}
+              onUpdate={onUpdate}
+              disabled={disabled}
+            />
+          );
+        }
+
+        const sanitaryChecklist = visibleFields.find((f) => f.fieldKey === 'operacion_sanitaria');
+        if (sanitaryChecklist) {
+          return (
+            <Format2SanitarySheet
+              key={gi}
+              fields={visibleFields}
+              sheetData={sheetData}
+              onUpdate={onUpdate}
+              disabled={disabled}
+            />
+          );
+        }
 
         const measureTableField = visibleFields.find(
           (f) => f.fieldType === 'CHECKLIST' && f.options?.layout === 'formal_measure_table'

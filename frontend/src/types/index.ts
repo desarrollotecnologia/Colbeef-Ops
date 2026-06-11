@@ -119,6 +119,7 @@ export interface MeasureRowData {
   punto_toma?: string;
   cloro_residual?: string;
   temperatura?: string;
+  presion?: string;
   volumen_naoh?: string;
   concentracion?: string;
   principio_activo?: string;

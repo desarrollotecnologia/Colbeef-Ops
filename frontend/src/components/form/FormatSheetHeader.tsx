@@ -23,6 +23,10 @@ export default function FormatSheetHeader({
   empresa = 'COLBEEF S.A.S',
 }: Props) {
   const fecha = formatSpanishDateLong(workDate);
+  const sistemaLabel =
+    documentCode === 'AC-FR-017'
+      ? 'Sistema de Aseguramiento de la Calidad'
+      : 'Sistema de Aseguramiento de la Inocuidad';
 
   return (
     <div className="border-2 border-gray-800 rounded-sm overflow-hidden mb-6 bg-white">
@@ -32,7 +36,7 @@ export default function FormatSheetHeader({
         </div>
         <div className="p-3 border-b sm:border-b-0 sm:border-r border-gray-800 text-center flex flex-col justify-center">
           <p className="text-[10px] uppercase tracking-wide text-gray-600 font-semibold">
-            Sistema de Aseguramiento de la Inocuidad
+            {sistemaLabel}
           </p>
           <h2 className="text-sm font-bold text-gray-900 leading-snug mt-1 uppercase">{formatName}</h2>
           <p className="text-xs font-bold text-primary-800 mt-1">{empresa}</p>
@@ -40,7 +44,7 @@ export default function FormatSheetHeader({
         <div className="p-3 text-xs text-gray-800 space-y-0.5 flex flex-col justify-center">
           <p><span className="font-bold">Hoja:</span> {sheetIndex + 1} / {sheetTotal}</p>
           {documentCode && <p><span className="font-bold">Código:</span> {documentCode}</p>}
-          <p><span className="font-bold">Versión:</span> 2.0.0</p>
+          <p><span className="font-bold">Versión:</span> {documentCode === 'AC-FR-017' ? '03' : '2.0.0'}</p>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 bg-[#e8edf2] border-b border-gray-800 text-sm">

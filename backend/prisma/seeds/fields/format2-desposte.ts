@@ -9,6 +9,9 @@ import {
   ESPECIES,
 } from '../field-helpers';
 
+const HOJA1 = 'Hoja 1';
+const SANITARY_GROUP = 'Operación sanitaria';
+
 const SANITARY_ITEM = (key: string, label: string, fr: string, section: string) => ({
   key,
   label,
@@ -30,21 +33,19 @@ const TEMP_AREAS = [
 ];
 
 function sanitarySheet(
-  sections: { name: string; items: { key: string; label: string; fr: string }[] }[],
-  extras: FieldDef[] = []
+  sections: { name: string; items: { key: string; label: string; fr: string }[] }[]
 ): FieldDef[] {
   const allItems = sections.flatMap((sec) =>
     sec.items.map((item) => SANITARY_ITEM(item.key, item.label, item.fr, sec.name))
   );
 
   return [
-    readonlyField('detergente', 'Detergente / Concentración', 'Alcalino clorado 2%', 1, 'Productos de limpieza'),
-    readonlyField('desinfectante', 'Desinfectante / Concentración', 'Amonio cuaternario 200 ppm', 2, 'Productos de limpieza'),
+    readonlyField('detergente', 'Detergente / Concentración', 'Alcalino clorado 2%', 1, SANITARY_GROUP),
+    readonlyField('desinfectante', 'Desinfectante / Concentración', 'Amonio cuaternario 200 ppm', 2, SANITARY_GROUP),
     itemChecklistField('operacion_sanitaria', 'Operación sanitaria', allItems, 3, {
-      groupName: 'Operación sanitaria',
+      groupName: SANITARY_GROUP,
       columns: ['fr', 'rev_cnc', 'observation', 'corrective', 'final_cnc', 'responsible'],
     }),
-    ...extras,
   ];
 }
 
@@ -52,7 +53,7 @@ export function getFormat2Fields(slug: string): FieldDef[] {
   switch (slug) {
     case 'preoperativo-1':
       return [
-        multiSelectField('especie', 'Especie', ESPECIES, 1, { required: true, groupName: 'Encabezado' }),
+        multiSelectField('especie', 'Especie', ESPECIES, 1, { required: true, groupName: HOJA1 }),
         formalMeasureTableField(
           'cloro_registros',
           'Control de cloro residual',
@@ -62,8 +63,8 @@ export function getFormat2Fields(slug: string): FieldDef[] {
             { key: 'r2', label: '2' },
           ],
           2,
-          'Control de cloro residual',
-          { helpText: 'Cloro residual libre 0.3 – 2.0 ppm · pH = 7.0' }
+          HOJA1,
+          { helpText: 'Cloro residual libre (0.3 – 2.0 ppm) · pH = 7.0' }
         ),
         formalMeasureTableField(
           'temperaturas',
@@ -71,7 +72,7 @@ export function getFormat2Fields(slug: string): FieldDef[] {
           'temperaturas',
           TEMP_AREAS.map((label, i) => ({ key: `t_${i}`, label })),
           3,
-          'Temperaturas de áreas'
+          HOJA1
         ),
         formalMeasureTableField(
           'titulacion',
@@ -82,7 +83,7 @@ export function getFormat2Fields(slug: string): FieldDef[] {
             { key: 'tit_2', label: '2' },
           ],
           4,
-          'Titulación de ácido láctico',
+          HOJA1,
           { helpText: 'Volumen 2.2 ml → 1.98% · Volumen 2.3 ml → 2.07%' }
         ),
         formalMeasureTableField(
@@ -95,7 +96,7 @@ export function getFormat2Fields(slug: string): FieldDef[] {
             { key: 'termoforma', label: 'Termoformadora', naTemp: true },
           ],
           5,
-          'Variables de equipos'
+          HOJA1
         ),
         formalMeasureTableField(
           'pediluvios',
@@ -106,9 +107,9 @@ export function getFormat2Fields(slug: string): FieldDef[] {
             { key: 'p2', label: '2' },
           ],
           6,
-          'Pediluvios'
+          HOJA1
         ),
-        textareaField('observaciones', 'Observaciones', 7, { groupName: 'Observaciones' }),
+        textareaField('observaciones', 'Observaciones', 7, { groupName: HOJA1 }),
       ];
 
     case 'preoperativo-2':
@@ -228,8 +229,8 @@ export function getFormat2Fields(slug: string): FieldDef[] {
       ]);
 
     case 'preoperativo-4':
-      return sanitarySheet(
-        [
+      return [
+        ...sanitarySheet([
           {
             name: 'Otras áreas',
             items: [
@@ -255,18 +256,14 @@ export function getFormat2Fields(slug: string): FieldDef[] {
               { key: 'ha_techos', label: 'Techos y cielorraso', fr: 'TM' },
             ],
           },
-        ],
-        [
-          selectField('material_extrano', '¿Presencia de material extraño en superficies y equipos?', ['Sí', 'No'], 50, {
-            groupName: 'Material extraño',
-            required: true,
-          }),
-          textareaField('material_extrano_obs', 'Observaciones', 51, { groupName: 'Material extraño' }),
-          textareaField('higienizacion_obs', 'Observaciones higienización alturas', 52, {
-            groupName: 'Observaciones',
-          }),
-        ]
-      );
+        ]),
+        selectField('material_extrano', '¿Presencia de material extraño en superficies y equipos?', ['Sí', 'No'], 50, {
+          groupName: 'Presencia de material extraño',
+          required: true,
+        }),
+        textareaField('material_extrano_obs', 'Observaciones', 51, { groupName: 'Presencia de material extraño' }),
+        textareaField('higienizacion_obs', 'Observaciones', 52, { groupName: 'Observaciones higienización alturas' }),
+      ];
 
     default:
       return [];

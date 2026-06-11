@@ -92,8 +92,8 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={`${thClass} text-left`}>Punto de toma</th>
               <th className={thClass}>pH</th>
               <th className={thClass}>Cloro residual (0.3–2 ppm)</th>
-              <th className={thClass}>C</th>
-              <th className={thClass}>NC</th>
+              <th className={thClass}>Cumple</th>
+              <th className={thClass}>No cumple</th>
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>
@@ -140,8 +140,8 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={`${thClass} text-left`}>Área</th>
               <th className={thClass}>Hora</th>
               <th className={thClass}>Temperatura °C</th>
-              <th className={thClass}>C</th>
-              <th className={thClass}>NC</th>
+              <th className={thClass}>Cumple</th>
+              <th className={thClass}>No cumple</th>
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>
@@ -184,9 +184,9 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={`${thClass} w-10`}>#</th>
               <th className={thClass}>Hora</th>
               <th className={thClass}>Volumen NaOH (ml)</th>
-              <th className={thClass}>Concentración AC láctico 2%</th>
-              <th className={thClass}>C</th>
-              <th className={thClass}>NC</th>
+              <th className={thClass}>Concentración AC. láctico 2%</th>
+              <th className={thClass}>Cumple</th>
+              <th className={thClass}>No cumple</th>
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>
@@ -251,8 +251,35 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               return (
                 <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>{item.label}</td>
-                  <td className={`${tdClass} text-center text-xs text-gray-500`}>{meta.naTemp ? 'N.A' : '—'}</td>
-                  <td className={`${tdClass} text-center text-xs text-gray-500`}>{meta.naPresion ? 'N.A' : '—'}</td>
+                  <td className={tdClass}>
+                    {meta.naTemp ? (
+                      <span className="block text-center text-xs text-gray-500">N.A</span>
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={row.temperatura ?? ''}
+                        onChange={(e) => updateRow(item.key, { temperatura: e.target.value })}
+                        disabled={disabled}
+                        placeholder="°C"
+                        className={`${INPUT_CLASS} text-xs py-1.5`}
+                      />
+                    )}
+                  </td>
+                  <td className={tdClass}>
+                    {meta.naPresion ? (
+                      <span className="block text-center text-xs text-gray-500">N.A</span>
+                    ) : (
+                      <input
+                        type="text"
+                        value={row.presion ?? ''}
+                        onChange={(e) => updateRow(item.key, { presion: e.target.value })}
+                        disabled={disabled}
+                        placeholder="—"
+                        className={`${INPUT_CLASS} text-xs py-1.5`}
+                      />
+                    )}
+                  </td>
                   <td className={`${tdClass} text-center w-20 px-1`}>
                     <PowerToggle choice="Encendido" value={row.estado ?? ''} disabled={disabled} onChange={(v) => updateRow(item.key, { estado: v })} />
                   </td>
@@ -280,8 +307,8 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={`${thClass} w-10`}>N°</th>
               <th className={`${thClass} text-left`}>Principio activo</th>
               <th className={thClass}>Concentración (250 ppm)</th>
-              <th className={thClass}>C</th>
-              <th className={thClass}>NC</th>
+              <th className={thClass}>Cumple</th>
+              <th className={thClass}>No cumple</th>
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>
