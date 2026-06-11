@@ -12,7 +12,7 @@ echo.
 cd /d "%~dp0"
 
 set TASK_NAME=ColbeefOps-Server
-set START_SCRIPT=%~dp0start.bat
+set START_SCRIPT=%~dp0start-server.bat
 
 echo Script de inicio: %START_SCRIPT%
 echo.
@@ -51,7 +51,7 @@ echo Se ejecutara al iniciar Windows.
 echo.
 echo Para verificar:  schtasks /query /tn "%TASK_NAME%"
 echo Para eliminar:   schtasks /delete /tn "%TASK_NAME%" /f
-echo Para probar ahora: scripts\start.bat
+echo Para probar ahora: scripts\start-server.bat
 echo.
 pause
 exit /b 0

@@ -63,7 +63,7 @@ echo.
 echo Proximos pasos:
 echo   1. Configure backend\.env con su base de datos MySQL
 echo   2. Ejecute setup-database.bat para crear la BD
-echo   3. Ejecute start.bat para iniciar el servidor
+echo   3. Ejecute start-server.bat para iniciar el servidor
 echo   4. Ejecute setup-autostart.bat para arranque automatico
 echo.
 pause

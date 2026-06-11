@@ -53,23 +53,26 @@ cd ..
 
 echo.
 echo [5/6] Deteniendo servidor anterior...
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8081 " ^| findstr "LISTENING"') do (
-    taskkill /PID %%a /F >nul 2>&1
-)
+call "%~dp0stop.bat"
 
 echo.
 echo [6/6] Iniciando servidor actualizado...
-cd backend
-start /b node dist\index.js
-cd ..
-
-timeout /t 3 /nobreak >nul
+call "%~dp0start-server.bat"
+if %errorlevel% neq 0 (
+    echo ERROR: El servidor no inicio correctamente.
+    pause
+    exit /b 1
+)
 
 echo.
 echo ============================================
-echo   Servidor actualizado correctamente
+echo   Servidor actualizado y en linea
 echo ============================================
 echo.
 echo URL: http://192.168.20.205:8081
+echo.
+echo El servidor corre en segundo plano (ventana minimizada).
+echo Para detenerlo: scripts\stop.bat
+echo Para reiniciar solo: scripts\restart-server.bat
 echo.
 pause
