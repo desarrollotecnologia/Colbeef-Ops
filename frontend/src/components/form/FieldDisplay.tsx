@@ -18,7 +18,7 @@ export default function FieldDisplay({ field, value }: Props) {
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.layout === 'day_schedule_table') {
-    const data = value as Record<string, { cloro_residual?: string; temperatura?: string; cnc?: string; observaciones?: string }>;
+    const data = value as Record<string, { hora?: string; punto_toma?: string; cloro_residual?: string; temperatura?: string; cnc?: string; observaciones?: string }>;
     const rows = Object.entries(data ?? {});
     if (rows.length === 0) return <span className="text-gray-400">—</span>;
     return (
@@ -26,6 +26,8 @@ export default function FieldDisplay({ field, value }: Props) {
         {rows.map(([key, row]) => (
           <div key={key} className="border-l-2 border-primary-300 pl-2">
             <span className="font-medium capitalize">{key.replace(/_/g, ' ')}</span>
+            {row.hora && <span className="ml-2">{row.hora}</span>}
+            {row.punto_toma && <span className="ml-2">Toma: {row.punto_toma}</span>}
             {row.cloro_residual && <span className="ml-2">Cloro: {row.cloro_residual} ppm</span>}
             {row.temperatura && <span className="ml-2">Temp: {row.temperatura}°C</span>}
             {row.cnc && <span className={`ml-2 px-1 rounded font-bold ${row.cnc === 'C' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{row.cnc}</span>}

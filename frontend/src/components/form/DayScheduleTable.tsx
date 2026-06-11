@@ -4,6 +4,8 @@ import { getPointsForDay } from '@/lib/daySchedules';
 import { INPUT_CLASS } from '@/lib/formUtils';
 
 export interface DayPointRow {
+  hora?: string;
+  punto_toma?: string;
   cloro_residual?: string;
   temperatura?: string;
   cnc?: string;
@@ -31,7 +33,7 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
   if (points.length === 0) {
     return (
       <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-        Los domingos no se llena este formato.
+        No hay puntos programados para este día de la semana.
       </p>
     );
   }
@@ -43,16 +45,22 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
   if (tableType === 'cloro') {
     return (
       <div className="overflow-x-auto border border-gray-800">
-        <table className="w-full text-sm min-w-[640px]">
+        <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
               <th className="px-2 py-2 text-left text-[11px] font-bold uppercase border-r border-gray-800">
                 Puntos inspeccionados
               </th>
+              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-28">
+                Hora <span className="text-red-600">*</span>
+              </th>
+              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 min-w-[120px]">
+                Punto de toma <span className="text-red-600">*</span>
+              </th>
+              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-16">pH</th>
               <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 whitespace-nowrap">
                 Cloro residual libre<br /><span className="font-normal">(0.3 – 2 ppm)</span>
               </th>
-              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-16">pH</th>
               <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">C</th>
               <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">NC</th>
               <th className="px-2 py-2 text-left text-[11px] font-bold uppercase">Observaciones</th>
@@ -71,6 +79,27 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
                   </td>
                   <td className="px-2 py-1 border-r border-b border-gray-400">
                     <input
+                      type="time"
+                      value={row.hora ?? ''}
+                      onChange={(e) => updateRow(key, { hora: e.target.value })}
+                      disabled={disabled}
+                      className={`${INPUT_CLASS} text-xs py-1.5 text-center`}
+                    />
+                  </td>
+                  <td className="px-2 py-1 border-r border-b border-gray-400">
+                    <input
+                      type="text"
+                      value={row.punto_toma ?? ''}
+                      onChange={(e) => updateRow(key, { punto_toma: e.target.value })}
+                      disabled={disabled}
+                      className={`${INPUT_CLASS} text-xs py-1.5`}
+                    />
+                  </td>
+                  <td className="px-2 py-2 border-r border-b border-gray-400 text-center bg-blue-50 text-blue-900 font-semibold text-xs">
+                    7.0
+                  </td>
+                  <td className="px-2 py-1 border-r border-b border-gray-400">
+                    <input
                       type="number"
                       step="0.1"
                       min={0.3}
@@ -80,9 +109,6 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
                       disabled={disabled}
                       className={`${INPUT_CLASS} text-xs py-1.5 text-center`}
                     />
-                  </td>
-                  <td className="px-2 py-2 border-r border-b border-gray-400 text-center bg-blue-50 text-blue-900 font-semibold text-xs">
-                    7.0
                   </td>
                   <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-14">
                     <button
@@ -123,17 +149,16 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
     );
   }
 
-  // Esterilizadores
   return (
     <div className="overflow-x-auto border border-gray-800">
-      <table className="w-full text-sm min-w-[560px]">
+      <table className="w-full text-sm min-w-[640px]">
         <thead>
           <tr className="bg-white border-b-2 border-gray-800">
             <th className="px-2 py-2 text-left text-[11px] font-bold uppercase border-r border-gray-800">
               Puntos de inspección
             </th>
             <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800">
-              Valores encontrados (°C)
+              Valores encontrados (°C) <span className="text-red-600">*</span>
             </th>
             <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">C</th>
             <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">NC</th>

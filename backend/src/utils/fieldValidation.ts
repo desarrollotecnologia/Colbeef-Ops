@@ -36,7 +36,7 @@ export function isFieldValueEmpty(
       const key = slugify(punto);
       const row = data[key] ?? {};
       if (tableType === 'cloro') {
-        if (!row.cloro_residual || !row.cnc) return true;
+        if (!row.hora || !row.punto_toma || !row.cloro_residual || !row.cnc) return true;
       } else {
         if (!row.temperatura || !row.cnc) return true;
       }

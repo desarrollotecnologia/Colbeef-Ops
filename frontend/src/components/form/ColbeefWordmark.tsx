@@ -1,18 +1,18 @@
 /** Logo tipográfico Colbeef — verde "Col" + rojo "beef" */
 export default function ColbeefWordmark({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const sizes = {
-    sm: 'text-2xl',
-    md: 'text-4xl',
-    lg: 'text-5xl',
+  const heights = {
+    sm: 'h-8',
+    md: 'h-12',
+    lg: 'h-16',
   };
 
   return (
-    <span
-      className={`${sizes[size]} font-black tracking-tight select-none`}
-      style={{ fontFamily: "'Arial Rounded MT Bold', 'Nunito', 'Segoe UI', sans-serif" }}
-    >
-      <span className="text-[#22a34a]">Col</span>
-      <span className="text-[#e31e24]">beef</span>
-    </span>
+    <div className="bg-white inline-flex items-center justify-center">
+      <img
+        src="/colbeef-wordmark.png"
+        alt="Colbeef"
+        className={`${heights[size]} w-auto object-contain`}
+      />
+    </div>
   );
 }

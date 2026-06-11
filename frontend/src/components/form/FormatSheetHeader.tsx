@@ -27,7 +27,7 @@ export default function FormatSheetHeader({
   return (
     <div className="border-2 border-gray-800 rounded-sm overflow-hidden mb-6 bg-white">
       <div className="grid grid-cols-1 sm:grid-cols-3 border-b-2 border-gray-800">
-        <div className="p-4 border-b sm:border-b-0 sm:border-r border-gray-800 flex items-center justify-center sm:justify-start">
+        <div className="p-4 border-b sm:border-b-0 sm:border-r border-gray-800 flex items-center justify-center sm:justify-start bg-white">
           <ColbeefWordmark size="md" />
         </div>
         <div className="p-3 border-b sm:border-b-0 sm:border-r border-gray-800 text-center flex flex-col justify-center">
