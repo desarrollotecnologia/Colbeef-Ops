@@ -185,11 +185,11 @@ export function powerStateField(fieldKey: string, label: string, sortOrder: numb
 export function itemChecklistField(
   fieldKey: string,
   label: string,
-  items: { key: string; label: string; fr?: string }[],
+  items: { key: string; label: string; fr?: string; section?: string }[],
   sortOrder: number,
   opts?: Partial<FieldDef> & {
     mode?: 'cnc' | 'cnc_na';
-    columns?: ('cnc' | 'observation' | 'corrective' | 'platforms')[];
+    columns?: ('cnc' | 'observation' | 'corrective' | 'platforms' | 'cavaColumns')[];
     platformCount?: number;
     cavaColumns?: string[];
     columnDefs?: { key: string; mode?: 'cnc' | 'cnc_na' }[];

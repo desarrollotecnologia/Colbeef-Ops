@@ -61,6 +61,24 @@ function AreaLabelCell({ label, rowSpan }: { label: string; rowSpan: number }) {
   );
 }
 
+type ChecklistItem = NonNullable<FieldOptions['items']>[number];
+type TableRow =
+  | { type: 'section'; label: string }
+  | { type: 'item'; item: ChecklistItem; itemIdx: number };
+
+function buildTableRows(items: ChecklistItem[]): TableRow[] {
+  const rows: TableRow[] = [];
+  let lastSection: string | undefined;
+  items.forEach((item, itemIdx) => {
+    if (item.section && item.section !== lastSection) {
+      rows.push({ type: 'section', label: item.section });
+      lastSection = item.section;
+    }
+    rows.push({ type: 'item', item, itemIdx });
+  });
+  return rows;
+}
+
 export default function ItemChecklist({ options, value, onChange, disabled, tableMode = false }: Props) {
   const items = options.items ?? [];
   const choices = options.choices ?? ['C', 'NC'];
@@ -271,6 +289,10 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
   }
 
   if (tableMode && !columns.includes('platforms') && !columns.includes('cavaColumns') && !hasSanitary) {
+    const tableRows = buildTableRows(items);
+    const areaRowSpan = tableRows.length;
+    const sectionColSpan = 1 + cncSubCols.length + 2;
+
     return (
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[560px]">
@@ -286,12 +308,27 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
             </tr>
           </thead>
           <tbody>
-            {items.map((item, idx) => {
+            {tableRows.map((row, rowIdx) => {
+              if (row.type === 'section') {
+                return (
+                  <tr key={`section-${row.label}`} className="bg-gray-100">
+                    {areaLabel && rowIdx === 0 && <AreaLabelCell label={areaLabel} rowSpan={areaRowSpan} />}
+                    <td
+                      colSpan={sectionColSpan}
+                      className="px-3 py-1.5 border-b border-gray-400 text-xs font-bold uppercase text-gray-800"
+                    >
+                      {row.label}
+                    </td>
+                  </tr>
+                );
+              }
+
+              const { item, itemIdx } = row;
               const data = value[item.key] ?? {};
               const cnc = data.cnc ?? '';
               return (
-                <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  {areaLabel && idx === 0 && <AreaLabelCell label={areaLabel} rowSpan={items.length} />}
+                <tr key={item.key} className={itemIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  {areaLabel && rowIdx === 0 && <AreaLabelCell label={areaLabel} rowSpan={areaRowSpan} />}
                   <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>
                     {item.label}
                   </td>

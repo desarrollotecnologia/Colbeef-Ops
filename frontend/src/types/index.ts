@@ -87,7 +87,7 @@ export interface FieldOptions {
   mode?: 'cnc' | 'cnc_na';
   choices?: string[];
   multi?: boolean;
-  items?: { key: string; label: string; fr?: string }[];
+  items?: { key: string; label: string; fr?: string; section?: string }[];
   columns?:
     | ('cnc' | 'observation' | 'corrective' | 'platforms' | 'cavaColumns' | 'fr' | 'rev_cnc' | 'final_cnc' | 'responsible')[]
     | RepeaterColumn[];
