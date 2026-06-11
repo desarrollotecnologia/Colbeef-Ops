@@ -44,9 +44,15 @@ router.post('/login', async (req: Request, res: Response) => {
 router.get('/me', authenticate, async (req: Request, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.userId },
-    select: { id: true, username: true, fullName: true, role: true, email: true },
+    select: { id: true, username: true, fullName: true, role: true, email: true, active: true },
   });
-  res.json(user);
+
+  if (!user || !user.active) {
+    return res.status(401).json({ error: 'Sesión inválida' });
+  }
+
+  const { active: _active, ...safeUser } = user;
+  res.json(safeUser);
 });
 
 export default router;

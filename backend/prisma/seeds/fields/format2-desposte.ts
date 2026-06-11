@@ -1,36 +1,50 @@
-import { AutoFillRule } from '@prisma/client';
 import {
   FieldDef,
-  autoField,
-  cncField,
+  formalMeasureTableField,
   itemChecklistField,
-  lacticoTitrationField,
   multiSelectField,
-  numberField,
-  powerStateField,
   readonlyField,
   selectField,
   textareaField,
-  textField,
-  timeField,
   ESPECIES,
 } from '../field-helpers';
 
-const SANITARY_ITEM = (key: string, label: string, fr: string) => ({ key, label, fr });
+const SANITARY_ITEM = (key: string, label: string, fr: string, section: string) => ({
+  key,
+  label,
+  fr,
+  section,
+});
 
-function sanitarySheet(items: ReturnType<typeof SANITARY_ITEM>[], sortStart = 1): FieldDef[] {
+const TEMP_AREAS = [
+  'Sala desposte',
+  'Cuarto de etiquetado y empaque secundario',
+  'Porcionado',
+  'Alistamiento o picking',
+  'Cuarto de refrigeración # 1',
+  'Cuarto de congelación # 1',
+  'Contenedor # 1',
+  'Contenedor # 2',
+  'Contenedor # 3',
+  'Cava 12',
+];
+
+function sanitarySheet(
+  sections: { name: string; items: { key: string; label: string; fr: string }[] }[],
+  extras: FieldDef[] = []
+): FieldDef[] {
+  const allItems = sections.flatMap((sec) =>
+    sec.items.map((item) => SANITARY_ITEM(item.key, item.label, item.fr, sec.name))
+  );
+
   return [
-    readonlyField('detergente', 'Detergente', 'Alcalino clorado 2%', sortStart),
-    readonlyField('desinfectante', 'Desinfectante', 'Amonio cuaternario 200 ppm', sortStart + 1),
-    itemChecklistField(
-      'operacion_sanitaria',
-      'Operación sanitaria',
-      items,
-      sortStart + 2,
-      {
-        columns: ['fr', 'rev_cnc', 'observation', 'corrective', 'final_cnc', 'responsible'],
-      }
-    ),
+    readonlyField('detergente', 'Detergente / Concentración', 'Alcalino clorado 2%', 1, 'Productos de limpieza'),
+    readonlyField('desinfectante', 'Desinfectante / Concentración', 'Amonio cuaternario 200 ppm', 2, 'Productos de limpieza'),
+    itemChecklistField('operacion_sanitaria', 'Operación sanitaria', allItems, 3, {
+      groupName: 'Operación sanitaria',
+      columns: ['fr', 'rev_cnc', 'observation', 'corrective', 'final_cnc', 'responsible'],
+    }),
+    ...extras,
   ];
 }
 
@@ -38,98 +52,221 @@ export function getFormat2Fields(slug: string): FieldDef[] {
   switch (slug) {
     case 'preoperativo-1':
       return [
-        multiSelectField('especie', 'Especie', ESPECIES, 1, { required: true }),
-        timeField('cloro_hora', 'Hora', 2, { groupName: 'Control cloro', required: true }),
-        textField('cloro_punto_toma', 'Punto de toma', 3, { groupName: 'Control cloro', required: true }),
-        autoField('cloro_ph', 'pH', AutoFillRule.FIXED_VALUE, 4, 'Control cloro', { value: '7.0' }),
-        numberField('cloro_residual', 'Cloro residual (0.3 - 2.0 ppm)', 5, { groupName: 'Control cloro', required: true, min: 0.3, max: 2 }),
-        cncField('cloro_cnc', 'C / NC', 6, { groupName: 'Control cloro', required: true }),
-        textareaField('cloro_correccion', 'Corrección', 7, { groupName: 'Control cloro', config: { requiredIf: 'nc_or_observation' } }),
-        ...Array.from({ length: 10 }, (_, i) => [
-          timeField(`temp_hora_${i}`, `Hora — ${['Sala desposte', 'Etiquetado y empaque', 'Porcionado', 'Alistamiento picking', 'Cuarto refrig #1', 'Cuarto congel #1', 'Contenedor #1', 'Contenedor #2', 'Contenedor #3', 'Cava 12'][i]}`, 10 + i * 3, { groupName: 'Temperaturas' }),
-          numberField(`temp_valor_${i}`, 'Temperatura °C', 11 + i * 3, { groupName: 'Temperaturas' }),
-          cncField(`temp_cnc_${i}`, 'C / NC', 12 + i * 3, { groupName: 'Temperaturas', required: true }),
-          textareaField(`temp_correccion_${i}`, 'Corrección', 13 + i * 3, { groupName: 'Temperaturas', config: { requiredIf: 'nc_or_observation' } }),
-        ]).flat(),
-        ...lacticoTitrationField(50),
-        readonlyField('termo_variable', 'Termo-encogido — Variable', 'T°C / Presión — N.A', 60, 'Variables equipos'),
-        powerStateField('termo_estado', 'Termo-encogido — Estado', 61, { groupName: 'Variables equipos' }),
-        textareaField('termo_obs', 'Termo-encogido — Observaciones', 62, { groupName: 'Variables equipos' }),
-        readonlyField('empacadora_variable', 'Empacadora al vacío — Variable', 'T°C / Presión — N.A', 63, 'Variables equipos'),
-        powerStateField('empacadora_estado', 'Empacadora al vacío — Estado', 64, { groupName: 'Variables equipos' }),
-        textareaField('empacadora_obs', 'Empacadora al vacío — Observaciones', 65, { groupName: 'Variables equipos' }),
-        readonlyField('termoforma_variable', 'Termoformadora — Variable', 'T°C / Presión — N.A', 66, 'Variables equipos'),
-        powerStateField('termoforma_estado', 'Termoformadora — Estado', 67, { groupName: 'Variables equipos' }),
-        textareaField('termoforma_obs', 'Termoformadora — Observaciones', 68, { groupName: 'Variables equipos' }),
-        textField('pediluvio_1_principio', 'Pediluvio 1 — Principio activo', 70, { groupName: 'Pediluvios' }),
-        textField('pediluvio_1_concentracion', 'Pediluvio 1 — Concentración (250 ppm)', 71, { groupName: 'Pediluvios' }),
-        cncField('pediluvio_1_cnc', 'Pediluvio 1 — C / NC', 72, { groupName: 'Pediluvios', required: true }),
-        textareaField('pediluvio_1_correccion', 'Pediluvio 1 — Corrección', 73, { groupName: 'Pediluvios', config: { requiredIf: 'nc_or_observation' } }),
-        textField('pediluvio_2_principio', 'Pediluvio 2 — Principio activo', 74, { groupName: 'Pediluvios' }),
-        textField('pediluvio_2_concentracion', 'Pediluvio 2 — Concentración (250 ppm)', 75, { groupName: 'Pediluvios' }),
-        cncField('pediluvio_2_cnc', 'Pediluvio 2 — C / NC', 76, { groupName: 'Pediluvios', required: true }),
-        textareaField('pediluvio_2_correccion', 'Pediluvio 2 — Corrección', 77, { groupName: 'Pediluvios', config: { requiredIf: 'nc_or_observation' } }),
+        multiSelectField('especie', 'Especie', ESPECIES, 1, { required: true, groupName: 'Encabezado' }),
+        formalMeasureTableField(
+          'cloro_registros',
+          'Control de cloro residual',
+          'cloro',
+          [
+            { key: 'r1', label: '1' },
+            { key: 'r2', label: '2' },
+          ],
+          2,
+          'Control de cloro residual',
+          { helpText: 'Cloro residual libre 0.3 – 2.0 ppm · pH = 7.0' }
+        ),
+        formalMeasureTableField(
+          'temperaturas',
+          'Temperaturas de áreas',
+          'temperaturas',
+          TEMP_AREAS.map((label, i) => ({ key: `t_${i}`, label })),
+          3,
+          'Temperaturas de áreas'
+        ),
+        formalMeasureTableField(
+          'titulacion',
+          'Titulación de ácido láctico',
+          'titulacion',
+          [
+            { key: 'tit_1', label: '1' },
+            { key: 'tit_2', label: '2' },
+          ],
+          4,
+          'Titulación de ácido láctico',
+          { helpText: 'Volumen 2.2 ml → 1.98% · Volumen 2.3 ml → 2.07%' }
+        ),
+        formalMeasureTableField(
+          'variables_equipos',
+          'Variables de equipos',
+          'equipos',
+          [
+            { key: 'termo', label: 'Termo-encogido', naPresion: true },
+            { key: 'empacadora', label: 'Empacadora al vacío', naTemp: true },
+            { key: 'termoforma', label: 'Termoformadora', naTemp: true },
+          ],
+          5,
+          'Variables de equipos'
+        ),
+        formalMeasureTableField(
+          'pediluvios',
+          'Pediluvios',
+          'pediluvios',
+          [
+            { key: 'p1', label: '1' },
+            { key: 'p2', label: '2' },
+          ],
+          6,
+          'Pediluvios'
+        ),
+        textareaField('observaciones', 'Observaciones', 7, { groupName: 'Observaciones' }),
       ];
 
     case 'preoperativo-2':
       return sanitarySheet([
-        SANITARY_ITEM('puertas', 'Puertas de ingreso', 'Dr'), SANITARY_ITEM('pisos', 'Pisos', 'Dr'), SANITARY_ITEM('paredes', 'Paredes', 'Dr'),
-        SANITARY_ITEM('salon', 'Salón múltiple', 'Dr'), SANITARY_ITEM('oficinas', 'Oficinas administrativas', 'Dr'),
-        SANITARY_ITEM('secador', 'Secador botas', 'Dr'), SANITARY_ITEM('bano', 'Baño hombres-mujeres', 'Dr'),
-        SANITARY_ITEM('lavamanos', 'Lavamanos', 'Dr'), SANITARY_ITEM('enfermeria', 'Enfermería', 'Dr'),
-        SANITARY_ITEM('sala_reuniones', 'Sala reuniones administrativa', 'Dr'), SANITARY_ITEM('cuarto_lyd', 'Cuarto LYD', 'Dr'),
-        SANITARY_ITEM('filtro', 'Filtro sanitario', 'Dr'), SANITARY_ITEM('dispensadores', 'Dispensadores de jabón', 'Dr'),
-        SANITARY_ITEM('cepillos', 'Cepillos lavabotas', 'Dr'), SANITARY_ITEM('toallas', 'Toallas para manos', 'Dr'),
-        SANITARY_ITEM('paredes2', 'Paredes', 'Dr'), SANITARY_ITEM('pisos_puertas', 'Pisos y puertas', 'Dr'),
-        SANITARY_ITEM('et_pisos', 'Pisos (etiquetado)', 'Dr'), SANITARY_ITEM('et_paredes', 'Paredes (etiquetado)', 'Dr'),
-        SANITARY_ITEM('et_puertas', 'Puertas (etiquetado)', 'Dr'), SANITARY_ITEM('et_cortinas', 'Cortinas', 'Dr'),
-        SANITARY_ITEM('et_computo', 'Equipos de cómputo', 'Dr'), SANITARY_ITEM('et_bandas', 'Bandas', 'Dr'),
-        SANITARY_ITEM('et_grameras', 'Grameras', 'Dr'), SANITARY_ITEM('et_mesones', 'Mesones', 'Dr'),
-        SANITARY_ITEM('et_cajas', 'Almacenamiento de cajas', 'Sn'), SANITARY_ITEM('et_canastillas_l', 'Cuarto canastillas limpias', 'Dr'),
-        SANITARY_ITEM('et_bases', 'Bases y canastillas', 'Dr'), SANITARY_ITEM('et_canastillas_s', 'Cuarto canastillas sucias', 'Dr'),
-        SANITARY_ITEM('por_pisos', 'Pisos y paredes (porcionado)', 'Dr'), SANITARY_ITEM('por_puertas', 'Puertas (porcionado)', 'Dr'),
-        SANITARY_ITEM('por_molino', 'Molino (P.O.E.S)', 'Dr'), SANITARY_ITEM('por_termoforma', 'Equipo termoformadora', 'Dr'),
-        SANITARY_ITEM('por_hamburguesas', 'Formadora hamburguesas', 'Dr'), SANITARY_ITEM('por_videojet', 'Equipo video jet', 'Dr'),
-        SANITARY_ITEM('por_mesones', 'Mesones (porcionado)', 'Dr'),
+        {
+          name: 'Áreas comunes',
+          items: [
+            { key: 'puertas', label: 'Puertas de ingreso', fr: 'Dr' },
+            { key: 'pisos', label: 'Pisos', fr: 'Dr' },
+            { key: 'paredes', label: 'Paredes', fr: 'Dr' },
+            { key: 'salon', label: 'Salón múltiple', fr: 'Dr' },
+            { key: 'oficinas', label: 'Oficinas administrativas', fr: 'Dr' },
+            { key: 'secador', label: 'Secador botas', fr: 'Dr' },
+            { key: 'bano', label: 'Baño hombres-mujeres', fr: 'Dr' },
+            { key: 'lavamanos', label: 'Lavamanos', fr: 'Dr' },
+            { key: 'enfermeria', label: 'Enfermería', fr: 'Dr' },
+            { key: 'sala_reuniones', label: 'Sala reuniones administrativa', fr: 'Dr' },
+            { key: 'cuarto_lyd', label: 'Cuarto LYD', fr: 'Dr' },
+          ],
+        },
+        {
+          name: 'Filtro sanitario',
+          items: [
+            { key: 'dispensadores', label: 'Dispensadores de jabón', fr: 'Dr' },
+            { key: 'cepillos', label: 'Cepillos lavabotas', fr: 'Dr' },
+            { key: 'toallas', label: 'Toallas para manos', fr: 'Dr' },
+            { key: 'filtro_paredes', label: 'Paredes', fr: 'Dr' },
+            { key: 'filtro_pisos', label: 'Pisos y puertas', fr: 'Dr' },
+          ],
+        },
+        {
+          name: 'Área de etiquetado',
+          items: [
+            { key: 'et_pisos', label: 'Pisos', fr: 'Dr' },
+            { key: 'et_paredes', label: 'Paredes', fr: 'Dr' },
+            { key: 'et_puertas', label: 'Puertas', fr: 'Dr' },
+            { key: 'et_cortinas', label: 'Cortinas', fr: 'Dr' },
+            { key: 'et_computo', label: 'Equipos de cómputo', fr: 'Dr' },
+            { key: 'et_bandas', label: 'Bandas', fr: 'Dr' },
+            { key: 'et_grameras', label: 'Grameras', fr: 'Dr' },
+            { key: 'et_mesones', label: 'Mesones', fr: 'Dr' },
+            { key: 'et_cajas', label: 'Almacenamiento de cajas', fr: 'Sn' },
+            { key: 'et_canastillas_l', label: 'Cuarto canastillas limpias', fr: 'Dr' },
+            { key: 'et_bases', label: 'Bases y canastillas', fr: 'Dr' },
+            { key: 'et_canastillas_s', label: 'Cuarto canastillas sucias', fr: 'Dr' },
+          ],
+        },
+        {
+          name: 'Área de porcionado',
+          items: [
+            { key: 'por_pisos', label: 'Pisos y paredes', fr: 'Dr' },
+            { key: 'por_puertas', label: 'Puertas', fr: 'Dr' },
+            { key: 'por_molino', label: 'Molino (P.O.E.S)', fr: 'Dr' },
+            { key: 'por_termoforma', label: 'Equipo termoformadora', fr: 'Dr' },
+            { key: 'por_hamburguesas', label: 'Formadora hamburguesas', fr: 'Dr' },
+            { key: 'por_videojet', label: 'Equipo video jet', fr: 'Dr' },
+            { key: 'por_mesones', label: 'Mesones', fr: 'Dr' },
+          ],
+        },
       ]);
 
     case 'preoperativo-3':
       return sanitarySheet([
-        SANITARY_ITEM('al_pisos', 'Pisos (alistamiento)', 'Dr'), SANITARY_ITEM('al_paredes', 'Paredes', 'Dr'),
-        SANITARY_ITEM('al_cortinas', 'Cortinas', 'Dr'), SANITARY_ITEM('al_refri', 'Cuarto refrigeración #1', 'Sn'),
-        SANITARY_ITEM('al_congel', 'Cuarto congelación', 'Sn'), SANITARY_ITEM('al_cont1', 'Contenedor #1', 'Sn'),
-        SANITARY_ITEM('al_cont2', 'Contenedor #2', 'Sn'), SANITARY_ITEM('al_cont3', 'Contenedor #3', 'Sn'),
-        SANITARY_ITEM('al_cava12', 'Cava 12', 'Sn'), SANITARY_ITEM('al_muelle', 'Muelle de despacho', 'Dr'),
-        SANITARY_ITEM('al_estibas', 'Estibas y traspale', 'Dr'), SANITARY_ITEM('pc_paredes', 'Paredes (pasillo cuarteo)', 'Dr'),
-        SANITARY_ITEM('pc_pisos', 'Pisos', 'Dr'), SANITARY_ITEM('pc_puertas', 'Puertas', 'Dr'),
-        SANITARY_ITEM('pc_plataforma', 'Plataforma', 'Dr'), SANITARY_ITEM('pc_difusor', 'Difusor', 'Dr'),
-        SANITARY_ITEM('sd_sierra', 'Sierra sin fin (P.O.E.S)', 'Dr'), SANITARY_ITEM('sd_tablas', 'Tablas teflón (P.O.E.S)', 'Dr'),
-        SANITARY_ITEM('sd_bandas', 'Bandas desposte (P.O.E.S)', 'Dr'), SANITARY_ITEM('sd_gancho', 'Soporte gancho deshuesador (P.O.E.S)', 'Dr'),
-        SANITARY_ITEM('sd_pisos', 'Pisos (sala desposte)', 'Dr'), SANITARY_ITEM('sd_paredes', 'Paredes', 'Dr'),
-        SANITARY_ITEM('sd_puertas', 'Puertas', 'Dr'), SANITARY_ITEM('sd_lavamanos', 'Lavamanos', 'Dr'),
-        SANITARY_ITEM('sd_empacadora', 'Empacadora al vacío', 'Dr'), SANITARY_ITEM('sd_termo', 'Termoencogido', 'Dr'),
-        SANITARY_ITEM('sd_bandas_hueso', 'Bandas para hueso', 'Dr'), SANITARY_ITEM('sd_bandas_sebo', 'Bandas para sebo', 'Dr'),
-        SANITARY_ITEM('sd_basculas', 'Básculas de piso', 'Dr'), SANITARY_ITEM('sd_mesas', 'Mesas', 'Dr'),
-        SANITARY_ITEM('sd_bodega', 'Bodega insumos producción', 'Sn'), SANITARY_ITEM('sd_sebo', 'Cuarto de sebo', 'Dr'),
-        SANITARY_ITEM('sd_maquinas', 'Cuarto de máquinas', 'Sn'), SANITARY_ITEM('sd_escaleras', 'Escaleras', 'Dr'),
-        SANITARY_ITEM('sd_canalinas', 'Canalinas', 'Dr'), SANITARY_ITEM('sd_difusores', 'Difusores', 'Dr'),
-        SANITARY_ITEM('sd_afilado', 'Cuarto de afilado', 'Sn'), SANITARY_ITEM('sd_esterilizadores', 'Esterilizadores', 'Dr'),
+        {
+          name: 'Área de alistamiento',
+          items: [
+            { key: 'al_pisos', label: 'Pisos', fr: 'Dr' },
+            { key: 'al_paredes', label: 'Paredes', fr: 'Dr' },
+            { key: 'al_cortinas', label: 'Cortinas', fr: 'Dr' },
+            { key: 'al_refri', label: 'Cuarto refrigeración #1', fr: 'Sn' },
+            { key: 'al_congel', label: 'Cuarto congelación', fr: 'Sn' },
+            { key: 'al_cont1', label: 'Contenedor #1', fr: 'Sn' },
+            { key: 'al_cont2', label: 'Contenedor #2', fr: 'Sn' },
+            { key: 'al_cont3', label: 'Contenedor #3', fr: 'Sn' },
+            { key: 'al_cava12', label: 'Cava 12', fr: 'Sn' },
+            { key: 'al_muelle', label: 'Muelle de despacho', fr: 'Dr' },
+            { key: 'al_estibas', label: 'Estibas y traspale', fr: 'Dr' },
+          ],
+        },
+        {
+          name: 'Pasillo y área de cuarteo',
+          items: [
+            { key: 'pc_paredes', label: 'Paredes', fr: 'Dr' },
+            { key: 'pc_pisos', label: 'Pisos', fr: 'Dr' },
+            { key: 'pc_puertas', label: 'Puertas', fr: 'Dr' },
+            { key: 'pc_plataforma', label: 'Plataforma', fr: 'Dr' },
+            { key: 'pc_difusor', label: 'Difusor', fr: 'Dr' },
+          ],
+        },
+        {
+          name: 'Sala de desposte',
+          items: [
+            { key: 'sd_sierra', label: 'Sierra sin fin (P.O.E.S)', fr: 'Dr' },
+            { key: 'sd_tablas', label: 'Tablas teflón (P.O.E.S)', fr: 'Dr' },
+            { key: 'sd_bandas', label: 'Bandas desposte (P.O.E.S)', fr: 'Dr' },
+            { key: 'sd_gancho', label: 'Soporte gancho deshuesador (P.O.E.S)', fr: 'Dr' },
+            { key: 'sd_pisos', label: 'Pisos', fr: 'Dr' },
+            { key: 'sd_paredes', label: 'Paredes', fr: 'Dr' },
+            { key: 'sd_puertas', label: 'Puertas', fr: 'Dr' },
+            { key: 'sd_lavamanos', label: 'Lavamanos', fr: 'Dr' },
+            { key: 'sd_empacadora', label: 'Empacadora al vacío', fr: 'Dr' },
+            { key: 'sd_termo', label: 'Termoencogido', fr: 'Dr' },
+            { key: 'sd_bandas_hueso', label: 'Bandas para hueso', fr: 'Dr' },
+            { key: 'sd_bandas_sebo', label: 'Bandas para sebo', fr: 'Dr' },
+            { key: 'sd_basculas', label: 'Básculas de piso', fr: 'Dr' },
+            { key: 'sd_mesas', label: 'Mesas', fr: 'Dr' },
+            { key: 'sd_bodega', label: 'Bodega insumos producción', fr: 'Sn' },
+            { key: 'sd_sebo', label: 'Cuarto de sebo', fr: 'Dr' },
+            { key: 'sd_maquinas', label: 'Cuarto de máquinas', fr: 'Sn' },
+            { key: 'sd_escaleras', label: 'Escaleras', fr: 'Dr' },
+            { key: 'sd_canalinas', label: 'Canalinas', fr: 'Dr' },
+            { key: 'sd_difusores', label: 'Difusores', fr: 'Dr' },
+            { key: 'sd_afilado', label: 'Cuarto de afilado', fr: 'Sn' },
+            { key: 'sd_esterilizadores', label: 'Esterilizadores', fr: 'Dr' },
+          ],
+        },
       ]);
 
     case 'preoperativo-4':
-      return sanitarySheet([
-        SANITARY_ITEM('of_prod', 'Oficina de producción', 'Dr'), SANITARY_ITEM('of_recep', 'Oficina recepción canales', 'Sn'),
-        SANITARY_ITEM('base_cuchillos', 'Base lavado cuchillos', 'Dr'), SANITARY_ITEM('cuchillos', 'Cuchillos (P.O.E.S)', 'Dr'),
-        SANITARY_ITEM('chairas', 'Chairas', 'Dr'), SANITARY_ITEM('portacuchillos', 'Portacuchillos', 'Dr'),
-        SANITARY_ITEM('guante_malla', 'Guante de malla (P.O.E.S)', 'Dr'), SANITARY_ITEM('gancho', 'Gancho desposte (P.O.E.S)', 'Dr'),
-        SANITARY_ITEM('delantales', 'Delantales plásticos (P.O.E.S)', 'Dr'), SANITARY_ITEM('laboratorio', 'Laboratorio', 'Dr'),
-        SANITARY_ITEM('ha_riel', 'Riel (higienización alturas)', 'TM'), SANITARY_ITEM('ha_extractores', 'Extractores', 'TM'),
-        SANITARY_ITEM('ha_lamparas', 'Lámparas', 'TM'), SANITARY_ITEM('ha_difusores', 'Difusores', 'TM'),
-        SANITARY_ITEM('ha_techos', 'Techos y cielorraso', 'TM'),
-      ]).concat([
-        selectField('material_extrano', '¿Presencia material extraño?', ['Sí', 'No'], 100, { required: true }),
-        textareaField('material_extrano_obs', 'Observaciones material extraño', 101),
-      ]);
+      return sanitarySheet(
+        [
+          {
+            name: 'Otras áreas',
+            items: [
+              { key: 'of_prod', label: 'Oficina de producción', fr: 'Dr' },
+              { key: 'of_recep', label: 'Oficina recepción canales', fr: 'Sn' },
+              { key: 'base_cuchillos', label: 'Base lavado cuchillos', fr: 'Dr' },
+              { key: 'cuchillos', label: 'Cuchillos (P.O.E.S)', fr: 'Dr' },
+              { key: 'chairas', label: 'Chairas', fr: 'Dr' },
+              { key: 'portacuchillos', label: 'Portacuchillos', fr: 'Dr' },
+              { key: 'guante_malla', label: 'Guante de malla (P.O.E.S)', fr: 'Dr' },
+              { key: 'gancho', label: 'Gancho desposte (P.O.E.S)', fr: 'Dr' },
+              { key: 'delantales', label: 'Delantales plásticos (P.O.E.S)', fr: 'Dr' },
+              { key: 'laboratorio', label: 'Laboratorio', fr: 'Dr' },
+            ],
+          },
+          {
+            name: 'Higienización alturas',
+            items: [
+              { key: 'ha_riel', label: 'Riel', fr: 'TM' },
+              { key: 'ha_extractores', label: 'Extractores', fr: 'TM' },
+              { key: 'ha_lamparas', label: 'Lámparas', fr: 'TM' },
+              { key: 'ha_difusores', label: 'Difusores', fr: 'TM' },
+              { key: 'ha_techos', label: 'Techos y cielorraso', fr: 'TM' },
+            ],
+          },
+        ],
+        [
+          selectField('material_extrano', '¿Presencia de material extraño en superficies y equipos?', ['Sí', 'No'], 50, {
+            groupName: 'Material extraño',
+            required: true,
+          }),
+          textareaField('material_extrano_obs', 'Observaciones', 51, { groupName: 'Material extraño' }),
+          textareaField('higienizacion_obs', 'Observaciones higienización alturas', 52, {
+            groupName: 'Observaciones',
+          }),
+        ]
+      );
 
     default:
       return [];

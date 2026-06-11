@@ -81,8 +81,8 @@ export interface FieldConfig {
 }
 
 export interface FieldOptions {
-  layout?: 'day_schedule_table';
-  tableType?: 'cloro' | 'esterilizadores';
+  layout?: 'day_schedule_table' | 'formal_measure_table';
+  tableType?: 'cloro' | 'esterilizadores' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios';
   schedule?: Record<string, string[]>;
   mode?: 'cnc' | 'cnc_na';
   choices?: string[];
@@ -111,6 +111,21 @@ export interface RepeaterColumn {
   options?: FieldOptions;
   config?: FieldConfig;
   required?: boolean;
+}
+
+/** Fila de tablas de medición (formato 2 hoja 1) */
+export interface MeasureRowData {
+  hora?: string;
+  punto_toma?: string;
+  cloro_residual?: string;
+  temperatura?: string;
+  volumen_naoh?: string;
+  concentracion?: string;
+  principio_activo?: string;
+  estado?: string;
+  cnc?: string;
+  observation?: string;
+  corrective?: string;
 }
 
 /** Datos de un ítem en checklist por equipos/áreas */

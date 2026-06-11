@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '@/lib/api';
+import { clearAuthSession, purgeLegacyAuthStorage, setAuthToken } from '@/lib/authSession';
 import type { User } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<User>;
   logout: () => void;
   isAdmin: boolean;
 }
@@ -17,30 +18,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-      api.get('/auth/me').catch(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setUser(null);
-      });
-    }
+    purgeLegacyAuthStorage();
     setLoading(false);
   }, []);
 
   const login = async (username: string, password: string) => {
     const { data } = await api.post('/auth/login', { username, password });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    setAuthToken(data.token);
     setUser(data.user);
+    return data.user as User;
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearAuthSession();
     setUser(null);
+    window.location.href = '/login';
   };
 
   return (

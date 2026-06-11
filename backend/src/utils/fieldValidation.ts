@@ -68,6 +68,28 @@ export function isFieldComplete(
 
   if (field.fieldKey === 'empresa') return true;
 
+  if (options.layout === 'formal_measure_table') {
+    const items = options.items ?? [];
+    const data = (value as Record<string, Record<string, string>>) ?? {};
+    const tableType = options.tableType ?? 'cloro';
+
+    for (const item of items) {
+      const row = data[item.key] ?? {};
+      if (tableType === 'cloro') {
+        if (!row.hora || !row.punto_toma || !row.cloro_residual || !row.cnc) return false;
+      } else if (tableType === 'temperaturas') {
+        if (!row.hora || !row.temperatura || !row.cnc) return false;
+      } else if (tableType === 'titulacion') {
+        if (!row.hora || !row.volumen_naoh || !row.cnc) return false;
+      } else if (tableType === 'equipos') {
+        if (!row.estado) return false;
+      } else if (tableType === 'pediluvios') {
+        if (!row.principio_activo || !row.concentracion || !row.cnc) return false;
+      }
+    }
+    return true;
+  }
+
   if (options.layout === 'day_schedule_table') {
     const schedule = options.schedule ?? {};
     const dayKey = getDayKey(workDate);

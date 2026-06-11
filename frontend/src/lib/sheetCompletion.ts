@@ -48,6 +48,32 @@ export function isFieldComplete(
 ): boolean {
   const options = field.options ?? {};
 
+  if (options.layout === 'formal_measure_table') {
+    const items = options.items ?? [];
+    const data = (value as Record<string, Record<string, string>>) ?? {};
+    const tableType = options.tableType ?? 'cloro';
+
+    return items.every((item) => {
+      const row = data[item.key] ?? {};
+      if (tableType === 'cloro') {
+        return Boolean(row.hora && row.punto_toma && row.cloro_residual && row.cnc);
+      }
+      if (tableType === 'temperaturas') {
+        return Boolean(row.hora && row.temperatura && row.cnc);
+      }
+      if (tableType === 'titulacion') {
+        return Boolean(row.hora && row.volumen_naoh && row.cnc);
+      }
+      if (tableType === 'equipos') {
+        return Boolean(row.estado);
+      }
+      if (tableType === 'pediluvios') {
+        return Boolean(row.principio_activo && row.concentracion && row.cnc);
+      }
+      return true;
+    });
+  }
+
   if (options.layout === 'day_schedule_table') {
     const schedule = options.schedule ?? {};
     const points = schedule[getDayKey(workDate)] ?? [];

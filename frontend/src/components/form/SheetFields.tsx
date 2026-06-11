@@ -3,7 +3,8 @@ import { groupFields } from '@/lib/formUtils';
 import FormField from './FormField';
 import ItemChecklist from './ItemChecklist';
 import DayScheduleTable from './DayScheduleTable';
-import type { ChecklistItemData } from '@/types';
+import FormalMeasureTable from './FormalMeasureTable';
+import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const HEADER_ONLY_KEYS = new Set(['empresa']);
 
@@ -23,6 +24,55 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
       {groups.map((group, gi) => {
         const visibleFields = group.fields.filter((f) => !HEADER_ONLY_KEYS.has(f.fieldKey));
         if (visibleFields.length === 0) return null;
+
+        const measureTableField = visibleFields.find(
+          (f) => f.fieldType === 'CHECKLIST' && f.options?.layout === 'formal_measure_table'
+        );
+
+        if (measureTableField) {
+          return (
+            <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
+              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+                <h3 className="text-xs font-bold uppercase text-gray-900">
+                  {group.name ?? measureTableField.label}
+                </h3>
+                {measureTableField.helpText && (
+                  <p className="text-[11px] text-gray-600 mt-0.5">{measureTableField.helpText}</p>
+                )}
+              </div>
+              <div className="p-0">
+                <FormalMeasureTable
+                  options={measureTableField.options ?? {}}
+                  value={(sheetData[measureTableField.fieldKey] as Record<string, MeasureRowData>) ?? {}}
+                  onChange={(v) => onUpdate(measureTableField.fieldKey, v)}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
+          );
+        }
+
+        const readonlyFields = visibleFields.filter((f) => f.fieldType === 'READONLY');
+        const readonlyPair =
+          readonlyFields.length >= 2 && readonlyFields.length === visibleFields.length;
+
+        if (readonlyPair) {
+          return (
+            <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
+              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+                <h3 className="text-xs font-bold uppercase text-gray-900">{group.name}</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+                {readonlyFields.map((field) => (
+                  <div key={field.fieldKey} className="px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase text-gray-600">{field.label}</p>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{field.defaultValue ?? '—'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
 
         const dayTableField = visibleFields.find(
           (f) => f.fieldType === 'CHECKLIST' && f.options?.layout === 'day_schedule_table'

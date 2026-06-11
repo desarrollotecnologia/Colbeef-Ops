@@ -18,9 +18,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(username, password);
-      const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      navigate(savedUser.role === 'ADMIN' ? '/admin' : '/');
+      const loggedInUser = await login(username, password);
+      navigate(loggedInUser.role === 'ADMIN' ? '/admin' : '/');
     } catch {
       setError('Usuario o contraseña incorrectos');
     } finally {

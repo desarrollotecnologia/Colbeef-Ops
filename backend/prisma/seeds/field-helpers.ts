@@ -291,6 +291,35 @@ export function hourlyMatrixField(
   };
 }
 
+export type MeasureTableType = 'cloro' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios';
+
+/** Tabla formal de medición (formato 2 hoja 1) */
+export function formalMeasureTableField(
+  fieldKey: string,
+  label: string,
+  tableType: MeasureTableType,
+  rows: { key: string; label: string; naTemp?: boolean; naPresion?: boolean }[],
+  sortOrder: number,
+  groupName: string,
+  opts?: Partial<FieldDef>
+): FieldDef {
+  return {
+    fieldKey,
+    label,
+    fieldType: FieldType.CHECKLIST,
+    manualOnly: true,
+    required: opts?.required ?? true,
+    sortOrder,
+    groupName,
+    helpText: opts?.helpText,
+    options: {
+      layout: 'formal_measure_table',
+      tableType,
+      items: rows,
+    },
+  };
+}
+
 /** Tabla con una fila por punto del día (cloro / esterilizadores) */
 export function dayScheduleTableField(
   fieldKey: string,
