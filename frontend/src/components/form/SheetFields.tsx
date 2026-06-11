@@ -29,10 +29,6 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
         );
 
         if (dayTableField) {
-          const subtitles: Record<string, string> = {
-            cloro: 'Cloro residual libre (0.3 – 2 ppm) y pH — los puntos se asignan automáticamente según el día',
-            esterilizadores: 'Funcionamiento, temperatura (82,5°C) o solución desinfectante aprobada',
-          };
           const tableType = dayTableField.options?.tableType ?? 'cloro';
           return (
             <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
@@ -40,7 +36,11 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
                 <h3 className="text-xs font-bold uppercase text-gray-900">
                   {group.name ?? dayTableField.label}
                 </h3>
-                <p className="text-[11px] text-gray-600 mt-0.5">{subtitles[tableType]}</p>
+                {tableType === 'cloro' && (
+                  <p className="text-[11px] text-gray-600 mt-0.5">
+                    Cloro residual libre (0.3 – 2 ppm) y pH — un registro por cada punto del día
+                  </p>
+                )}
               </div>
               <div className="p-0">
                 <DayScheduleTable
@@ -104,7 +104,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
 
       <div className="text-xs text-gray-500 border-t pt-3 space-y-0.5">
         <p><strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>AC:</strong> Acción correctiva</p>
-        <p className="text-blue-600">Los <strong>puntos inspeccionados</strong> y el <strong>pH (7.0)</strong> se asignan solos según el día de la semana.</p>
+        <p className="text-blue-600">Cada <strong>punto inspeccionado</strong> aparece en su propia fila según el día. El <strong>pH (7.0)</strong> es automático.</p>
       </div>
     </div>
   );

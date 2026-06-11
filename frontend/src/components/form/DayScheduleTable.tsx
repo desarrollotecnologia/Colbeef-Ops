@@ -4,8 +4,6 @@ import { getPointsForDay } from '@/lib/daySchedules';
 import { INPUT_CLASS } from '@/lib/formUtils';
 
 export interface DayPointRow {
-  hora?: string;
-  punto_toma?: string;
   cloro_residual?: string;
   temperatura?: string;
   cnc?: string;
@@ -22,6 +20,45 @@ interface Props {
 
 function pointKey(name: string): string {
   return name.toLowerCase().replace(/\s+/g, '_').replace(/[.]/g, '');
+}
+
+function CncButtons({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  disabled?: boolean;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <>
+      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-14">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(value === 'C' ? '' : 'C')}
+          className={`w-full py-1 text-xs font-bold rounded border-2 ${
+            value === 'C' ? 'bg-green-600 text-white border-green-600' : 'bg-white border-gray-300'
+          }`}
+        >
+          C
+        </button>
+      </td>
+      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-14">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(value === 'NC' ? '' : 'NC')}
+          className={`w-full py-1 text-xs font-bold rounded border-2 ${
+            value === 'NC' ? 'bg-red-600 text-white border-red-600' : 'bg-white border-gray-300'
+          }`}
+        >
+          NC
+        </button>
+      </td>
+    </>
+  );
 }
 
 export default function DayScheduleTable({ options, value, onChange, workDate, disabled }: Props) {
@@ -45,22 +82,16 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
   if (tableType === 'cloro') {
     return (
       <div className="overflow-x-auto border border-gray-800">
-        <table className="w-full text-sm min-w-[900px]">
+        <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
               <th className="px-2 py-2 text-left text-[11px] font-bold uppercase border-r border-gray-800">
                 Puntos inspeccionados
               </th>
-              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-28">
-                Hora <span className="text-red-600">*</span>
-              </th>
-              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 min-w-[120px]">
-                Punto de toma <span className="text-red-600">*</span>
-              </th>
-              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-16">pH</th>
               <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 whitespace-nowrap">
                 Cloro residual libre<br /><span className="font-normal">(0.3 – 2 ppm)</span>
               </th>
+              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-16">pH</th>
               <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">C</th>
               <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">NC</th>
               <th className="px-2 py-2 text-left text-[11px] font-bold uppercase">Observaciones</th>
@@ -73,30 +104,8 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
               const cnc = row.cnc ?? '';
               return (
                 <tr key={key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-3 py-2 border-r border-b border-gray-400 font-medium text-gray-900 text-xs">
+                  <td className="px-3 py-2.5 border-r border-b border-gray-400 font-medium text-gray-900 text-xs align-top">
                     {punto}
-                    <span className="ml-1 text-[10px] text-blue-500 font-bold uppercase">Auto</span>
-                  </td>
-                  <td className="px-2 py-1 border-r border-b border-gray-400">
-                    <input
-                      type="time"
-                      value={row.hora ?? ''}
-                      onChange={(e) => updateRow(key, { hora: e.target.value })}
-                      disabled={disabled}
-                      className={`${INPUT_CLASS} text-xs py-1.5 text-center`}
-                    />
-                  </td>
-                  <td className="px-2 py-1 border-r border-b border-gray-400">
-                    <input
-                      type="text"
-                      value={row.punto_toma ?? ''}
-                      onChange={(e) => updateRow(key, { punto_toma: e.target.value })}
-                      disabled={disabled}
-                      className={`${INPUT_CLASS} text-xs py-1.5`}
-                    />
-                  </td>
-                  <td className="px-2 py-2 border-r border-b border-gray-400 text-center bg-blue-50 text-blue-900 font-semibold text-xs">
-                    7.0
                   </td>
                   <td className="px-2 py-1 border-r border-b border-gray-400">
                     <input
@@ -110,26 +119,14 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
                       className={`${INPUT_CLASS} text-xs py-1.5 text-center`}
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-14">
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => updateRow(key, { cnc: cnc === 'C' ? '' : 'C' })}
-                      className={`w-full py-1 text-xs font-bold rounded border-2 ${
-                        cnc === 'C' ? 'bg-green-600 text-white border-green-600' : 'bg-white border-gray-300'
-                      }`}
-                    >C</button>
+                  <td className="px-2 py-2.5 border-r border-b border-gray-400 text-center bg-blue-50 text-blue-900 font-semibold text-xs">
+                    7.0
                   </td>
-                  <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-14">
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => updateRow(key, { cnc: cnc === 'NC' ? '' : 'NC' })}
-                      className={`w-full py-1 text-xs font-bold rounded border-2 ${
-                        cnc === 'NC' ? 'bg-red-600 text-white border-red-600' : 'bg-white border-gray-300'
-                      }`}
-                    >NC</button>
-                  </td>
+                  <CncButtons
+                    value={cnc}
+                    disabled={disabled}
+                    onChange={(v) => updateRow(key, { cnc: v })}
+                  />
                   <td className="px-2 py-1 border-b border-gray-400">
                     <input
                       type="text"
@@ -149,16 +146,20 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
     );
   }
 
+  const esterilizadoresNote =
+    'Funcionamiento, temperatura (82,5°C) o presencia de solución desinfectante aprobada para utilización en industria de alimentos';
+
   return (
     <div className="overflow-x-auto border border-gray-800">
       <table className="w-full text-sm min-w-[640px]">
         <thead>
           <tr className="bg-white border-b-2 border-gray-800">
+            <th className="px-2 py-2 text-left text-[11px] font-bold uppercase border-r border-gray-800 w-36" />
             <th className="px-2 py-2 text-left text-[11px] font-bold uppercase border-r border-gray-800">
               Puntos de inspección
             </th>
             <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800">
-              Valores encontrados (°C) <span className="text-red-600">*</span>
+              Valores encontrados (°C)
             </th>
             <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">C</th>
             <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">NC</th>
@@ -169,11 +170,20 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
           {points.map((punto, idx) => {
             const key = pointKey(punto);
             const row = value[key] ?? {};
+            const cnc = row.cnc ?? '';
             return (
               <tr key={key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-3 py-2 border-r border-b border-gray-400 font-medium text-gray-900 text-xs">
+                {idx === 0 && (
+                  <td
+                    rowSpan={points.length}
+                    className="px-2 py-2 border-r border-b border-gray-400 align-top bg-gray-50 text-[10px] text-gray-800 leading-snug"
+                  >
+                    <p className="font-bold uppercase text-xs mb-1">Esterilizadores</p>
+                    <p>{esterilizadoresNote}</p>
+                  </td>
+                )}
+                <td className="px-3 py-2.5 border-r border-b border-gray-400 font-medium text-gray-900 text-xs align-top">
                   {punto}
-                  <span className="ml-1 text-[10px] text-blue-500 font-bold uppercase">Auto</span>
                 </td>
                 <td className="px-2 py-1 border-r border-b border-gray-400">
                   <input
@@ -185,14 +195,11 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
                     className={`${INPUT_CLASS} text-xs py-1.5 text-center`}
                   />
                 </td>
-                <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-14">
-                  <button type="button" disabled={disabled} onClick={() => updateRow(key, { cnc: row.cnc === 'C' ? '' : 'C' })}
-                    className={`w-full py-1 text-xs font-bold rounded border-2 ${row.cnc === 'C' ? 'bg-green-600 text-white border-green-600' : 'bg-white border-gray-300'}`}>C</button>
-                </td>
-                <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-14">
-                  <button type="button" disabled={disabled} onClick={() => updateRow(key, { cnc: row.cnc === 'NC' ? '' : 'NC' })}
-                    className={`w-full py-1 text-xs font-bold rounded border-2 ${row.cnc === 'NC' ? 'bg-red-600 text-white border-red-600' : 'bg-white border-gray-300'}`}>NC</button>
-                </td>
+                <CncButtons
+                  value={cnc}
+                  disabled={disabled}
+                  onChange={(v) => updateRow(key, { cnc: v })}
+                />
                 <td className="px-2 py-1 border-b border-gray-400">
                   <input
                     type="text"
