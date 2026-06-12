@@ -133,10 +133,12 @@ export default function CavaMatrixTable({
                 </th>
               ))}
               {showObsCols && columns.includes('observation') && (
-                <th className={`${thClass} text-left min-w-[90px]`} rowSpan={2}>Obs.</th>
+                <th className={`${thClass} text-left min-w-[110px]`} rowSpan={2}>Observaciones</th>
               )}
               {showObsCols && columns.includes('corrective') && (
-                <th className="px-1 py-2 text-left text-[10px] font-bold uppercase min-w-[90px]" rowSpan={2}>AC</th>
+                <th className="px-1 py-2 text-left text-[10px] font-bold uppercase min-w-[110px]" rowSpan={2}>
+                  Acción correctiva
+                </th>
               )}
             </tr>
             <tr className="bg-white border-b-2 border-gray-800">

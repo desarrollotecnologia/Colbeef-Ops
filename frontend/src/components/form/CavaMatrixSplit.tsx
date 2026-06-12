@@ -1,6 +1,5 @@
 import type { ChecklistItemData, FieldOptions } from '@/types';
 import CavaMatrixTable from './CavaMatrixTable';
-import MatrixObsFooter from './MatrixObsFooter';
 
 interface Props {
   options: FieldOptions;
@@ -24,11 +23,10 @@ function buildChunks<T>(items: T[], splitAt: number[]): T[][] {
   return chunks.filter((c) => c.length > 0);
 }
 
-function hasObsCols(options: FieldOptions): boolean {
+function checklistColumnList(options: FieldOptions): string[] {
   const raw = options.columns;
-  if (!Array.isArray(raw) || !raw[0] || typeof raw[0] !== 'string') return false;
-  const cols = raw as string[];
-  return cols.includes('observation') || cols.includes('corrective');
+  if (!Array.isArray(raw) || !raw[0] || typeof raw[0] !== 'string') return ['cavaColumns'];
+  return raw as string[];
 }
 
 export default function CavaMatrixSplit({
@@ -40,12 +38,14 @@ export default function CavaMatrixSplit({
   subtitles,
 }: Props) {
   const columnDefs = options.columnDefs ?? [];
-  const items = options.items ?? [];
   if (columnDefs.length === 0) return null;
 
   const chunks = buildChunks(columnDefs, splitAt);
   const splitMode = chunks.length > 1;
-  const obsSeparate = splitMode && hasObsCols(options);
+  const baseColumns = checklistColumnList(options);
+  const chunkColumns = baseColumns.includes('cavaColumns')
+    ? baseColumns
+    : (['cavaColumns', ...baseColumns] as string[]);
 
   if (!splitMode) {
     return (
@@ -77,12 +77,12 @@ export default function CavaMatrixSplit({
               options={{
                 ...options,
                 columnDefs: chunk,
-                columns: ['cavaColumns'],
+                columns: chunkColumns as FieldOptions['columns'],
               }}
               value={value}
               onChange={onChange}
               disabled={disabled}
-              showObsCols={false}
+              showObsCols
               showScrollHint={i === 0}
               hideAreaLabel={i > 0}
               compact
@@ -90,15 +90,6 @@ export default function CavaMatrixSplit({
           </div>
         );
       })}
-
-      {obsSeparate && items.length > 0 && (
-        <MatrixObsFooter
-          items={items}
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-        />
-      )}
     </div>
   );
 }

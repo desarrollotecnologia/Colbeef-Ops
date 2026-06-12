@@ -1,4 +1,5 @@
 import type { FormatField, ChecklistItemData } from '@/types';
+import { resolveHoja7Field, syntheticAreasRefrigeracionField } from '@/lib/format1Hoja7Defaults';
 import ItemChecklist from './ItemChecklist';
 import CavaMatrixSplit from './CavaMatrixSplit';
 import FormField from './FormField';
@@ -45,8 +46,10 @@ function MatrixSection({
 
 export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: Props) {
   const pcField = fields.find((f) => f.fieldKey === 'pc_comestibles');
-  const refri = fields.find((f) => f.fieldKey === 'area_refri');
-  const areasRefrig = fields.find((f) => f.fieldKey === 'areas_refrigeracion');
+  const refri = resolveHoja7Field(fields.find((f) => f.fieldKey === 'area_refri'));
+  const areasRefrig =
+    resolveHoja7Field(fields.find((f) => f.fieldKey === 'areas_refrigeracion')) ??
+    syntheticAreasRefrigeracionField(fields);
   const obsField = fields.find((f) => f.fieldKey === 'observaciones');
   const acField = fields.find((f) => f.fieldKey === 'acciones_correctivas');
 
@@ -68,7 +71,7 @@ export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: 
         </div>
       )}
 
-      {refri && refri.options?.columnDefs?.length ? (
+      {refri && (refri.options?.columnDefs?.length ?? 0) > 0 ? (
         <MatrixSection
           field={refri}
           sheetData={sheetData}
