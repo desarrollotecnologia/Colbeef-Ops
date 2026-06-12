@@ -4,6 +4,18 @@ import { INPUT_CLASS } from '@/lib/formUtils';
 
 type CncChoice = 'C' | 'NC' | 'NA';
 
+/** Fondos alternados por grupo de cava (C#10, C#9, …) para no confundir columnas */
+const GROUP_HEADER_BG = ['bg-sky-100', 'bg-teal-100'] as const;
+const GROUP_CELL_BG = ['bg-sky-50/90', 'bg-teal-50/90'] as const;
+
+function groupHeaderBg(colIdx: number) {
+  return GROUP_HEADER_BG[colIdx % GROUP_HEADER_BG.length];
+}
+
+function groupCellBg(colIdx: number) {
+  return GROUP_CELL_BG[colIdx % GROUP_CELL_BG.length];
+}
+
 function CncToggle({
   choice,
   value,
@@ -113,7 +125,7 @@ export default function CavaMatrixTable({
     <div>
       {showScrollHint && (
         <p className="text-[11px] text-amber-800 bg-amber-50 border-b border-amber-200 px-3 py-1.5">
-          Deslice horizontalmente → cada columna es una cava o máquina. Marque C / NC / NA en cada cruce.
+          Cada grupo de color (azul / verde claro) es una cava o máquina — marque C / NC / NA en cada cruce.
         </p>
       )}
       <div className="overflow-x-auto">
@@ -127,8 +139,12 @@ export default function CavaMatrixTable({
               >
                 {rowLabel}
               </th>
-              {columnDefs.map((col) => (
-                <th key={col.key} colSpan={subColsFor(col.mode).length} className={thClass}>
+              {columnDefs.map((col, colIdx) => (
+                <th
+                  key={col.key}
+                  colSpan={subColsFor(col.mode).length}
+                  className={`${thClass} ${groupHeaderBg(colIdx)} border-l-2 border-l-gray-400`}
+                >
                   {col.key}
                 </th>
               ))}
@@ -142,9 +158,16 @@ export default function CavaMatrixTable({
               )}
             </tr>
             <tr className="bg-white border-b-2 border-gray-800">
-              {columnDefs.map((col) =>
-                subColsFor(col.mode).map((sub) => (
-                  <th key={`${col.key}-${sub}`} className={`${thClass} w-9 min-w-[2.25rem]`}>{sub}</th>
+              {columnDefs.map((col, colIdx) =>
+                subColsFor(col.mode).map((sub, subIdx) => (
+                  <th
+                    key={`${col.key}-${sub}`}
+                    className={`${thClass} w-9 min-w-[2.25rem] ${groupHeaderBg(colIdx)} ${
+                      subIdx === 0 ? 'border-l-2 border-l-gray-400' : ''
+                    }`}
+                  >
+                    {sub}
+                  </th>
                 ))
               )}
             </tr>
@@ -157,12 +180,18 @@ export default function CavaMatrixTable({
                 <tr key={item.key} className={rowBg}>
                   {areaLabel && idx === 0 && <AreaLabelCell label={areaLabel} rowSpan={items.length} />}
                   <td className={`${stickyLabelClass} ${rowBg}`}>{item.label}</td>
-                  {columnDefs.map((col) => {
+                  {columnDefs.map((col, colIdx) => {
                     const cnc = data.cavas?.[col.key] ?? '';
+                    const cellBg = groupCellBg(colIdx);
                     return (
                       <Fragment key={col.key}>
-                        {subColsFor(col.mode).map((sub) => (
-                          <td key={`${col.key}-${sub}`} className={`${tdClass} text-center w-9 min-w-[2.25rem] px-0.5`}>
+                        {subColsFor(col.mode).map((sub, subIdx) => (
+                          <td
+                            key={`${col.key}-${sub}`}
+                            className={`${tdClass} text-center w-9 min-w-[2.25rem] px-0.5 ${cellBg} ${
+                              subIdx === 0 ? 'border-l-2 border-l-gray-300' : ''
+                            }`}
+                          >
                             <CncToggle
                               choice={sub}
                               value={cnc}
