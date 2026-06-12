@@ -12,6 +12,7 @@ type ChecklistItemData = {
 type FieldOptions = {
   layout?: string;
   tableType?: string;
+  pediluviosLayout?: 'operativo' | 'simple';
   schedule?: Record<string, string[]>;
   items?: { key: string }[];
   columns?: string[];
@@ -84,7 +85,11 @@ export function isFieldComplete(
       } else if (tableType === 'equipos') {
         if (!row.estado) return false;
       } else if (tableType === 'pediluvios') {
-        if (!row.principio_activo || !row.concentracion || !row.cnc) return false;
+        if (options.pediluviosLayout === 'operativo') {
+          if (!row.hora || !row.principio_activo || !row.concentracion || !row.cnc) return false;
+        } else if (!row.principio_activo || !row.concentracion || !row.cnc) {
+          return false;
+        }
       }
     }
     return true;

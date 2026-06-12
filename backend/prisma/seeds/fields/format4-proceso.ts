@@ -6,7 +6,7 @@ import {
   hourlyMatrixField,
   lacticoTitrationField,
   multiSelectField,
-  pediluviosBlock,
+  formalMeasureTableField,
   photoField,
   repeaterField,
   selectField,
@@ -63,7 +63,19 @@ export function getFormat4Fields(slug: string): FieldDef[] {
         }),
         ...cloroBlock(20, 'Control cloro residual (cada 4 horas)', 'lavamanos'),
         ...lacticoTitrationField(30),
-        ...pediluviosBlock(40, 3),
+        formalMeasureTableField(
+          'pediluvios',
+          'Pediluvios',
+          'pediluvios',
+          [
+            { key: 'ped_1', label: 'Pediluvios 1 y 2' },
+            { key: 'ped_2', label: 'Pediluvios 1 y 2' },
+            { key: 'ped_3', label: 'Pediluvios 1 y 2' },
+          ],
+          40,
+          'Pediluvios',
+          { pediluviosLayout: 'operativo' }
+        ),
         textareaField('observaciones', 'Observaciones', 60, { groupName: 'Diario 1' }),
       ];
 

@@ -83,6 +83,7 @@ export interface FieldConfig {
 export interface FieldOptions {
   layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table';
   tableType?: 'cloro' | 'esterilizadores' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios';
+  pediluviosLayout?: 'operativo' | 'simple';
   schedule?: Record<string, string[]>;
   mode?: 'cnc' | 'cnc_na';
   choices?: string[];

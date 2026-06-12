@@ -299,6 +299,56 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
   }
 
   if (tableType === 'pediluvios') {
+    const operativo = options.pediluviosLayout === 'operativo';
+
+    if (operativo) {
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[800px]">
+            <thead>
+              <tr className="bg-white border-b-2 border-gray-800">
+                <th className={`${thClass} text-left`}>Área</th>
+                <th className={thClass}>Hora</th>
+                <th className={`${thClass} text-left`}>Principio activo</th>
+                <th className={thClass}>Concentración (ppm)</th>
+                <th className={`${thClass} bg-green-50`}>Cumple</th>
+                <th className={`${thClass} bg-red-50`}>No cumple</th>
+                <th className={`${thClass} text-left min-w-[120px]`}>Corrección</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, idx) => {
+                const row = value[item.key] ?? {};
+                const cnc = row.cnc ?? '';
+                return (
+                  <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>{item.label}</td>
+                    <td className={tdClass}>
+                      <input type="time" value={row.hora ?? ''} onChange={(e) => updateRow(item.key, { hora: e.target.value })} disabled={disabled} className={`${INPUT_CLASS} text-xs py-1.5`} />
+                    </td>
+                    <td className={tdClass}>
+                      <input type="text" value={row.principio_activo ?? ''} onChange={(e) => updateRow(item.key, { principio_activo: e.target.value })} disabled={disabled} placeholder="—" className={`${INPUT_CLASS} text-xs py-1.5`} />
+                    </td>
+                    <td className={tdClass}>
+                      <input type="text" value={row.concentracion ?? ''} onChange={(e) => updateRow(item.key, { concentracion: e.target.value })} disabled={disabled} placeholder="—" className={`${INPUT_CLASS} text-xs py-1.5`} />
+                    </td>
+                    {(['C', 'NC'] as CncChoice[]).map((sub) => (
+                      <td key={sub} className={`${tdClass} text-center w-14 px-1 ${sub === 'C' ? 'bg-green-50/60' : 'bg-red-50/60'}`}>
+                        <CncToggle choice={sub} value={cnc} disabled={disabled} onChange={(v) => updateRow(item.key, { cnc: v })} />
+                      </td>
+                    ))}
+                    <td className="px-2 py-1 border-b border-gray-400">
+                      <input type="text" value={row.corrective ?? ''} onChange={(e) => updateRow(item.key, { corrective: e.target.value })} disabled={disabled} placeholder="—" className={`${INPUT_CLASS} text-xs py-1.5`} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
     return (
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[640px]">

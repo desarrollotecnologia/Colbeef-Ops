@@ -68,6 +68,9 @@ export function isFieldComplete(
         return Boolean(row.estado);
       }
       if (tableType === 'pediluvios') {
+        if (options.pediluviosLayout === 'operativo') {
+          return Boolean(row.hora && row.principio_activo && row.concentracion && row.cnc);
+        }
         return Boolean(row.principio_activo && row.concentracion && row.cnc);
       }
       return true;

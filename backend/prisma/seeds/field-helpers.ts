@@ -305,21 +305,23 @@ export function formalMeasureTableField(
   rows: { key: string; label: string; naTemp?: boolean; naPresion?: boolean }[],
   sortOrder: number,
   groupName: string,
-  opts?: Partial<FieldDef>
+  opts?: Partial<FieldDef> & { pediluviosLayout?: 'operativo' | 'simple' }
 ): FieldDef {
+  const { pediluviosLayout, ...fieldOpts } = opts ?? {};
   return {
     fieldKey,
     label,
     fieldType: FieldType.CHECKLIST,
     manualOnly: true,
-    required: opts?.required ?? true,
+    required: fieldOpts.required ?? true,
     sortOrder,
     groupName,
-    helpText: opts?.helpText,
+    helpText: fieldOpts.helpText,
     options: {
       layout: 'formal_measure_table',
       tableType,
       items: rows,
+      ...(pediluviosLayout ? { pediluviosLayout } : {}),
     },
   };
 }

@@ -1,5 +1,6 @@
-import type { FormatField } from '@/types';
+import type { FormatField, MeasureRowData } from '@/types';
 import FormField from './FormField';
+import FormalMeasureTable from './FormalMeasureTable';
 import { groupFields } from '@/lib/formUtils';
 
 interface Props {
@@ -7,6 +8,10 @@ interface Props {
   sheetData: Record<string, unknown>;
   onUpdate: (key: string, value: unknown) => void;
   disabled?: boolean;
+}
+
+function isFormalMeasureTable(field: FormatField) {
+  return field.fieldType === 'CHECKLIST' && field.options?.layout === 'formal_measure_table';
 }
 
 export default function Format4Diario1({ fields, sheetData, onUpdate, disabled }: Props) {
@@ -25,22 +30,42 @@ export default function Format4Diario1({ fields, sheetData, onUpdate, disabled }
         </div>
       )}
 
-      {groups.map((group, gi) => (
-        <div key={gi} className="border-t border-gray-800">
-          {group.name && (
-            <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
-              <h3 className="text-xs font-bold uppercase text-gray-900">{group.name}</h3>
-            </div>
-          )}
-          <div className={group.fields.length === 1 && group.fields[0].fieldType === 'REPEATER' ? 'p-0' : 'grid grid-cols-1 sm:grid-cols-2 gap-4 p-4'}>
-            {group.fields.map((f) => (
-              <div key={f.fieldKey} className={f.fieldType === 'REPEATER' ? 'col-span-full' : ''}>
-                <FormField field={f} value={sheetData[f.fieldKey]} onChange={(v) => onUpdate(f.fieldKey, v)} disabled={disabled} />
+      {groups.map((group, gi) => {
+        const isPediluvios = group.name?.toLowerCase().includes('pediluvio');
+        const isFormalOnly = group.fields.length === 1 && isFormalMeasureTable(group.fields[0]);
+        const isRepeaterOnly = group.fields.length === 1 && group.fields[0].fieldType === 'REPEATER';
+
+        return (
+          <div key={gi} className="border-t border-gray-800">
+            {group.name && (
+              <div className={`px-3 py-2 border-b border-gray-800 ${isPediluvios ? 'bg-[#c5e1a5]' : 'bg-gray-200'}`}>
+                <h3 className="text-xs font-bold uppercase text-gray-900 text-center">{group.name}</h3>
               </div>
-            ))}
+            )}
+            <div className={isFormalOnly || isRepeaterOnly ? 'p-0' : 'grid grid-cols-1 sm:grid-cols-2 gap-4 p-4'}>
+              {group.fields.map((f) => {
+                if (isFormalMeasureTable(f)) {
+                  return (
+                    <div key={f.fieldKey} className="col-span-full">
+                      <FormalMeasureTable
+                        options={f.options ?? {}}
+                        value={(sheetData[f.fieldKey] as Record<string, MeasureRowData>) ?? {}}
+                        onChange={(v) => onUpdate(f.fieldKey, v)}
+                        disabled={disabled}
+                      />
+                    </div>
+                  );
+                }
+                return (
+                  <div key={f.fieldKey} className={f.fieldType === 'REPEATER' ? 'col-span-full' : ''}>
+                    <FormField field={f} value={sheetData[f.fieldKey]} onChange={(v) => onUpdate(f.fieldKey, v)} disabled={disabled} />
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {obs && (
         <div className="border-t border-gray-800">
