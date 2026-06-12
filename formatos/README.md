@@ -6,17 +6,17 @@ Documentación de campos para los 7 formatos operativos.
 
 ## Estado de revisión
 
-| # | Formato | Hojas | Estado |
-|---|---------|-------|--------|
-| 1 | Preoperativo Planta Beneficio | 8 | **Cerrado** |
-| 2 | Preoperativo Planta Desposte | 4 | **Cerrado** |
-| 3 | Despacho Producto Terminado | 1 | **Cerrado** |
-| 4 | Verificación Desposte Operativo | 5 | **Cerrado** |
-| 5 | Recepción Canales Foráneas | 1 | **Cerrado** |
-| 6 | Recepción Canales para Desposte | 1 | **Cerrado** |
-| 7 | Verificación Producto Terminado | 2 | **Cerrado** |
+| # | Formato | Hojas | CAMPOS.md | UI digital |
+|---|---------|-------|-----------|------------|
+| 1 | Preoperativo Planta Beneficio | 8 | ✓ | ✓ Hojas 1–8 (matriz cavas hojas 7–8) |
+| 2 | Preoperativo Planta Desposte | 4 | ✓ | ✓ Hoja 1 medición + hojas 2–4 sanitaria |
+| 3 | Despacho Producto Terminado | 1 | ✓ | ✓ Encabezado + tabla productos |
+| 4 | Verificación Desposte Operativo | 5 | ✓ | ✓ Diario 1–5 con layout formal |
+| 5 | Recepción Canales Foráneas | 1 | ✓ | ✓ Recepción + inspección tabla |
+| 6 | Recepción Canales para Desposte | 1 | ✓ | ✓ Encabezado + inspección tabla |
+| 7 | Verificación Producto Terminado | 2 | ✓ | ✓ 4 bloques por lote + obs. generales |
 
-**Todos los formatos revisados.** Base de datos diseñada — siga `docs/DATABASE.md` para crear MySQL e insertar todos los campos.
+**Campos:** definidos en seeds (`backend/prisma/seeds/fields/`). Tras cambios ejecutar `npm run db:seed` y `scripts\update.bat` en servidor.
 
 ---
 

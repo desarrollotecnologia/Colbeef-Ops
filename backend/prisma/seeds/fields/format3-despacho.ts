@@ -24,18 +24,20 @@ const PRODUCTO_COLS: FieldDef[] = [
   { fieldKey: 'correccion', label: 'Corrección', fieldType: 'TEXT' as const, sortOrder: 8, manualOnly: true, config: { requiredIf: 'nc_or_observation' } },
 ];
 
+const GROUP = 'Despacho';
+
 export function getFormat3Fields(_slug: string): FieldDef[] {
   return [
-    multiSelectField('especie', 'Especie', ESPECIES, 1, { required: true }),
-    dateField('fecha', 'Fecha', 2, { required: true }),
-    timeField('hora', 'Hora', 3, { required: true }),
-    textField('destino', 'Destino', 4, { required: true }),
-    textField('conductor', 'Nombre del conductor', 5, { required: true }),
-    textField('placa', 'Placa', 6, { required: true }),
-    numberField('temp_vehiculo', 'T°C vehículo', 7, { required: true }),
-    cncField('limpieza_vehiculo', 'Limpieza del vehículo', 8, { required: true }),
-    cncField('desinfeccion_vehiculo', 'Desinfección del vehículo', 9, { required: true }),
-    textareaField('observaciones_encabezado', 'Observaciones', 10),
-    repeaterField('productos', 'Productos despachados', PRODUCTO_COLS, 20, { minRows: 1, maxRows: 30 }),
+    multiSelectField('especie', 'Especie', ESPECIES, 1, { required: true, groupName: GROUP }),
+    dateField('fecha', 'Fecha', 2, { required: true, groupName: GROUP }),
+    timeField('hora', 'Hora', 3, { required: true, groupName: GROUP }),
+    textField('destino', 'Destino', 4, { required: true, groupName: GROUP }),
+    textField('conductor', 'Nombre del conductor', 5, { required: true, groupName: GROUP }),
+    textField('placa', 'Placa', 6, { required: true, groupName: GROUP }),
+    numberField('temp_vehiculo', 'T°C vehículo', 7, { required: true, groupName: GROUP }),
+    cncField('limpieza_vehiculo', 'Limpieza del vehículo', 8, { required: true, groupName: GROUP }),
+    cncField('desinfeccion_vehiculo', 'Desinfección del vehículo', 9, { required: true, groupName: GROUP }),
+    textareaField('observaciones_encabezado', 'Observaciones', 10, { groupName: GROUP }),
+    repeaterField('productos', 'Productos despachados', PRODUCTO_COLS, 20, { minRows: 1, maxRows: 30, groupName: GROUP }),
   ];
 }

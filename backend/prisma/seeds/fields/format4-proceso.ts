@@ -55,15 +55,16 @@ export function getFormat4Fields(slug: string): FieldDef[] {
   switch (slug) {
     case 'diario-1':
       return [
-        multiSelectField('especie', 'Especie', ESPECIES, 1, { required: true }),
+        multiSelectField('especie', 'Especie', ESPECIES, 1, { required: true, groupName: 'Diario 1' }),
         hourlyMatrixField('temperaturas_areas', 'Temperaturas de áreas (cada hora)', TEMP_AREAS, 2, {
           showProm: true,
           note: 'La toma se realiza cada hora. PROM = promedio por área.',
+          groupName: 'Temperaturas de áreas',
         }),
         ...cloroBlock(20, 'Control cloro residual (cada 4 horas)', 'lavamanos'),
         ...lacticoTitrationField(30),
         ...pediluviosBlock(40, 3),
-        textareaField('observaciones', 'Observaciones', 60),
+        textareaField('observaciones', 'Observaciones', 60, { groupName: 'Diario 1' }),
       ];
 
     case 'diario-2':

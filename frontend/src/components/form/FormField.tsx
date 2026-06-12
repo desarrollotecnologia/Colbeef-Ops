@@ -6,6 +6,7 @@ import ChoiceButtons from './ChoiceButtons';
 import ItemChecklist from './ItemChecklist';
 import MatrixField from './MatrixField';
 import RepeaterField from './RepeaterField';
+import FormalRepeaterTable from './FormalRepeaterTable';
 import AutoValue from './AutoValue';
 
 interface Props {
@@ -153,21 +154,31 @@ export default function FormField({ field, value, onChange, disabled, compact }:
   }
 
   if (field.fieldType === 'REPEATER') {
+    const columnsDef = Array.isArray(opts.columns) && opts.columns[0] && typeof opts.columns[0] === 'object'
+      ? (opts.columns as RepeaterColumn[])
+      : [];
+    const repeaterOpts = { ...opts, columns_def: columnsDef };
+    const repeaterValue = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+
     return (
       <div>
         <FieldLabel field={field} show={showLabel} />
         {field.helpText && <p className="text-xs text-gray-500 mb-2">{field.helpText}</p>}
-        <RepeaterField
-          options={{
-            ...opts,
-            columns_def: Array.isArray(opts.columns) && opts.columns[0] && typeof opts.columns[0] === 'object'
-              ? (opts.columns as RepeaterColumn[])
-              : [],
-          }}
-          value={Array.isArray(value) ? (value as Record<string, unknown>[]) : []}
-          onChange={onChange}
-          disabled={disabled}
-        />
+        {opts.layout === 'formal_repeater_table' ? (
+          <FormalRepeaterTable
+            options={repeaterOpts}
+            value={repeaterValue}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        ) : (
+          <RepeaterField
+            options={repeaterOpts}
+            value={repeaterValue}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        )}
       </div>
     );
   }

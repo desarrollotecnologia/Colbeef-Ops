@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 import type { ChecklistItemData, FieldOptions } from '@/types';
 import ChoiceButtons from './ChoiceButtons';
+import CavaMatrixTable from './CavaMatrixTable';
 import { INPUT_CLASS } from '@/lib/formUtils';
 
 interface Props {
@@ -99,8 +100,6 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
     options.columnDefs?.length
       ? options.columnDefs
       : cavaColumns.map((key) => ({ key, mode: (useNa ? 'cnc_na' : 'cnc') as 'cnc' | 'cnc_na' }));
-  const subColsFor = (mode?: 'cnc' | 'cnc_na'): CncChoice[] =>
-    mode === 'cnc_na' ? ['C', 'NC', 'NA'] : ['C', 'NC'];
 
   const updateItem = (itemKey: string, patch: Partial<ChecklistItemData>) => {
     onChange({ ...value, [itemKey]: { ...value[itemKey], ...patch } });
@@ -309,91 +308,14 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
     );
   }
 
-  if (tableMode && columns.includes('cavaColumns') && columnDefs.length > 0 && !columns.includes('cnc')) {
-    const showObsCols = columns.includes('observation') || columns.includes('corrective');
+  if (tableMode && columnDefs.length > 0 && !columns.includes('platforms') && !hasSanitary) {
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
-          <thead>
-            <tr className="bg-white border-b-2 border-gray-800">
-              {areaLabel && <th className={`${thClass} w-8`} rowSpan={2} />}
-              <th className={`${thClass} text-left`} rowSpan={2}>Equipo o superficie</th>
-              {columnDefs.map((col) => (
-                <th key={col.key} colSpan={subColsFor(col.mode).length} className={`${thClass} whitespace-nowrap`}>
-                  {col.key}
-                </th>
-              ))}
-              {showObsCols && columns.includes('observation') && (
-                <th className={`${thClass} text-left min-w-[100px]`} rowSpan={2}>Observaciones</th>
-              )}
-              {showObsCols && columns.includes('corrective') && (
-                <th className="px-2 py-2 text-left text-[11px] font-bold uppercase min-w-[100px]" rowSpan={2}>
-                  Acción correctiva
-                </th>
-              )}
-            </tr>
-            <tr className="bg-white border-b-2 border-gray-800">
-              {columnDefs.map((col) =>
-                subColsFor(col.mode).map((sub) => (
-                  <th key={`${col.key}-${sub}`} className={`${thClass} w-10`}>{sub}</th>
-                ))
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => {
-              const data = value[item.key] ?? {};
-              return (
-                <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  {areaLabel && idx === 0 && <AreaLabelCell label={areaLabel} rowSpan={items.length} />}
-                  <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>{item.label}</td>
-                  {columnDefs.map((col) => {
-                    const cnc = data.cavas?.[col.key] ?? '';
-                    return (
-                      <Fragment key={col.key}>
-                        {subColsFor(col.mode).map((sub) => (
-                          <td key={`${col.key}-${sub}`} className={`${tdClass} text-center w-11 px-0.5`}>
-                            <CncToggle
-                              choice={sub}
-                              value={cnc}
-                              disabled={disabled}
-                              onChange={(v) => updateItem(item.key, { cavas: { ...data.cavas, [col.key]: v } })}
-                            />
-                          </td>
-                        ))}
-                      </Fragment>
-                    );
-                  })}
-                  {showObsCols && columns.includes('observation') && (
-                    <td className={tdClass}>
-                      <input
-                        type="text"
-                        value={data.observation ?? ''}
-                        onChange={(e) => updateItem(item.key, { observation: e.target.value })}
-                        disabled={disabled}
-                        placeholder="—"
-                        className={`${INPUT_CLASS} text-xs py-1.5`}
-                      />
-                    </td>
-                  )}
-                  {showObsCols && columns.includes('corrective') && (
-                    <td className="px-2 py-1 border-b border-gray-400">
-                      <input
-                        type="text"
-                        value={data.corrective ?? ''}
-                        onChange={(e) => updateItem(item.key, { corrective: e.target.value })}
-                        disabled={disabled}
-                        placeholder="—"
-                        className={`${INPUT_CLASS} text-xs py-1.5`}
-                      />
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <CavaMatrixTable
+        options={options}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+      />
     );
   }
 

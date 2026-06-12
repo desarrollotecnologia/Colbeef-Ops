@@ -225,7 +225,7 @@ export function repeaterField(
   label: string,
   columns: FieldDef[],
   sortOrder: number,
-  opts?: Partial<FieldDef> & { minRows?: number; maxRows?: number }
+  opts?: Partial<FieldDef> & { minRows?: number; maxRows?: number; formalTable?: boolean }
 ): FieldDef {
   return {
     fieldKey,
@@ -234,8 +234,10 @@ export function repeaterField(
     manualOnly: true,
     sortOrder,
     groupName: opts?.groupName,
+    helpText: opts?.helpText,
     required: opts?.required,
     options: {
+      layout: opts?.formalTable !== false ? 'formal_repeater_table' : undefined,
       columns: columns.map(({ fieldKey: k, label: l, fieldType: t, options, config, required }) => ({
         key: k,
         label: l,

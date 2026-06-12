@@ -6,7 +6,26 @@ import DayScheduleTable from './DayScheduleTable';
 import FormalMeasureTable from './FormalMeasureTable';
 import Format2Hoja1 from './Format2Hoja1';
 import Format2SanitarySheet from './Format2SanitarySheet';
+import Format1Hoja7 from './Format1Hoja7';
+import Format1Hoja8 from './Format1Hoja8';
+import Format3Sheet from './Format3Sheet';
+import Format4Diario1 from './Format4Diario1';
+import Format4Diario2 from './Format4Diario2';
+import Format4Diario3 from './Format4Diario3';
+import Format4Diario4 from './Format4Diario4';
+import Format4Diario5 from './Format4Diario5';
+import Format5Sheet from './Format5Sheet';
+import Format6Sheet from './Format6Sheet';
+import Format7Sheet from './Format7Sheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
+
+const LEGEND_FOOTER = (
+  <div className="text-xs text-gray-500 border-t pt-3">
+    <p>
+      <strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>NA:</strong> No aplica &nbsp; <strong>PLAT:</strong> Plataforma &nbsp; <strong>AC:</strong> Acción correctiva (obligatoria si hay NC u observación)
+    </p>
+  </div>
+);
 
 const HEADER_ONLY_KEYS = new Set(['empresa']);
 
@@ -19,6 +38,116 @@ interface Props {
 }
 
 export default function SheetFields({ fields, sheetData, onUpdate, workDate, disabled }: Props) {
+  const visible = fields.filter((f) => !HEADER_ONLY_KEYS.has(f.fieldKey));
+  const has = (key: string) => fields.some((f) => f.fieldKey === key);
+
+  if (has('pc_comestibles') && has('area_refri')) {
+    return (
+      <div className="space-y-6">
+        <Format1Hoja7 fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        <div className="text-xs text-gray-500 border-t pt-3">
+          <p>
+            <strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>NA:</strong> No aplica &nbsp; <strong>C#:</strong> Cava &nbsp; <strong>M#:</strong> Máquina &nbsp; <strong>PRE:</strong> Pre-refrigeración &nbsp; <strong>PVC:</strong> Pasillo cavas
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (has('condensacion') && fields.some((f) => f.options?.columnDefs?.length)) {
+    return (
+      <div className="space-y-6">
+        <Format1Hoja8 fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        <div className="text-xs text-gray-500 border-t pt-3">
+          <p>
+            <strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>NA:</strong> No aplica &nbsp; <strong>C#:</strong> Cava &nbsp; <strong>M#:</strong> Máquina
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (has('productos') && has('destino')) {
+    return (
+      <div className="space-y-6">
+        <Format3Sheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('temperaturas_areas')) {
+    return (
+      <div className="space-y-6">
+        <Format4Diario1 fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('inspeccion_cortes') && has('proceso_despostado')) {
+    return (
+      <div className="space-y-6">
+        <Format4Diario2 fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('condiciones_empaque')) {
+    return (
+      <div className="space-y-6">
+        <Format4Diario3 fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('poes_manipulador')) {
+    return (
+      <div className="space-y-6">
+        <Format4Diario4 fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('refri_sin_hueso_empaque')) {
+    return (
+      <div className="space-y-6">
+        <Format4Diario5 fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('desinfeccion_canales') && has('inspeccion_canales')) {
+    return (
+      <div className="space-y-6">
+        <Format5Sheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('temp_cava_cnc') && has('inspeccion_canales')) {
+    return (
+      <div className="space-y-6">
+        <Format6Sheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('bloque_1_lote')) {
+    return (
+      <div className="space-y-6">
+        <Format7Sheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
   const groups = groupFields(fields);
 
   return (
@@ -275,11 +404,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
         );
       })}
 
-      <div className="text-xs text-gray-500 border-t pt-3">
-        <p>
-          <strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>NA:</strong> No aplica &nbsp; <strong>PLAT:</strong> Plataforma &nbsp; <strong>AC:</strong> Acción correctiva (obligatoria si hay NC u observación)
-        </p>
-      </div>
+      {LEGEND_FOOTER}
     </div>
   );
 }

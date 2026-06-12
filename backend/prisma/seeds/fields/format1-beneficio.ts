@@ -183,18 +183,18 @@ export function getFormat1Fields(slug: string): FieldDef[] {
       return [
         itemChecklistField('pc_comestibles', 'Área de P.C. comestibles', PC_COMESTIBLES_ITEMS, 1, {
           mode: 'cnc',
-          groupName: 'Área de P.C. comestibles',
+          groupName: 'Refrigeración',
           areaLabel: 'Área de P.C. comestibles',
         }),
         itemChecklistField('area_refri', 'Área de refrigeración', AREA_REFRI_ITEMS, 2, {
-          groupName: 'Área de refrigeración',
+          groupName: 'Refrigeración',
           areaLabel: 'Área de refrigeración',
           columns: ['cavaColumns'],
           columnDefs: STORAGE_COLUMN_DEFS,
           helpText: 'C# = Cava · M# = Máquinas · PRE = Pre-refrigeración · PVC = Pasillo cavas',
         }),
-        textareaField('observaciones', 'Observaciones', 3, { groupName: 'Observaciones y acciones' }),
-        textareaField('acciones_correctivas', 'Acciones correctivas', 4, { groupName: 'Observaciones y acciones' }),
+        textareaField('observaciones', 'Observaciones', 3, { groupName: 'Refrigeración' }),
+        textareaField('acciones_correctivas', 'Acciones correctivas', 4, { groupName: 'Refrigeración' }),
       ];
 
     case 'cavas':
@@ -202,15 +202,15 @@ export function getFormat1Fields(slug: string): FieldDef[] {
         itemChecklistField('condensacion', 'Verificación previa al inicio del beneficio — Condensación', [
           { key: 'almacenamiento', label: 'Área de almacenamiento' },
         ], 1, {
-          groupName: 'Condensación',
+          groupName: 'Cavas',
           areaLabel: 'Condensación',
           columns: ['cavaColumns'],
           columnDefs: STORAGE_COLUMN_DEFS,
           helpText: 'C# = Cava · M# = Máquinas · PRE = Pre-refrigeración · PVC = Pasillo cavas',
         }),
-        textareaField('observaciones', 'Observaciones', 2, { groupName: 'Observaciones y acciones' }),
-        textareaField('acciones_correctivas', 'Acciones correctivas', 3, { groupName: 'Observaciones y acciones' }),
-        textareaField('observaciones_generales', 'Observaciones generales', 4, { groupName: 'Observaciones generales' }),
+        textareaField('observaciones', 'Observaciones', 2, { groupName: 'Cavas' }),
+        textareaField('acciones_correctivas', 'Acciones correctivas', 3, { groupName: 'Cavas' }),
+        textareaField('observaciones_generales', 'Observaciones generales', 4, { groupName: 'Cavas' }),
       ];
 
     default:
