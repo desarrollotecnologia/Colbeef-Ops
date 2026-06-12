@@ -1,5 +1,5 @@
 import type { FormatField } from '@/types';
-import { groupFields } from '@/lib/formUtils';
+import { groupFields, SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 import ItemChecklist from './ItemChecklist';
 import DayScheduleTable from './DayScheduleTable';
@@ -192,7 +192,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
         if (measureTableField) {
           return (
             <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
-              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+              <div className={SECTION_HEADER_CLASS}>
                 <h3 className="text-xs font-bold uppercase text-gray-900">
                   {group.name ?? measureTableField.label}
                 </h3>
@@ -219,7 +219,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
         if (readonlyPair) {
           return (
             <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
-              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+              <div className={SECTION_HEADER_CLASS}>
                 <h3 className="text-xs font-bold uppercase text-gray-900">{group.name}</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-800">
@@ -242,7 +242,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
           const tableType = dayTableField.options?.tableType ?? 'cloro';
           return (
             <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
-              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+              <div className={SECTION_HEADER_CLASS}>
                 <h3 className="text-xs font-bold uppercase text-gray-900">
                   {group.name ?? dayTableField.label}
                 </h3>
@@ -274,7 +274,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
             <div key={gi} className="space-y-4">
               {checklistFields.map((checklistField) => (
                 <div key={checklistField.fieldKey} className="border border-gray-800 rounded-sm overflow-hidden">
-                  <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+                  <div className={SECTION_HEADER_CLASS}>
                     <h3 className="text-xs font-bold uppercase text-gray-900">
                       {checklistField.label}
                     </h3>
@@ -318,7 +318,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
         if (textareaPair) {
           return (
             <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
-              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+              <div className={SECTION_HEADER_CLASS}>
                 <h3 className="text-xs font-bold uppercase text-gray-900">{group.name}</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-800">
@@ -344,7 +344,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
           const field = visibleFields[0];
           return (
             <div key={gi} className="border border-gray-800 rounded-sm overflow-hidden">
-              <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+              <div className={SECTION_HEADER_CLASS}>
                 <h3 className="text-xs font-bold uppercase text-gray-900">{group.name ?? field.label}</h3>
               </div>
               <div className="p-4">
@@ -371,7 +371,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
                 if (field.fieldType === 'CHECKLIST' && field.options?.items) {
                   return (
                     <div key={field.fieldKey} className="border border-gray-800 rounded-sm overflow-hidden">
-                      <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+                      <div className={SECTION_HEADER_CLASS}>
                         <h3 className="text-xs font-bold uppercase text-gray-900">{field.label}</h3>
                         {field.helpText && (
                           <p className="text-[11px] text-gray-600 mt-0.5">{field.helpText}</p>

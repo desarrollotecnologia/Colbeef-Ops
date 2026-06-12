@@ -1,4 +1,5 @@
 import type { FormatField } from '@/types';
+import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 
 interface Props {
@@ -32,7 +33,7 @@ export default function Format4Diario5({ fields, sheetData, onUpdate, disabled }
         if (blockFields.length === 0) return null;
         return (
           <div key={prefix} className="border-t border-gray-800">
-            <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+            <div className={SECTION_HEADER_CLASS}>
               <h3 className="text-xs font-bold uppercase text-gray-900">{title}</h3>
               <p className="text-[11px] text-gray-600 mt-0.5">Empaque Vacío/Granel · Etiqueta C/NC · Video Jet C/NC/NA · Foto</p>
             </div>

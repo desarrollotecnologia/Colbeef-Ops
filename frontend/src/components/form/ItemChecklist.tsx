@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import type { ChecklistItemData, FieldOptions } from '@/types';
 import ChoiceButtons from './ChoiceButtons';
 import CavaMatrixTable from './CavaMatrixTable';
-import { INPUT_CLASS } from '@/lib/formUtils';
+import { INPUT_CLASS, SECTION_HEADER_ROW_CLASS } from '@/lib/formUtils';
 
 interface Props {
   options: FieldOptions;
@@ -228,7 +228,7 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
           <tbody>
             {sectionGroups.flatMap((group) => {
               const sectionRow = group.label ? (
-                <tr key={`section-${group.label}`} className="bg-gray-200">
+                <tr key={`section-${group.label}`} className={SECTION_HEADER_ROW_CLASS}>
                   <td
                     colSpan={totalCols}
                     className="px-3 py-1.5 border-b border-gray-400 text-xs font-bold uppercase text-gray-900 text-center"

@@ -1,4 +1,5 @@
 import type { FormatField } from '@/types';
+import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 
 interface Props {
@@ -21,7 +22,7 @@ export default function Format6Sheet({ fields, sheetData, onUpdate, disabled }: 
   return (
     <div className="border border-gray-800 rounded-sm overflow-hidden">
       <div className="border-b border-gray-800">
-        <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+        <div className={SECTION_HEADER_CLASS}>
           <h3 className="text-xs font-bold uppercase text-gray-900">Encabezado — Inspección de canales</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
@@ -33,7 +34,7 @@ export default function Format6Sheet({ fields, sheetData, onUpdate, disabled }: 
 
       {inspeccion && (
         <div className="border-b border-gray-800">
-          <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+          <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">{inspeccion.label}</h3>
             <p className="text-[11px] text-gray-600 mt-0.5">CR · MF · LV · PELO — pH 5.4–5.7 · T°C 0–4</p>
           </div>

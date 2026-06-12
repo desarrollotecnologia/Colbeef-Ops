@@ -1,4 +1,5 @@
 import type { FormatField } from '@/types';
+import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 
 interface Props {
@@ -16,7 +17,7 @@ export default function Format4Diario4({ fields, sheetData, onUpdate, disabled }
     <div className="border border-gray-800 rounded-sm overflow-hidden">
       {manipulador && (
         <div className="border-b border-gray-800">
-          <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+          <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">{manipulador.label}</h3>
             <p className="text-[11px] text-gray-600 mt-0.5">Registro cada hora — guantes · malla · cuchillo · ganchos</p>
           </div>

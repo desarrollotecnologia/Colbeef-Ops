@@ -1,4 +1,5 @@
 import type { FormatField } from '@/types';
+import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 
 interface Props {
@@ -20,7 +21,7 @@ export default function Format3Sheet({ fields, sheetData, onUpdate, disabled }: 
   return (
     <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
       <div className="border-b border-gray-800">
-        <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+        <div className={SECTION_HEADER_CLASS}>
           <h3 className="text-xs font-bold uppercase text-gray-900">Datos del despacho</h3>
           <p className="text-[11px] text-gray-600 mt-0.5">Vehículo, conductor y condiciones sanitarias</p>
         </div>
@@ -39,7 +40,7 @@ export default function Format3Sheet({ fields, sheetData, onUpdate, disabled }: 
 
       {productosField && (
         <div>
-          <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+          <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">{productosField.label}</h3>
             <p className="text-[11px] text-gray-600 mt-0.5">REFR 0–4 °C · CONG -18 °C · C = Cumple · NC = No cumple</p>
           </div>

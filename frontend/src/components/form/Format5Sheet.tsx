@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { FormatField } from '@/types';
+import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 
 interface Props {
@@ -72,7 +73,7 @@ export default function Format5Sheet({ fields, sheetData, onUpdate, disabled }: 
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
     <div className="border-t border-gray-800">
-      <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+      <div className={SECTION_HEADER_CLASS}>
         <h3 className="text-xs font-bold uppercase text-gray-900">{title}</h3>
         {subtitle && <p className="text-[11px] text-gray-600 mt-0.5">{subtitle}</p>}
       </div>

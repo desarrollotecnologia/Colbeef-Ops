@@ -3,6 +3,10 @@ import type { FormatField } from '@/types';
 export const INPUT_CLASS =
   'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none disabled:bg-gray-100 text-gray-900';
 
+/** Barra de título de sección/etapa en hojas de formato */
+export const SECTION_HEADER_CLASS = 'bg-[#dcfce7] px-3 py-2 border-b border-gray-800';
+export const SECTION_HEADER_ROW_CLASS = 'bg-[#dcfce7]';
+
 export function groupFields(fields: FormatField[]): { name: string | null; fields: FormatField[] }[] {
   const groups: { name: string | null; fields: FormatField[] }[] = [];
   let current: string | null = null;

@@ -1,4 +1,5 @@
 import type { FormatField } from '@/types';
+import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 import AutoValue from './AutoValue';
 import { isAutoField } from '@/lib/autoFill';
@@ -15,7 +16,7 @@ interface Props {
 export default function InspectionTable({ title, subtitle, fields, sheetData, onUpdate, disabled }: Props) {
   return (
     <div className="border border-gray-400 rounded-lg overflow-hidden">
-      <div className="bg-gray-200 px-3 py-2 border-b border-gray-400">
+      <div className={SECTION_HEADER_CLASS}>
         <h3 className="text-xs font-bold uppercase text-gray-800">{title}</h3>
         {subtitle && <p className="text-[11px] text-gray-600 mt-0.5">{subtitle}</p>}
       </div>

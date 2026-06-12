@@ -1,7 +1,7 @@
 import type { FormatField, MeasureRowData } from '@/types';
 import FormField from './FormField';
 import FormalMeasureTable from './FormalMeasureTable';
-import { groupFields } from '@/lib/formUtils';
+import { groupFields, SECTION_HEADER_CLASS } from '@/lib/formUtils';
 
 interface Props {
   fields: FormatField[];
@@ -31,14 +31,13 @@ export default function Format4Diario1({ fields, sheetData, onUpdate, disabled }
       )}
 
       {groups.map((group, gi) => {
-        const isPediluvios = group.name?.toLowerCase().includes('pediluvio');
         const isFormalOnly = group.fields.length === 1 && isFormalMeasureTable(group.fields[0]);
         const isRepeaterOnly = group.fields.length === 1 && group.fields[0].fieldType === 'REPEATER';
 
         return (
           <div key={gi} className="border-t border-gray-800">
             {group.name && (
-              <div className={`px-3 py-2 border-b border-gray-800 ${isPediluvios ? 'bg-[#c5e1a5]' : 'bg-gray-200'}`}>
+              <div className={SECTION_HEADER_CLASS}>
                 <h3 className="text-xs font-bold uppercase text-gray-900 text-center">{group.name}</h3>
               </div>
             )}
@@ -69,7 +68,7 @@ export default function Format4Diario1({ fields, sheetData, onUpdate, disabled }
 
       {obs && (
         <div className="border-t border-gray-800">
-          <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+          <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">Observaciones</h3>
           </div>
           <div className="p-4">

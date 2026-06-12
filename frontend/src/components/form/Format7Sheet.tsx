@@ -1,4 +1,5 @@
 import type { FormatField } from '@/types';
+import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 
 interface Props {
@@ -26,7 +27,7 @@ export default function Format7Sheet({ fields, sheetData, onUpdate, disabled }: 
         if (blockFields.length === 0) return null;
         return (
           <div key={prefix} className="border-b border-gray-800">
-            <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+            <div className={SECTION_HEADER_CLASS}>
               <h3 className="text-xs font-bold uppercase text-gray-900">{BLOQUE_LABELS[prefix]}</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">

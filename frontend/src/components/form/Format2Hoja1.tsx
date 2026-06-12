@@ -1,4 +1,5 @@
 import type { FormatField, MeasureRowData } from '@/types';
+import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormalMeasureTable from './FormalMeasureTable';
 import FormField from './FormField';
 
@@ -31,7 +32,7 @@ export default function Format2Hoja1({ fields, sheetData, onUpdate, disabled }: 
 
       {measureFields.map((field) => (
         <div key={field.fieldKey} className="border-t border-gray-800">
-          <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+          <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">{field.label}</h3>
             {field.helpText && (
               <p className="text-[11px] text-gray-600 mt-0.5">{field.helpText}</p>
@@ -48,7 +49,7 @@ export default function Format2Hoja1({ fields, sheetData, onUpdate, disabled }: 
 
       {obsField && (
         <div className="border-t border-gray-800">
-          <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+          <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">Observaciones</h3>
           </div>
           <div className="p-4">
