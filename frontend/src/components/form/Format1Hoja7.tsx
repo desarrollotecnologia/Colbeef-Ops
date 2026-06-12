@@ -1,6 +1,6 @@
 import type { FormatField, ChecklistItemData } from '@/types';
 import ItemChecklist from './ItemChecklist';
-import CavaMatrixTable from './CavaMatrixTable';
+import CavaMatrixSplit from './CavaMatrixSplit';
 import FormField from './FormField';
 
 interface Props {
@@ -10,13 +10,45 @@ interface Props {
   disabled?: boolean;
 }
 
+function MatrixSection({
+  field,
+  sheetData,
+  onUpdate,
+  disabled,
+  splitAt,
+  subtitles,
+}: {
+  field: FormatField;
+  sheetData: Record<string, unknown>;
+  onUpdate: (key: string, value: unknown) => void;
+  disabled?: boolean;
+  splitAt: number[];
+  subtitles: string[];
+}) {
+  return (
+    <div className="border-b border-gray-800">
+      <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
+        <h3 className="text-xs font-bold uppercase text-gray-900">{field.label}</h3>
+        {field.helpText && <p className="text-[11px] text-gray-600 mt-0.5">{field.helpText}</p>}
+      </div>
+      <CavaMatrixSplit
+        options={field.options ?? {}}
+        value={(sheetData[field.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
+        onChange={(v) => onUpdate(field.fieldKey, v)}
+        disabled={disabled}
+        splitAt={splitAt}
+        subtitles={subtitles}
+      />
+    </div>
+  );
+}
+
 export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: Props) {
   const pcField = fields.find((f) => f.fieldKey === 'pc_comestibles');
-  const refriField = fields.find((f) => f.fieldKey === 'area_refri');
+  const refri = fields.find((f) => f.fieldKey === 'area_refri');
+  const areasRefrig = fields.find((f) => f.fieldKey === 'areas_refrigeracion');
   const obsField = fields.find((f) => f.fieldKey === 'observaciones');
   const acField = fields.find((f) => f.fieldKey === 'acciones_correctivas');
-
-  const isMatrix = (f: FormatField) => Boolean(f.options?.columnDefs?.length);
 
   return (
     <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
@@ -36,32 +68,45 @@ export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: 
         </div>
       )}
 
-      {refriField && (
+      {refri && refri.options?.columnDefs?.length ? (
+        <MatrixSection
+          field={refri}
+          sheetData={sheetData}
+          onUpdate={onUpdate}
+          disabled={disabled}
+          splitAt={[4, 9, 14]}
+          subtitles={[
+            'Cavas principales — C#10 · C#9 · C#8 · C#7',
+            'Cavas y máquinas — M7 · C#6B · M6B · C#6A · C#5',
+            'Cavas y máquinas — M5 · C#4 · M4 · C#3 · M#3',
+            'Cavas y máquinas — C#2 · M2 · C#1 · M1 · PRE',
+          ]}
+        />
+      ) : refri ? (
         <div className="border-b border-gray-800">
-          <div className="bg-gray-200 px-3 py-2 border-b border-gray-800">
-            <h3 className="text-xs font-bold uppercase text-gray-900">{refriField.label}</h3>
-            <p className="text-[11px] text-gray-600 mt-0.5">
-              {refriField.helpText ??
-                'Cada fila es un equipo o superficie · Cada columna es una cava, máquina o zona (C#10…PVC, M7, PRE…)'}
-            </p>
-          </div>
-          {isMatrix(refriField) ? (
-            <CavaMatrixTable
-              options={refriField.options ?? {}}
-              value={(sheetData[refriField.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
-              onChange={(v) => onUpdate(refriField.fieldKey, v)}
-              disabled={disabled}
-            />
-          ) : (
-            <ItemChecklist
-              options={refriField.options ?? {}}
-              value={(sheetData[refriField.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
-              onChange={(v) => onUpdate(refriField.fieldKey, v)}
-              disabled={disabled}
-              tableMode
-            />
-          )}
+          <ItemChecklist
+            options={refri.options ?? {}}
+            value={(sheetData[refri.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
+            onChange={(v) => onUpdate(refri.fieldKey, v)}
+            disabled={disabled}
+            tableMode
+          />
         </div>
+      ) : null}
+
+      {areasRefrig && areasRefrig.options?.columnDefs?.length && (
+        <MatrixSection
+          field={areasRefrig}
+          sheetData={sheetData}
+          onUpdate={onUpdate}
+          disabled={disabled}
+          splitAt={[6, 12]}
+          subtitles={[
+            'Ubicaciones — PAN1 · CAV2 · CAV3 · CAV4 · FIL1 · PAS2',
+            'Ubicaciones — DES1 · CON1 · FIL2 · TUN1 · LAV1 · CAV5',
+            'Ubicaciones — BAÑ1 · ESP1 · ASE1 · MAN1 · PER1',
+          ]}
+        />
       )}
 
       {(obsField || acField) && (

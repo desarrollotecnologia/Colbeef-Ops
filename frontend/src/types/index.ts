@@ -102,6 +102,7 @@ export interface FieldOptions {
   maxRows?: number;
   note?: string;
   areaLabel?: string;
+  matrixRowLabel?: string;
 }
 
 export interface RepeaterColumn {

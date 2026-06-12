@@ -20,15 +20,15 @@ const AREAS_COMUNES = [
   'Dotación del personal', 'Lavamanos de piso', 'Dispensadores de jabón', 'Baterías sanitarias', 'Camilla',
 ];
 
-/** Columnas cavas / máquinas — igual en hoja 7 (área refri) y hoja 8 (condensación) según Excel */
-const STORAGE_COLUMN_DEFS: { key: string; mode: 'cnc' | 'cnc_na' }[] = [
+/** Cavas principales + máquinas — hoja 7 área refri (según Excel fila 24) */
+const AREA_REFRI_COLUMN_DEFS: { key: string; mode: 'cnc' | 'cnc_na' }[] = [
   { key: 'C#10', mode: 'cnc_na' },
   { key: 'C#9', mode: 'cnc_na' },
   { key: 'C#8', mode: 'cnc_na' },
   { key: 'C#7', mode: 'cnc_na' },
   { key: 'M7', mode: 'cnc' },
   { key: 'C#6B', mode: 'cnc_na' },
-  { key: 'M6', mode: 'cnc' },
+  { key: 'M6B', mode: 'cnc' },
   { key: 'C#6A', mode: 'cnc_na' },
   { key: 'C#5', mode: 'cnc_na' },
   { key: 'M5', mode: 'cnc' },
@@ -37,12 +37,45 @@ const STORAGE_COLUMN_DEFS: { key: string; mode: 'cnc' | 'cnc_na' }[] = [
   { key: 'C#3', mode: 'cnc_na' },
   { key: 'M#3', mode: 'cnc' },
   { key: 'C#2', mode: 'cnc_na' },
-  { key: 'M#2', mode: 'cnc' },
+  { key: 'M2', mode: 'cnc' },
   { key: 'C#1', mode: 'cnc_na' },
-  { key: 'M#1', mode: 'cnc' },
+  { key: 'M1', mode: 'cnc' },
   { key: 'PRE', mode: 'cnc' },
+];
+
+/** Columnas hoja 8 condensación — incluye PVC */
+const STORAGE_COLUMN_DEFS: { key: string; mode: 'cnc' | 'cnc_na' }[] = [
+  ...AREA_REFRI_COLUMN_DEFS,
   { key: 'PVC', mode: 'cnc' },
 ];
+
+/** Segunda matriz hoja 7 — áreas de refrigeración × ubicaciones */
+const AREAS_REFRIGERACION_COLUMN_DEFS: { key: string; mode: 'cnc' | 'cnc_na' }[] = [
+  { key: 'PAN1', mode: 'cnc_na' },
+  { key: 'CAV2', mode: 'cnc_na' },
+  { key: 'CAV3', mode: 'cnc_na' },
+  { key: 'CAV4', mode: 'cnc_na' },
+  { key: 'FIL1', mode: 'cnc_na' },
+  { key: 'PAS2', mode: 'cnc_na' },
+  { key: 'DES1', mode: 'cnc_na' },
+  { key: 'CON1', mode: 'cnc_na' },
+  { key: 'FIL2', mode: 'cnc_na' },
+  { key: 'TUN1', mode: 'cnc_na' },
+  { key: 'LAV1', mode: 'cnc_na' },
+  { key: 'CAV5', mode: 'cnc_na' },
+  { key: 'BAÑ1', mode: 'cnc_na' },
+  { key: 'ESP1', mode: 'cnc_na' },
+  { key: 'ASE1', mode: 'cnc_na' },
+  { key: 'MAN1', mode: 'cnc_na' },
+  { key: 'PER1', mode: 'cnc_na' },
+];
+
+const AREAS_REFRIGERACION_ITEMS = [
+  'Entrada de canales', 'Pasillos', 'Filtros', 'Lavabos y lava botas', 'Puerta de ingreso',
+  'Despacho de carne y vísceras', 'Cuarto de decomisos', 'Túnel de oreo', 'Lavado de canastillas',
+  'Lavado de ganchos', 'Muelle de carga', 'Baños', 'Sala de espera de conductores',
+  'Cuarto de aseo', 'Cuarto de mantenimiento',
+].map((l, i) => ({ key: `arz_${i}`, label: l }));
 
 const PC_COMESTIBLES_ITEMS = [
   { key: 'd_0', label: 'Carros de uso general', section: 'Cuarto de decomisos' },
@@ -186,15 +219,23 @@ export function getFormat1Fields(slug: string): FieldDef[] {
           groupName: 'Refrigeración',
           areaLabel: 'Área de P.C. comestibles',
         }),
-        itemChecklistField('area_refri', 'Área de refrigeración', AREA_REFRI_ITEMS, 2, {
+        itemChecklistField('area_refri', 'Área de refrigeración — equipos y superficies', AREA_REFRI_ITEMS, 2, {
           groupName: 'Refrigeración',
           areaLabel: 'Área de refrigeración',
-          columns: ['cavaColumns'],
-          columnDefs: STORAGE_COLUMN_DEFS,
-          helpText: 'C# = Cava · M# = Máquinas · PRE = Pre-refrigeración · PVC = Pasillo cavas',
+          columns: ['cavaColumns', 'observation', 'corrective'],
+          columnDefs: AREA_REFRI_COLUMN_DEFS,
+          helpText: '4 bloques de cavas/máquinas · Obs. y AC al pie de cada sección · C# = Cava · M# = Máquina',
         }),
-        textareaField('observaciones', 'Observaciones', 3, { groupName: 'Refrigeración' }),
-        textareaField('acciones_correctivas', 'Acciones correctivas', 4, { groupName: 'Refrigeración' }),
+        itemChecklistField('areas_refrigeracion', 'Áreas de refrigeración', AREAS_REFRIGERACION_ITEMS, 3, {
+          groupName: 'Refrigeración',
+          areaLabel: 'Áreas de refrigeración',
+          columns: ['cavaColumns'],
+          columnDefs: AREAS_REFRIGERACION_COLUMN_DEFS,
+          matrixRowLabel: 'Área',
+          helpText: '3 bloques de ubicaciones (PAN1…PER1) — marque C / NC / NA por área',
+        }),
+        textareaField('observaciones', 'Observaciones', 4, { groupName: 'Refrigeración' }),
+        textareaField('acciones_correctivas', 'Acciones correctivas', 5, { groupName: 'Refrigeración' }),
       ];
 
     case 'cavas':

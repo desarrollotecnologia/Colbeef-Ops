@@ -194,6 +194,7 @@ export function itemChecklistField(
     cavaColumns?: string[];
     columnDefs?: { key: string; mode?: 'cnc' | 'cnc_na' }[];
     areaLabel?: string;
+    matrixRowLabel?: string;
   }
 ): FieldDef {
   const mode = opts?.mode ?? 'cnc';
@@ -215,6 +216,7 @@ export function itemChecklistField(
       cavaColumns: opts?.cavaColumns,
       columnDefs: opts?.columnDefs,
       areaLabel: opts?.areaLabel,
+      matrixRowLabel: opts?.matrixRowLabel,
     },
   };
 }

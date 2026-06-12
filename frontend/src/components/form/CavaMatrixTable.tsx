@@ -57,6 +57,10 @@ interface Props {
   value: Record<string, ChecklistItemData>;
   onChange: (v: Record<string, ChecklistItemData>) => void;
   disabled?: boolean;
+  showObsCols?: boolean;
+  showScrollHint?: boolean;
+  hideAreaLabel?: boolean;
+  compact?: boolean;
 }
 
 type ChecklistColumn = 'cnc' | 'observation' | 'corrective' | 'platforms' | 'cavaColumns';
@@ -69,9 +73,18 @@ function checklistColumns(options: FieldOptions): ChecklistColumn[] {
   return ['cavaColumns'];
 }
 
-export default function CavaMatrixTable({ options, value, onChange, disabled }: Props) {
+export default function CavaMatrixTable({
+  options,
+  value,
+  onChange,
+  disabled,
+  showObsCols: showObsColsProp,
+  showScrollHint = true,
+  hideAreaLabel = false,
+  compact = false,
+}: Props) {
   const items = options.items ?? [];
-  const areaLabel = options.areaLabel;
+  const areaLabel = hideAreaLabel ? undefined : options.areaLabel;
   const cavaColumns = options.cavaColumns ?? [];
   const columns = checklistColumns(options);
   const columnDefs =
@@ -82,11 +95,13 @@ export default function CavaMatrixTable({ options, value, onChange, disabled }: 
   const subColsFor = (mode?: 'cnc' | 'cnc_na'): CncChoice[] =>
     mode === 'cnc_na' ? ['C', 'NC', 'NA'] : ['C', 'NC'];
 
-  const showObsCols = columns.includes('observation') || columns.includes('corrective');
+  const showObsCols =
+    showObsColsProp ?? (columns.includes('observation') || columns.includes('corrective'));
+  const rowLabel = options.matrixRowLabel ?? 'Equipo o superficie';
 
-  const thClass = 'px-1 py-2 text-center text-[10px] font-bold uppercase border-r border-gray-800 whitespace-nowrap';
-  const tdClass = 'px-1 py-1 border-r border-b border-gray-400';
-  const stickyLabelClass = `sticky ${areaLabel ? 'left-8' : 'left-0'} z-10 bg-inherit px-3 py-2 font-medium text-gray-900 text-xs border-r border-gray-400`;
+  const thClass = `px-1 ${compact ? 'py-1.5' : 'py-2'} text-center text-[10px] font-bold uppercase border-r border-gray-800 whitespace-nowrap`;
+  const tdClass = `px-1 ${compact ? 'py-1.5' : 'py-1'} border-r border-b border-gray-400`;
+  const stickyLabelClass = `sticky ${areaLabel ? 'left-8' : 'left-0'} z-10 bg-inherit px-3 ${compact ? 'py-1.5' : 'py-2'} font-medium text-gray-900 text-xs border-r border-gray-400 min-w-[120px] max-w-[180px]`;
 
   const updateItem = (itemKey: string, patch: Partial<ChecklistItemData>) => {
     onChange({ ...value, [itemKey]: { ...value[itemKey], ...patch } });
@@ -96,9 +111,11 @@ export default function CavaMatrixTable({ options, value, onChange, disabled }: 
 
   return (
     <div>
-      <p className="text-[11px] text-amber-800 bg-amber-50 border-b border-amber-200 px-3 py-1.5">
-        Deslice horizontalmente → cada columna es una cava o máquina. Marque C / NC / NA en cada cruce.
-      </p>
+      {showScrollHint && (
+        <p className="text-[11px] text-amber-800 bg-amber-50 border-b border-amber-200 px-3 py-1.5">
+          Deslice horizontalmente → cada columna es una cava o máquina. Marque C / NC / NA en cada cruce.
+        </p>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm" style={{ minWidth: `${280 + columnDefs.length * 52}px` }}>
           <thead>
@@ -108,7 +125,7 @@ export default function CavaMatrixTable({ options, value, onChange, disabled }: 
                 className={`${thClass} text-left sticky ${areaLabel ? 'left-8' : 'left-0'} z-20 bg-gray-100 min-w-[140px]`}
                 rowSpan={2}
               >
-                Equipo o superficie
+                {rowLabel}
               </th>
               {columnDefs.map((col) => (
                 <th key={col.key} colSpan={subColsFor(col.mode).length} className={thClass}>
