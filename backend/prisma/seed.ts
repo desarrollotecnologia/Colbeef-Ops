@@ -32,6 +32,23 @@ async function seedUsers() {
       role: 'OPERARIO',
     },
   });
+
+  const panelPassword = await bcrypt.hash('123456789', 10);
+  await prisma.user.upsert({
+    where: { username: 'panel' },
+    update: {
+      passwordHash: panelPassword,
+      role: 'PANEL',
+      active: true,
+    },
+    create: {
+      username: 'panel',
+      email: 'panel@colbeef.local',
+      passwordHash: panelPassword,
+      fullName: 'Panel de Usabilidad',
+      role: 'PANEL',
+    },
+  });
 }
 
 async function seedFormats() {

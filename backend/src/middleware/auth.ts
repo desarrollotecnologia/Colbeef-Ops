@@ -44,3 +44,11 @@ export function requireRole(...roles: UserRole[]) {
     next();
   };
 }
+
+/** Bloquea al usuario de panel de usabilidad en rutas operativas */
+export function denyPanel(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role === UserRole.PANEL) {
+    return res.status(403).json({ error: 'Acceso no permitido' });
+  }
+  next();
+}

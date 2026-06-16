@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '@/lib/api';
 import { clearAuthSession, purgeLegacyAuthStorage, setAuthToken } from '@/lib/authSession';
+import { trackUsageEvent } from '@/lib/usageTracking';
 import type { User } from '@/types';
 
 interface AuthContextType {
@@ -9,6 +10,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<User>;
   logout: () => void;
   isAdmin: boolean;
+  isPanel: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -30,6 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    if (user && user.role !== 'PANEL') {
+      trackUsageEvent('LOGOUT', window.location.pathname);
+    }
     clearAuthSession();
     setUser(null);
     window.location.href = '/login';
@@ -43,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         isAdmin: user?.role === 'ADMIN',
+        isPanel: user?.role === 'PANEL',
       }}
     >
       {children}

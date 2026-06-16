@@ -19,7 +19,9 @@ export default function LoginPage() {
 
     try {
       const loggedInUser = await login(username, password);
-      navigate(loggedInUser.role === 'ADMIN' ? '/admin' : '/');
+      const path =
+        loggedInUser.role === 'ADMIN' ? '/admin' : loggedInUser.role === 'PANEL' ? '/panel' : '/';
+      navigate(path);
     } catch {
       setError('Usuario o contraseña incorrectos');
     } finally {

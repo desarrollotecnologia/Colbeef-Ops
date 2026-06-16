@@ -15,6 +15,7 @@ datasource db {
 enum UserRole {
   ADMIN
   OPERARIO
+  PANEL
 }
 
 model User {
@@ -31,6 +32,7 @@ model User {
   submissionsCreated FormSubmission[] @relation("OperatorSubmissions")
   submissionsReviewed FormSubmission[] @relation("ReviewerSubmissions")
   signatures         Signature[]
+  usageEvents        UsageEvent[]
 
   @@map("users")
 }
@@ -184,4 +186,49 @@ model Signature {
   admin      User           @relation(fields: [adminId], references: [id])
 
   @@map("signatures")
+}
+
+// ─── Telemetría de usabilidad ───────────────────────────────────────
+
+enum UsageEventType {
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  PAGE_VIEW
+  SUBMISSION_CREATED
+  SHEET_SAVED
+  SUBMISSION_SUBMITTED
+  SUBMISSION_SUBMITTED_FAILED
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  SUBMISSION_DELETED
+  SUBMISSION_OPENED
+  PDF_DOWNLOADED
+  SEARCH_EXECUTED
+  PENDING_VIEWED
+}
+
+model UsageEvent {
+  id           String         @id @default(uuid())
+  eventType    UsageEventType @map("event_type")
+  userId       String?        @map("user_id")
+  username     String?
+  userRole     UserRole?      @map("user_role")
+  path         String?
+  formatId     String?        @map("format_id")
+  formatCode   String?        @map("format_code")
+  formatName   String?        @map("format_name")
+  submissionId String?        @map("submission_id")
+  sheetId      String?        @map("sheet_id")
+  sheetName    String?        @map("sheet_name")
+  metadata     Json?
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([formatId])
+  @@map("usage_events")
 }

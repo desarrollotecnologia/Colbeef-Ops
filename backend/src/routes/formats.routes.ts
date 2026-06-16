@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, denyPanel } from '../middleware/auth';
 import { paramId } from '../utils/params';
 
 const router = Router();
 
-router.get('/', authenticate, async (_req: Request, res: Response) => {
+router.get('/', authenticate, denyPanel, async (_req: Request, res: Response) => {
   const formats = await prisma.format.findMany({
     where: { active: true },
     orderBy: { sortOrder: 'asc' },
@@ -20,7 +20,7 @@ router.get('/', authenticate, async (_req: Request, res: Response) => {
   res.json(formats);
 });
 
-router.get('/:id', authenticate, async (req: Request, res: Response) => {
+router.get('/:id', authenticate, denyPanel, async (req: Request, res: Response) => {
   const format = await prisma.format.findUnique({
     where: { id: paramId(req.params.id) },
     include: {

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { SubmissionStatus, UserRole } from '@prisma/client';
+import { SubmissionStatus, UsageEventType, UserRole } from '@prisma/client';
 import prisma from '../lib/prisma';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, denyPanel, requireRole } from '../middleware/auth';
 import { paramId } from '../utils/params';
 import {
   assertWorkDateAllowed,
@@ -10,10 +10,12 @@ import {
 } from '../utils/workDate';
 import { getSubmissionMissingFields } from '../utils/fieldValidation';
 import { buildPdfFilename, generateSubmissionPdf } from '../services/submissionPdf';
+import { logUsageEvent } from '../services/usageLogger';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(denyPanel);
 
 // Listar envíos (operario ve los suyos, admin ve todos)
 router.get('/', async (req: Request, res: Response) => {
@@ -49,11 +51,29 @@ router.get('/', async (req: Request, res: Response) => {
     },
   });
 
+  if (status || formatId || from || to) {
+    logUsageEvent({
+      eventType: UsageEventType.SEARCH_EXECUTED,
+      userId: req.user!.userId,
+      username: req.user!.username,
+      userRole: req.user!.role,
+      path: '/api/submissions',
+      metadata: { status, formatId, from, to },
+    });
+  }
+
   res.json(submissions);
 });
 
 // Pendientes de revisión (solo admin)
-router.get('/pending', requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+router.get('/pending', requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  logUsageEvent({
+    eventType: UsageEventType.PENDING_VIEWED,
+    userId: req.user!.userId,
+    username: req.user!.username,
+    userRole: req.user!.role,
+    path: '/api/submissions/pending',
+  });
   const pending = await prisma.formSubmission.findMany({
     where: { status: SubmissionStatus.PENDING_REVIEW },
     orderBy: { submittedAt: 'asc' },
@@ -121,6 +141,18 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
     },
   });
 
+  logUsageEvent({
+    eventType: UsageEventType.SUBMISSION_CREATED,
+    userId: req.user!.userId,
+    username: req.user!.username,
+    userRole: req.user!.role,
+    formatId: format.id,
+    formatCode: format.code,
+    formatName: format.name,
+    submissionId: submission.id,
+    path: '/api/submissions',
+  });
+
   res.status(201).json(submission);
 });
 
@@ -153,6 +185,17 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
   try {
     const pdfBuffer = await generateSubmissionPdf(submission);
     const filename = buildPdfFilename(submission);
+    logUsageEvent({
+      eventType: UsageEventType.PDF_DOWNLOADED,
+      userId: req.user!.userId,
+      username: req.user!.username,
+      userRole: req.user!.role,
+      formatId: submission.formatId,
+      formatCode: submission.format.code,
+      formatName: submission.format.name,
+      submissionId: submission.id,
+      path: '/api/submissions/pdf',
+    });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(pdfBuffer);
@@ -190,6 +233,19 @@ router.get('/:id', async (req: Request, res: Response) => {
     });
   }
 
+  logUsageEvent({
+    eventType: UsageEventType.SUBMISSION_OPENED,
+    userId: req.user!.userId,
+    username: req.user!.username,
+    userRole: req.user!.role,
+    formatId: submission.formatId,
+    formatCode: submission.format.code,
+    formatName: submission.format.name,
+    submissionId: submission.id,
+    path: '/api/submissions/:id',
+    metadata: { status: submission.status },
+  });
+
   res.json(submission);
 });
 
@@ -221,6 +277,21 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
       },
     },
     data: { data },
+    include: { sheet: { select: { name: true } }, submission: { include: { format: true } } },
+  });
+
+  logUsageEvent({
+    eventType: UsageEventType.SHEET_SAVED,
+    userId: req.user!.userId,
+    username: req.user!.username,
+    userRole: req.user!.role,
+    formatId: updated.submission.formatId,
+    formatCode: updated.submission.format.code,
+    formatName: updated.submission.format.name,
+    submissionId: updated.submissionId,
+    sheetId: updated.sheetId,
+    sheetName: updated.sheet.name,
+    path: '/api/submissions/sheets',
   });
 
   res.json(updated);
@@ -272,6 +343,17 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
 
   if (missingFields.length > 0) {
     const incompleteSheetNames = [...new Set(missingFields.map((f) => f.sheet))];
+    logUsageEvent({
+      eventType: UsageEventType.SUBMISSION_SUBMITTED_FAILED,
+      userId: req.user!.userId,
+      username: req.user!.username,
+      userRole: req.user!.role,
+      formatId: submission.formatId,
+      formatCode: submission.format.code,
+      formatName: submission.format.name,
+      submissionId: submission.id,
+      metadata: { incompleteSheets: incompleteSheetNames },
+    });
     return res.status(422).json({
       error: `Debe completar todas las hojas del formato antes de entregar (${submission.format.sheets.length} hojas). Pendientes: ${incompleteSheetNames.join(', ')}`,
       missingFields,
@@ -285,6 +367,19 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
       status: SubmissionStatus.PENDING_REVIEW,
       submittedAt: new Date(),
     },
+    include: { format: true },
+  });
+
+  logUsageEvent({
+    eventType: UsageEventType.SUBMISSION_SUBMITTED,
+    userId: req.user!.userId,
+    username: req.user!.username,
+    userRole: req.user!.role,
+    formatId: updated.formatId,
+    formatCode: updated.format.code,
+    formatName: updated.format.name,
+    submissionId: updated.id,
+    path: '/api/submissions/submit',
   });
 
   res.json(updated);
@@ -323,7 +418,20 @@ router.post('/:id/approve', requireRole(UserRole.ADMIN), async (req: Request, re
     include: {
       signature: { include: { admin: { select: { id: true, fullName: true } } } },
       reviewedBy: { select: { id: true, fullName: true } },
+      format: true,
     },
+  });
+
+  logUsageEvent({
+    eventType: UsageEventType.SUBMISSION_APPROVED,
+    userId: req.user!.userId,
+    username: req.user!.username,
+    userRole: req.user!.role,
+    formatId: updated.formatId,
+    formatCode: updated.format.code,
+    formatName: updated.format.name,
+    submissionId: updated.id,
+    path: '/api/submissions/approve',
   });
 
   res.json(updated);
@@ -351,6 +459,19 @@ router.delete('/:id', requireRole(UserRole.OPERARIO), async (req: Request, res: 
     where: { id: submission.id },
   });
 
+  const format = await prisma.format.findUnique({ where: { id: submission.formatId } });
+  logUsageEvent({
+    eventType: UsageEventType.SUBMISSION_DELETED,
+    userId: req.user!.userId,
+    username: req.user!.username,
+    userRole: req.user!.role,
+    formatId: submission.formatId,
+    formatCode: format?.code,
+    formatName: format?.name,
+    submissionId: submission.id,
+    path: '/api/submissions',
+  });
+
   res.status(204).send();
 });
 
@@ -362,6 +483,18 @@ router.post('/:id/reject', requireRole(UserRole.ADMIN), async (req: Request, res
     return res.status(400).json({ error: 'Debe indicar el motivo del rechazo' });
   }
 
+  const submission = await prisma.formSubmission.findUnique({
+    where: { id: paramId(req.params.id) },
+  });
+
+  if (!submission) {
+    return res.status(404).json({ error: 'Envío no encontrado' });
+  }
+
+  if (submission.status !== SubmissionStatus.PENDING_REVIEW) {
+    return res.status(400).json({ error: 'Este envío no está pendiente de revisión' });
+  }
+
   const updated = await prisma.formSubmission.update({
     where: { id: paramId(req.params.id) },
     data: {
@@ -370,6 +503,20 @@ router.post('/:id/reject', requireRole(UserRole.ADMIN), async (req: Request, res
       reviewedById: req.user!.userId,
       reviewNotes: notes,
     },
+    include: { format: true },
+  });
+
+  logUsageEvent({
+    eventType: UsageEventType.SUBMISSION_REJECTED,
+    userId: req.user!.userId,
+    username: req.user!.username,
+    userRole: req.user!.role,
+    formatId: updated.formatId,
+    formatCode: updated.format.code,
+    formatName: updated.format.name,
+    submissionId: updated.id,
+    path: '/api/submissions/reject',
+    metadata: { notesLength: notes.length },
   });
 
   res.json(updated);

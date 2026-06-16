@@ -6,6 +6,7 @@ import { errorHandler, notFound } from './middleware/errorHandler';
 import authRoutes from './routes/auth.routes';
 import formatsRoutes from './routes/formats.routes';
 import submissionsRoutes from './routes/submissions.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/formats', formatsRoutes);
 app.use('/api/submissions', submissionsRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 if (config.nodeEnv === 'production') {
   const frontendDist = path.join(__dirname, '../../frontend/dist');

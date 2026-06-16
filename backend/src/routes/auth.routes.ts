@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { UsageEventType } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { config } from '../config';
 import { authenticate } from '../middleware/auth';
+import { logUsageEvent } from '../services/usageLogger';
 
 const router = Router();
 
@@ -16,13 +18,31 @@ router.post('/login', async (req: Request, res: Response) => {
 
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !user.active) {
+    logUsageEvent({
+      eventType: UsageEventType.LOGIN_FAILED,
+      username,
+      path: '/api/auth/login',
+    });
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
+    logUsageEvent({
+      eventType: UsageEventType.LOGIN_FAILED,
+      username,
+      path: '/api/auth/login',
+    });
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
+
+  logUsageEvent({
+    eventType: UsageEventType.LOGIN,
+    userId: user.id,
+    username: user.username,
+    userRole: user.role,
+    path: '/api/auth/login',
+  });
 
   const token = jwt.sign(
     { userId: user.id, username: user.username, role: user.role },
