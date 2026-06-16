@@ -216,7 +216,7 @@ export default function UsabilityDashboard() {
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 11 }}
-                      tickFormatter={(v) => String(v).slice(5)}
+                      tickFormatter={(v: string) => String(v).slice(5)}
                     />
                     <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                     <Tooltip labelFormatter={(v) => `Fecha: ${v}`} />
@@ -306,7 +306,7 @@ export default function UsabilityDashboard() {
                       cx="50%"
                       cy="50%"
                       outerRadius={75}
-                      label={({ role, percent }) => `${role} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                      label={(props) => `${(props as { name?: string }).name ?? ''} ${(((props as { percent?: number }).percent ?? 0) * 100).toFixed(0)}%`}
                     >
                       <Cell fill="#2563eb" />
                       <Cell fill="#059669" />
