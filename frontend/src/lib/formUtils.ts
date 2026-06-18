@@ -7,6 +7,15 @@ export const INPUT_CLASS =
 export const SECTION_HEADER_CLASS = 'bg-[#dcfce7] px-3 py-2 border-b border-gray-800';
 export const SECTION_HEADER_ROW_CLASS = 'bg-[#dcfce7]';
 
+/** Campos de temperatura aceptan texto libre además de números */
+export function isTemperatureInput(fieldKey?: string, label?: string): boolean {
+  const key = (fieldKey ?? '').toLowerCase();
+  const lbl = (label ?? '').toLowerCase();
+  if (key.includes('temperatura') || key === 'temp' || key.startsWith('temp_')) return true;
+  if (lbl.includes('temperatura') || lbl.includes('t°c') || lbl.includes('t°')) return true;
+  return false;
+}
+
 export function groupFields(fields: FormatField[]): { name: string | null; fields: FormatField[] }[] {
   const groups: { name: string | null; fields: FormatField[] }[] = [];
   let current: string | null = null;

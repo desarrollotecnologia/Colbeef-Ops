@@ -1,12 +1,15 @@
 import { Camera } from 'lucide-react';
 import type { ChecklistItemData, FormatField, RepeaterColumn } from '@/types';
-import { INPUT_CLASS } from '@/lib/formUtils';
+import { INPUT_CLASS, isTemperatureInput } from '@/lib/formUtils';
 import { isAutoField } from '@/lib/autoFill';
 import ChoiceButtons from './ChoiceButtons';
 import ItemChecklist from './ItemChecklist';
 import MatrixField from './MatrixField';
 import RepeaterField from './RepeaterField';
 import FormalRepeaterTable from './FormalRepeaterTable';
+import CloroResidualRepeater from './CloroResidualRepeater';
+import LacticoTitrationRepeater from './LacticoTitrationRepeater';
+import CardRepeater from './CardRepeater';
 import AutoValue from './AutoValue';
 
 interface Props {
@@ -164,7 +167,28 @@ export default function FormField({ field, value, onChange, disabled, compact }:
       <div>
         <FieldLabel field={field} show={showLabel} />
         {field.helpText && <p className="text-xs text-gray-500 mb-2">{field.helpText}</p>}
-        {opts.layout === 'formal_repeater_table' ? (
+        {opts.layout === 'cloro_residual_repeater' ? (
+          <CloroResidualRepeater
+            options={repeaterOpts}
+            value={repeaterValue}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        ) : opts.layout === 'lactico_titration_repeater' ? (
+          <LacticoTitrationRepeater
+            options={repeaterOpts}
+            value={repeaterValue}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        ) : opts.layout === 'card_repeater' ? (
+          <CardRepeater
+            options={repeaterOpts}
+            value={repeaterValue}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        ) : opts.layout === 'formal_repeater_table' ? (
           <FormalRepeaterTable
             options={repeaterOpts}
             value={repeaterValue}
@@ -231,16 +255,17 @@ export default function FormField({ field, value, onChange, disabled, compact }:
   }
 
   if (field.fieldType === 'NUMBER') {
+    const textInput = isTemperatureInput(field.fieldKey, field.label);
     return (
       <div>
         <FieldLabel field={field} show={showLabel} />
         <input
-          type="number"
+          type={textInput ? 'text' : 'number'}
           value={value !== undefined && value !== null ? String(value) : ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          min={field.config?.min}
-          max={field.config?.max}
+          min={textInput ? undefined : field.config?.min}
+          max={textInput ? undefined : field.config?.max}
           placeholder={field.placeholder}
           className={INPUT_CLASS}
         />

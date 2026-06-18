@@ -95,6 +95,9 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
   const cavaColumns = options.cavaColumns ?? [];
   const areaLabel = options.areaLabel;
   const useNa = options.mode === 'cnc_na' || choices.includes('NA');
+  const revSubCols: CncChoice[] =
+    options.revCncNa || options.mode === 'cnc_na' ? ['C', 'NC', 'NA'] : ['C', 'NC'];
+  const finalSubCols: CncChoice[] = options.mode === 'cnc_na' ? ['C', 'NC', 'NA'] : ['C', 'NC'];
   const cncSubCols: CncChoice[] = useNa ? ['C', 'NC', 'NA'] : ['C', 'NC'];
   const columnDefs =
     options.columnDefs?.length
@@ -202,7 +205,7 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
   if (tableMode && hasSanitary) {
     const hasSections = items.some((item) => item.section);
     const sectionGroups = hasSections ? groupBySection(items) : [{ label: '', items }];
-    const totalCols = 1 + 1 + cncSubCols.length + 1 + 1 + cncSubCols.length + 1;
+    const totalCols = 1 + 1 + revSubCols.length + 1 + 1 + finalSubCols.length + 1;
     let rowIdx = 0;
 
     return (
@@ -212,17 +215,23 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
             <tr className="bg-white border-b-2 border-gray-800">
               <th className={`${thClass} text-left`} rowSpan={2}>Operación sanitaria</th>
               <th className={`${thClass} w-10`} rowSpan={2}>FR</th>
-              <th className={thClass} colSpan={2}>Rev.</th>
+              <th className={thClass} colSpan={revSubCols.length}>Rev.</th>
               <th className={`${thClass} text-left min-w-[100px]`} rowSpan={2}>Observación</th>
               <th className={`${thClass} text-left min-w-[100px]`} rowSpan={2}>Corrección</th>
-              <th className={thClass} colSpan={2}>Verif. final</th>
+              <th className={thClass} colSpan={finalSubCols.length}>Verif. final</th>
               <th className={`${thClass} text-left min-w-[90px]`} rowSpan={2}>Responsable</th>
             </tr>
             <tr className="bg-white border-b-2 border-gray-800">
-              <th className={`${thClass} w-10`}>C</th>
-              <th className={`${thClass} w-10`}>NC</th>
-              <th className={`${thClass} w-10`}>C</th>
-              <th className={`${thClass} w-10`}>NC</th>
+              {revSubCols.map((sub) => (
+                <th key={`rev-h-${sub}`} className={`${thClass} w-10 ${sub === 'NA' ? 'bg-gray-100' : sub === 'C' ? 'bg-green-50' : 'bg-red-50'}`}>
+                  {sub}
+                </th>
+              ))}
+              {finalSubCols.map((sub) => (
+                <th key={`final-h-${sub}`} className={`${thClass} w-10 ${sub === 'NA' ? 'bg-gray-100' : sub === 'C' ? 'bg-green-50' : 'bg-red-50'}`}>
+                  {sub}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -246,8 +255,13 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
                   <tr key={item.key} className={currentRow % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>{item.label}</td>
                     <td className={`${tdClass} text-center text-xs font-mono text-gray-600`}>{item.fr ?? '—'}</td>
-                    {cncSubCols.map((sub) => (
-                      <td key={`rev-${sub}`} className={`${tdClass} text-center w-11 px-0.5`}>
+                    {revSubCols.map((sub) => (
+                      <td
+                        key={`rev-${sub}`}
+                        className={`${tdClass} text-center w-11 px-0.5 ${
+                          sub === 'C' ? 'bg-green-50/60' : sub === 'NC' ? 'bg-red-50/60' : 'bg-gray-100/60'
+                        }`}
+                      >
                         <CncToggle
                           choice={sub}
                           value={data.rev_cnc ?? ''}
@@ -276,8 +290,13 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
                         className={`${INPUT_CLASS} text-xs py-1.5`}
                       />
                     </td>
-                    {cncSubCols.map((sub) => (
-                      <td key={`final-${sub}`} className={`${tdClass} text-center w-11 px-0.5`}>
+                    {finalSubCols.map((sub) => (
+                      <td
+                        key={`final-${sub}`}
+                        className={`${tdClass} text-center w-11 px-0.5 ${
+                          sub === 'C' ? 'bg-green-50/60' : sub === 'NC' ? 'bg-red-50/60' : 'bg-gray-100/60'
+                        }`}
+                      >
                         <CncToggle
                           choice={sub}
                           value={data.final_cnc ?? ''}
@@ -411,8 +430,8 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
             </div>
             {columns.includes('rev_cnc') && (
               <div className="mb-2">
-                <p className="text-xs text-gray-500 mb-1">Rev. C/NC</p>
-                <ChoiceButtons choices={choices.filter((c) => c !== 'NA')} value={data.rev_cnc ?? ''} onChange={(v) => updateItem(item.key, { rev_cnc: v })} disabled={disabled} size="sm" />
+                <p className="text-xs text-gray-500 mb-1">Rev. C/NC/NA</p>
+                <ChoiceButtons choices={revSubCols} value={data.rev_cnc ?? ''} onChange={(v) => updateItem(item.key, { rev_cnc: v })} disabled={disabled} size="sm" />
               </div>
             )}
             {columns.includes('cnc') && (
@@ -458,7 +477,7 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
             {columns.includes('final_cnc') && (
               <div className="mb-2">
                 <p className="text-xs text-gray-500 mb-1">C/NC Final</p>
-                <ChoiceButtons choices={choices.filter((c) => c !== 'NA')} value={data.final_cnc ?? ''} onChange={(v) => updateItem(item.key, { final_cnc: v })} disabled={disabled} size="sm" />
+                <ChoiceButtons choices={finalSubCols} value={data.final_cnc ?? ''} onChange={(v) => updateItem(item.key, { final_cnc: v })} disabled={disabled} size="sm" />
               </div>
             )}
             {columns.includes('responsible') && (

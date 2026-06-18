@@ -10,10 +10,10 @@ interface Props {
 }
 
 const PRODUCT_BLOCKS = [
-  { prefix: 'refri_sin_hueso', title: 'Producto refrigerado sin hueso' },
-  { prefix: 'refri_con_hueso', title: 'Producto refrigerado con hueso' },
-  { prefix: 'cong_sin_hueso', title: 'Producto congelado sin hueso' },
-  { prefix: 'cong_con_hueso', title: 'Producto congelado con hueso' },
+  { prefix: 'refri_sin_hueso', title: 'Producto refrigerado sin hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC · Video Jet C/NC/NA · Foto' },
+  { prefix: 'refri_con_hueso', title: 'Producto refrigerado con hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC · Video Jet C/NC/NA · Foto' },
+  { prefix: 'cong_sin_hueso', title: 'Producto congelado sin hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC/NA · Video Jet C/NC/NA · Foto' },
+  { prefix: 'cong_con_hueso', title: 'Producto congelado con hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC/NA · Video Jet C/NC/NA · Foto' },
 ];
 
 export default function Format4Diario5({ fields, sheetData, onUpdate, disabled }: Props) {
@@ -28,14 +28,14 @@ export default function Format4Diario5({ fields, sheetData, onUpdate, disabled }
         </div>
       )}
 
-      {PRODUCT_BLOCKS.map(({ prefix, title }) => {
+      {PRODUCT_BLOCKS.map(({ prefix, title, subtitle }) => {
         const blockFields = fields.filter((f) => f.fieldKey.startsWith(`${prefix}_`));
         if (blockFields.length === 0) return null;
         return (
           <div key={prefix} className="border-t border-gray-800">
             <div className={SECTION_HEADER_CLASS}>
               <h3 className="text-xs font-bold uppercase text-gray-900">{title}</h3>
-              <p className="text-[11px] text-gray-600 mt-0.5">Empaque Vacío/Granel · Etiqueta C/NC · Video Jet C/NC/NA · Foto</p>
+              <p className="text-[11px] text-gray-600 mt-0.5">{subtitle}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
               {blockFields.map((f) => (

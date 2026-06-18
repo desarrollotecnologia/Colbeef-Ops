@@ -79,7 +79,9 @@ export function isFieldComplete(
       if (tableType === 'cloro') {
         if (!row.hora || !row.punto_toma || !row.cloro_residual || !row.cnc) return false;
       } else if (tableType === 'temperaturas') {
-        if (!row.hora || !row.temperatura || !row.cnc) return false;
+        if (!row.cnc) return false;
+        if (row.cnc === 'NA') continue;
+        if (!row.hora || !row.temperatura) return false;
       } else if (tableType === 'titulacion') {
         if (!row.hora || !row.volumen_naoh || !row.cnc) return false;
       } else if (tableType === 'equipos') {
@@ -127,7 +129,16 @@ export function isFieldComplete(
     const rows = Array.isArray(value) ? value : [];
     const minRows = options.minRows ?? 1;
     if (rows.length < minRows) return false;
-    return true;
+    const cols = options.columns ?? options.columns_def ?? [];
+    return rows.every((row) =>
+      cols
+        .filter((c) => typeof c === 'object' && c !== null && 'required' in c && c.required)
+        .every((c) => {
+          const col = c as { key: string };
+          const cell = (row as Record<string, unknown>)[col.key];
+          return cell !== undefined && cell !== null && cell !== '';
+        })
+    );
   }
 
   if (field.required) {

@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions, RepeaterColumn } from '@/types';
 import ChoiceButtons from './ChoiceButtons';
-import { INPUT_CLASS } from '@/lib/formUtils';
+import { INPUT_CLASS, isTemperatureInput } from '@/lib/formUtils';
 import Button from '@/components/Button';
 
 interface Props {
@@ -83,14 +83,15 @@ function RepeaterCell({
   }
 
   if (type === 'NUMBER') {
+    const textInput = isTemperatureInput(col.key, col.label);
     return (
       <input
-        type="number"
+        type={textInput ? 'text' : 'number'}
         value={value !== undefined && value !== null ? String(value) : ''}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        min={col.config?.min}
-        max={col.config?.max}
+        min={textInput ? undefined : col.config?.min}
+        max={textInput ? undefined : col.config?.max}
         className={`${INPUT_CLASS} text-xs py-1`}
       />
     );

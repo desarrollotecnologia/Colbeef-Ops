@@ -1,6 +1,8 @@
 import type { FormatField, MeasureRowData } from '@/types';
 import FormField from './FormField';
 import FormalMeasureTable from './FormalMeasureTable';
+import CloroResidualRepeater from './CloroResidualRepeater';
+import LacticoTitrationRepeater from './LacticoTitrationRepeater';
 import { groupFields, SECTION_HEADER_CLASS } from '@/lib/formUtils';
 
 interface Props {
@@ -12,6 +14,18 @@ interface Props {
 
 function isFormalMeasureTable(field: FormatField) {
   return field.fieldType === 'CHECKLIST' && field.options?.layout === 'formal_measure_table';
+}
+
+function isCloroResidualRepeater(field: FormatField) {
+  return field.fieldType === 'REPEATER' && field.options?.layout === 'cloro_residual_repeater';
+}
+
+function isLacticoTitrationRepeater(field: FormatField) {
+  return field.fieldType === 'REPEATER' && field.options?.layout === 'lactico_titration_repeater';
+}
+
+function isCardRepeater(field: FormatField) {
+  return isCloroResidualRepeater(field) || isLacticoTitrationRepeater(field);
 }
 
 export default function Format4Diario1({ fields, sheetData, onUpdate, disabled }: Props) {
@@ -32,7 +46,9 @@ export default function Format4Diario1({ fields, sheetData, onUpdate, disabled }
 
       {groups.map((group, gi) => {
         const isFormalOnly = group.fields.length === 1 && isFormalMeasureTable(group.fields[0]);
-        const isRepeaterOnly = group.fields.length === 1 && group.fields[0].fieldType === 'REPEATER';
+        const isRepeaterOnly =
+          group.fields.length === 1 &&
+          (group.fields[0].fieldType === 'REPEATER' || isCardRepeater(group.fields[0]));
 
         return (
           <div key={gi} className="border-t border-gray-800">
@@ -49,6 +65,30 @@ export default function Format4Diario1({ fields, sheetData, onUpdate, disabled }
                       <FormalMeasureTable
                         options={f.options ?? {}}
                         value={(sheetData[f.fieldKey] as Record<string, MeasureRowData>) ?? {}}
+                        onChange={(v) => onUpdate(f.fieldKey, v)}
+                        disabled={disabled}
+                      />
+                    </div>
+                  );
+                }
+                if (isLacticoTitrationRepeater(f)) {
+                  return (
+                    <div key={f.fieldKey} className="col-span-full">
+                      <LacticoTitrationRepeater
+                        options={f.options ?? {}}
+                        value={Array.isArray(sheetData[f.fieldKey]) ? (sheetData[f.fieldKey] as Record<string, unknown>[]) : []}
+                        onChange={(v) => onUpdate(f.fieldKey, v)}
+                        disabled={disabled}
+                      />
+                    </div>
+                  );
+                }
+                if (isCloroResidualRepeater(f)) {
+                  return (
+                    <div key={f.fieldKey} className="col-span-full">
+                      <CloroResidualRepeater
+                        options={f.options ?? {}}
+                        value={Array.isArray(sheetData[f.fieldKey]) ? (sheetData[f.fieldKey] as Record<string, unknown>[]) : []}
                         onChange={(v) => onUpdate(f.fieldKey, v)}
                         disabled={disabled}
                       />

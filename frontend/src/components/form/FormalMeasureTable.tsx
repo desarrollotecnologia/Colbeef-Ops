@@ -9,9 +9,13 @@ interface Props {
   disabled?: boolean;
 }
 
-type CncChoice = 'C' | 'NC';
+type CncChoice = 'C' | 'NC' | 'NA';
 
-const LACTICO_MAP: Record<string, string> = { '2.2': '1.98', '2.3': '2.07' };
+const CNC_ACTIVE_CLASS: Record<CncChoice, string> = {
+  C: 'bg-green-600 text-white border-green-600',
+  NC: 'bg-red-600 text-white border-red-600',
+  NA: 'bg-gray-500 text-white border-gray-500',
+};
 
 function CncToggle({
   choice,
@@ -25,20 +29,24 @@ function CncToggle({
   onChange: (v: string) => void;
 }) {
   const active = value === choice;
-  const activeClass =
-    choice === 'C' ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600';
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={() => onChange(active ? '' : choice)}
       className={`w-full py-1 text-xs font-bold rounded border-2 ${
-        active ? activeClass : 'bg-white border-gray-300'
+        active ? CNC_ACTIVE_CLASS[choice] : 'bg-white border-gray-300'
       }`}
     >
       {choice}
     </button>
   );
+}
+
+const LACTICO_MAP: Record<string, string> = { '2.2': '1.98', '2.3': '2.07' };
+
+function cncChoices(mode?: string): CncChoice[] {
+  return mode === 'cnc_na' ? ['C', 'NC', 'NA'] : ['C', 'NC'];
 }
 
 function PowerToggle({
@@ -132,16 +140,18 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
   }
 
   if (tableType === 'temperaturas') {
+    const cncCols = cncChoices(options.mode);
     return (
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[640px]">
+        <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
               <th className={`${thClass} text-left`}>Área</th>
               <th className={thClass}>Hora</th>
               <th className={thClass}>Temperatura °C</th>
-              <th className={thClass}>Cumple</th>
-              <th className={thClass}>No cumple</th>
+              <th className={`${thClass} bg-green-50`}>Cumple</th>
+              <th className={`${thClass} bg-red-50`}>No cumple</th>
+              {cncCols.includes('NA') && <th className={`${thClass} bg-gray-100`}>No aplica</th>}
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>
@@ -156,10 +166,15 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
                     <input type="time" value={row.hora ?? ''} onChange={(e) => updateRow(item.key, { hora: e.target.value })} disabled={disabled} className={`${INPUT_CLASS} text-xs py-1.5`} />
                   </td>
                   <td className={tdClass}>
-                    <input type="number" step="0.1" value={row.temperatura ?? ''} onChange={(e) => updateRow(item.key, { temperatura: e.target.value })} disabled={disabled} placeholder="—" className={`${INPUT_CLASS} text-xs py-1.5`} />
+                    <input type="text" value={row.temperatura ?? ''} onChange={(e) => updateRow(item.key, { temperatura: e.target.value })} disabled={disabled} placeholder="—" className={`${INPUT_CLASS} text-xs py-1.5`} />
                   </td>
-                  {(['C', 'NC'] as CncChoice[]).map((sub) => (
-                    <td key={sub} className={`${tdClass} text-center w-12 px-1`}>
+                  {cncCols.map((sub) => (
+                    <td
+                      key={sub}
+                      className={`${tdClass} text-center w-12 px-1 ${
+                        sub === 'C' ? 'bg-green-50/60' : sub === 'NC' ? 'bg-red-50/60' : 'bg-gray-100/60'
+                      }`}
+                    >
                       <CncToggle choice={sub} value={cnc} disabled={disabled} onChange={(v) => updateRow(item.key, { cnc: v })} />
                     </td>
                   ))}
@@ -256,8 +271,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
                       <span className="block text-center text-xs text-gray-500">N.A</span>
                     ) : (
                       <input
-                        type="number"
-                        step="0.1"
+                        type="text"
                         value={row.temperatura ?? ''}
                         onChange={(e) => updateRow(item.key, { temperatura: e.target.value })}
                         disabled={disabled}

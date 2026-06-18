@@ -59,7 +59,9 @@ export function isFieldComplete(
         return Boolean(row.hora && row.punto_toma && row.cloro_residual && row.cnc);
       }
       if (tableType === 'temperaturas') {
-        return Boolean(row.hora && row.temperatura && row.cnc);
+        if (!row.cnc) return false;
+        if (row.cnc === 'NA') return true;
+        return Boolean(row.hora && row.temperatura);
       }
       if (tableType === 'titulacion') {
         return Boolean(row.hora && row.volumen_naoh && row.cnc);

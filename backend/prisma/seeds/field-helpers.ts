@@ -189,6 +189,7 @@ export function itemChecklistField(
   sortOrder: number,
   opts?: Partial<FieldDef> & {
     mode?: 'cnc' | 'cnc_na';
+    revCncNa?: boolean;
     columns?: ('cnc' | 'observation' | 'corrective' | 'platforms' | 'cavaColumns')[];
     platformCount?: number;
     cavaColumns?: string[];
@@ -210,6 +211,7 @@ export function itemChecklistField(
     options: {
       mode,
       choices: mode === 'cnc_na' ? ['C', 'NC', 'NA'] : ['C', 'NC'],
+      revCncNa: opts?.revCncNa ?? false,
       items,
       columns: opts?.columns ?? ['cnc', 'observation', 'corrective'],
       platformCount: opts?.platformCount,
@@ -250,6 +252,34 @@ export function repeaterField(
       })),
       minRows: opts?.minRows ?? 1,
       maxRows: opts?.maxRows ?? 50,
+    },
+  };
+}
+
+/** Repetidor en tarjetas (varios registros al día con los mismos campos) */
+export function cardRepeaterField(
+  fieldKey: string,
+  label: string,
+  columns: FieldDef[],
+  sortOrder: number,
+  opts?: Partial<FieldDef> & {
+    minRows?: number;
+    maxRows?: number;
+    entryLabel?: string;
+    addButtonLabel?: string;
+  }
+): FieldDef {
+  const field = repeaterField(fieldKey, label, columns, sortOrder, {
+    ...opts,
+    formalTable: false,
+  });
+  return {
+    ...field,
+    options: {
+      ...field.options,
+      layout: 'card_repeater',
+      entryLabel: opts?.entryLabel ?? 'Registro',
+      addButtonLabel: opts?.addButtonLabel ?? 'Agregar registro',
     },
   };
 }
@@ -305,9 +335,9 @@ export function formalMeasureTableField(
   rows: { key: string; label: string; naTemp?: boolean; naPresion?: boolean }[],
   sortOrder: number,
   groupName: string,
-  opts?: Partial<FieldDef> & { pediluviosLayout?: 'operativo' | 'simple' }
+  opts?: Partial<FieldDef> & { pediluviosLayout?: 'operativo' | 'simple'; measureCncMode?: 'cnc' | 'cnc_na' }
 ): FieldDef {
-  const { pediluviosLayout, ...fieldOpts } = opts ?? {};
+  const { pediluviosLayout, measureCncMode, ...fieldOpts } = opts ?? {};
   return {
     fieldKey,
     label,
@@ -322,6 +352,7 @@ export function formalMeasureTableField(
       tableType,
       items: rows,
       ...(pediluviosLayout ? { pediluviosLayout } : {}),
+      ...(measureCncMode ? { mode: measureCncMode } : {}),
     },
   };
 }
@@ -393,6 +424,54 @@ export function lacticoTitrationField(sortOrder: number): FieldDef[] {
   ];
 }
 
+const TITULACION_COLS: FieldDef[] = [
+  { fieldKey: 'hora', label: 'Hora', fieldType: 'TIME', sortOrder: 0, manualOnly: true, required: true },
+  {
+    fieldKey: 'volumen_naoh',
+    label: 'Volumen NaOH (ml)',
+    fieldType: 'SELECT',
+    sortOrder: 1,
+    manualOnly: true,
+    options: { choices: ['2.2', '2.3'] },
+    required: true,
+  },
+  {
+    fieldKey: 'cnc',
+    label: 'Cumple / No cumple',
+    fieldType: 'CHECKLIST',
+    sortOrder: 2,
+    manualOnly: true,
+    options: { mode: 'cnc', choices: ['C', 'NC'] },
+    required: true,
+  },
+  {
+    fieldKey: 'correccion',
+    label: 'Corrección',
+    fieldType: 'TEXTAREA',
+    sortOrder: 3,
+    manualOnly: true,
+    config: { requiredIf: 'nc_or_observation' },
+  },
+];
+
+/** Titulación ácido láctico — varios monitoreos al día */
+export function lacticoTitrationRepeaterField(sortOrder: number, groupName = 'Titulación ácido láctico'): FieldDef {
+  const field = repeaterField('titulacion_acido_lactico', groupName, TITULACION_COLS, sortOrder, {
+    groupName,
+    required: true,
+    minRows: 1,
+    maxRows: 12,
+    formalTable: false,
+  });
+  return {
+    ...field,
+    options: {
+      ...field.options,
+      layout: 'lactico_titration_repeater',
+    },
+  };
+}
+
 /** Bloque cloro estándar */
 export function cloroBlock(sortOrder: number, groupName: string, puntoToma?: 'text' | 'lavamanos'): FieldDef[] {
   const fields: FieldDef[] = [
@@ -430,6 +509,65 @@ export function cloroBlock(sortOrder: number, groupName: string, puntoToma?: 'te
     })
   );
   return fields;
+}
+
+const LAVAMANOS_CHOICES = Array.from({ length: 15 }, (_, i) => `Lavamanos #${i + 1}`);
+
+const CLORO_RESIDUAL_COLS: FieldDef[] = [
+  { fieldKey: 'hora', label: 'Hora', fieldType: 'TIME', sortOrder: 0, manualOnly: true, required: true },
+  {
+    fieldKey: 'punto_toma',
+    label: 'Punto de toma (Lavamanos)',
+    fieldType: 'SELECT',
+    sortOrder: 1,
+    manualOnly: true,
+    options: { choices: LAVAMANOS_CHOICES },
+    required: true,
+  },
+  {
+    fieldKey: 'cloro_residual',
+    label: 'Cloro residual (0.3 - 2.0 ppm)',
+    fieldType: 'NUMBER',
+    sortOrder: 2,
+    manualOnly: true,
+    config: { min: 0.3, max: 2.0 },
+    required: true,
+  },
+  {
+    fieldKey: 'cnc',
+    label: 'C / NC',
+    fieldType: 'CHECKLIST',
+    sortOrder: 3,
+    manualOnly: true,
+    options: { mode: 'cnc', choices: ['C', 'NC'] },
+    required: true,
+  },
+  {
+    fieldKey: 'correccion',
+    label: 'Corrección',
+    fieldType: 'TEXTAREA',
+    sortOrder: 4,
+    manualOnly: true,
+    config: { requiredIf: 'nc_or_observation' },
+  },
+];
+
+/** Control cloro residual — varios monitoreos al día con lista desplegable de lavamanos */
+export function cloroResidualRepeaterField(sortOrder: number, groupName: string): FieldDef {
+  const field = repeaterField('control_cloro_residual', groupName, CLORO_RESIDUAL_COLS, sortOrder, {
+    groupName,
+    required: true,
+    minRows: 1,
+    maxRows: 12,
+    formalTable: false,
+  });
+  return {
+    ...field,
+    options: {
+      ...field.options,
+      layout: 'cloro_residual_repeater',
+    },
+  };
 }
 
 /** Pediluvios (3 casillas) */

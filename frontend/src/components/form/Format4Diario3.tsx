@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { FormatField } from '@/types';
 import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
+import CardRepeater from './CardRepeater';
 
 interface Props {
   fields: FormatField[];
@@ -10,16 +11,15 @@ interface Props {
   disabled?: boolean;
 }
 
+function isCardRepeater(field: FormatField) {
+  return field.fieldType === 'REPEATER' && field.options?.layout === 'card_repeater';
+}
+
 export default function Format4Diario3({ fields, sheetData, onUpdate, disabled }: Props) {
   const empaque = fields.find((f) => f.fieldKey === 'condiciones_empaque');
+  const poes4h = fields.find((f) => f.fieldKey === 'poes_equipos_4h');
+  const poes1h = fields.find((f) => f.fieldKey === 'poes_operativos_1h');
   const obs = fields.find((f) => f.fieldKey === 'observaciones');
-
-  const poes4hFields = fields.filter((f) =>
-    ['poes_4h_hora', 'poes_tablas', 'poes_sierra', 'poes_bandas', 'poes_delantales', 'poes_4h_correccion'].includes(f.fieldKey)
-  );
-  const poes1hFields = fields.filter((f) =>
-    ['poes_1h_hora', 'poes_molino', 'poes_grameras', 'poes_1h_obs', 'poes_1h_correccion'].includes(f.fieldKey)
-  );
 
   return (
     <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
@@ -29,23 +29,25 @@ export default function Format4Diario3({ fields, sheetData, onUpdate, disabled }
         </Section>
       )}
 
-      {poes4hFields.length > 0 && (
+      {poes4h && isCardRepeater(poes4h) && (
         <Section title="POES equipos — cada 4 horas" subtitle="Tablas · Sierra · Bandas · Delantales">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-            {poes4hFields.map((f) => (
-              <FormField key={f.fieldKey} field={f} value={sheetData[f.fieldKey]} onChange={(v) => onUpdate(f.fieldKey, v)} disabled={disabled} />
-            ))}
-          </div>
+          <CardRepeater
+            options={poes4h.options ?? {}}
+            value={Array.isArray(sheetData[poes4h.fieldKey]) ? (sheetData[poes4h.fieldKey] as Record<string, unknown>[]) : []}
+            onChange={(v) => onUpdate(poes4h.fieldKey, v)}
+            disabled={disabled}
+          />
         </Section>
       )}
 
-      {poes1hFields.length > 0 && (
+      {poes1h && isCardRepeater(poes1h) && (
         <Section title="POES operativos — cada hora" subtitle="Molino · Grameras">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-            {poes1hFields.map((f) => (
-              <FormField key={f.fieldKey} field={f} value={sheetData[f.fieldKey]} onChange={(v) => onUpdate(f.fieldKey, v)} disabled={disabled} />
-            ))}
-          </div>
+          <CardRepeater
+            options={poes1h.options ?? {}}
+            value={Array.isArray(sheetData[poes1h.fieldKey]) ? (sheetData[poes1h.fieldKey] as Record<string, unknown>[]) : []}
+            onChange={(v) => onUpdate(poes1h.fieldKey, v)}
+            disabled={disabled}
+          />
         </Section>
       )}
 

@@ -75,8 +75,7 @@ export default function MatrixField({ options, value, onChange, disabled }: Prop
                   <div className="flex-1 min-w-[100px]">
                     <label className="text-xs text-gray-500">Temp °C</label>
                     <input
-                      type="number"
-                      step="0.1"
+                      type="text"
                       value={reading.temperatura}
                       onChange={(e) => updateRow(area, idx, 'temperatura', e.target.value)}
                       disabled={disabled}

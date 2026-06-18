@@ -2,12 +2,13 @@ import {
   FieldDef,
   cncField,
   cncNaField,
-  cloroBlock,
+  cloroResidualRepeaterField,
   hourlyMatrixField,
-  lacticoTitrationField,
+  lacticoTitrationRepeaterField,
   multiSelectField,
   formalMeasureTableField,
   photoField,
+  cardRepeaterField,
   repeaterField,
   selectField,
   textField,
@@ -44,11 +45,35 @@ const EMPAQUE_COLS: FieldDef[] = [
   { fieldKey: 'correccion', label: 'Corrección', fieldType: 'TEXT' as const, sortOrder: 8, manualOnly: true, config: { requiredIf: 'nc_or_observation' } },
 ];
 
-const PRODUCTO_ETIQUETA = (prefix: string, label: string, sort: number): FieldDef[] => [
+const PRODUCTO_ETIQUETA = (
+  prefix: string,
+  label: string,
+  sort: number,
+  opts?: { etiquetaNa?: boolean }
+): FieldDef[] => [
   selectField(`${prefix}_empaque`, `${label} — Empaque`, ['Vacío', 'Granel'], sort, { groupName: label }),
-  cncField(`${prefix}_etiqueta`, `${label} — Etiqueta`, sort + 1, { groupName: label, required: true }),
+  opts?.etiquetaNa
+    ? cncNaField(`${prefix}_etiqueta`, `${label} — Etiqueta`, sort + 1, { groupName: label, required: true })
+    : cncField(`${prefix}_etiqueta`, `${label} — Etiqueta`, sort + 1, { groupName: label, required: true }),
   cncNaField(`${prefix}_videojet`, `${label} — Video Jet`, sort + 2, { groupName: label }),
   photoField(`${prefix}_foto`, `${label} — Foto etiqueta`, sort + 3, { groupName: label }),
+];
+
+const POES_4H_COLS: FieldDef[] = [
+  { fieldKey: 'hora', label: 'Hora — POES cada 4 horas', fieldType: 'TIME' as const, sortOrder: 0, manualOnly: true, required: true },
+  { fieldKey: 'tablas', label: 'Tablas (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 1, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+  { fieldKey: 'sierra', label: 'Sierra sin fin (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 2, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+  { fieldKey: 'bandas', label: 'Bandas 1,2 y recortes (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 3, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+  { fieldKey: 'delantales', label: 'Delantales plásticos (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 4, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+  { fieldKey: 'correccion', label: 'Corrección POES 4h', fieldType: 'TEXTAREA' as const, sortOrder: 5, manualOnly: true, config: { requiredIf: 'nc_or_observation' } },
+];
+
+const POES_1H_COLS: FieldDef[] = [
+  { fieldKey: 'hora', label: 'Hora — POES cada hora', fieldType: 'TIME' as const, sortOrder: 0, manualOnly: true, required: true },
+  { fieldKey: 'molino', label: 'Molino (cada hora)', fieldType: 'CHECKLIST' as const, sortOrder: 1, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+  { fieldKey: 'grameras', label: 'Grameras (cada hora)', fieldType: 'CHECKLIST' as const, sortOrder: 2, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+  { fieldKey: 'observaciones', label: 'Observaciones POES 1h', fieldType: 'TEXTAREA' as const, sortOrder: 3, manualOnly: true },
+  { fieldKey: 'correccion', label: 'Corrección POES 1h', fieldType: 'TEXTAREA' as const, sortOrder: 4, manualOnly: true, config: { requiredIf: 'nc_or_observation' } },
 ];
 
 export function getFormat4Fields(slug: string): FieldDef[] {
@@ -61,8 +86,8 @@ export function getFormat4Fields(slug: string): FieldDef[] {
           note: 'La toma se realiza cada hora. PROM = promedio por área.',
           groupName: 'Temperaturas de áreas',
         }),
-        ...cloroBlock(20, 'Control cloro residual (cada 4 horas)', 'lavamanos'),
-        ...lacticoTitrationField(30),
+        cloroResidualRepeaterField(20, 'Control cloro residual (cada 4 horas)'),
+        lacticoTitrationRepeaterField(30),
         formalMeasureTableField(
           'pediluvios',
           'Pediluvios',
@@ -94,17 +119,16 @@ export function getFormat4Fields(slug: string): FieldDef[] {
     case 'diario-3':
       return [
         repeaterField('condiciones_empaque', 'Condiciones de empaque', EMPAQUE_COLS, 1, { minRows: 1, maxRows: 24 }),
-        timeField('poes_4h_hora', 'Hora — POES cada 4 horas', 30),
-        cncField('poes_tablas', 'Tablas (cada 4 h)', 31, { required: true }),
-        cncField('poes_sierra', 'Sierra sin fin (cada 4 h)', 32, { required: true }),
-        cncField('poes_bandas', 'Bandas 1,2 y recortes (cada 4 h)', 33, { required: true }),
-        cncField('poes_delantales', 'Delantales plásticos (cada 4 h)', 34, { required: true }),
-        textareaField('poes_4h_correccion', 'Corrección POES 4h', 35, { config: { requiredIf: 'nc_or_observation' } }),
-        timeField('poes_1h_hora', 'Hora — POES cada hora', 40),
-        cncField('poes_molino', 'Molino (cada hora)', 41, { required: true }),
-        cncField('poes_grameras', 'Grameras (cada hora)', 42, { required: true }),
-        textareaField('poes_1h_obs', 'Observaciones POES 1h', 43),
-        textareaField('poes_1h_correccion', 'Corrección POES 1h', 44, { config: { requiredIf: 'nc_or_observation' } }),
+        cardRepeaterField('poes_equipos_4h', 'POES equipos — cada 4 horas', POES_4H_COLS, 30, {
+          required: true,
+          minRows: 1,
+          maxRows: 12,
+        }),
+        cardRepeaterField('poes_operativos_1h', 'POES operativos — cada hora', POES_1H_COLS, 40, {
+          required: true,
+          minRows: 1,
+          maxRows: 24,
+        }),
         textareaField('observaciones', 'Observaciones generales', 50),
       ];
 
@@ -113,11 +137,11 @@ export function getFormat4Fields(slug: string): FieldDef[] {
         repeaterField('poes_manipulador', 'POES operativo manipulador (cada hora)', [
           { fieldKey: 'hora', label: 'Hora', fieldType: 'TIME' as const, sortOrder: 0, manualOnly: true, required: true },
           { fieldKey: 'operario', label: 'Operario', fieldType: 'TEXT' as const, sortOrder: 1, manualOnly: true, required: true },
-          { fieldKey: 'guantes', label: 'Guantes', fieldType: 'CHECKLIST' as const, sortOrder: 2, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
-          { fieldKey: 'guante_malla', label: 'Guante de malla', fieldType: 'CHECKLIST' as const, sortOrder: 3, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
-          { fieldKey: 'cuchillo', label: 'Cuchillo', fieldType: 'CHECKLIST' as const, sortOrder: 4, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
-          { fieldKey: 'gancho', label: 'Gancho despostador', fieldType: 'CHECKLIST' as const, sortOrder: 5, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
-          { fieldKey: 'soporte_gancho', label: 'Soporte gancho deshuesador', fieldType: 'CHECKLIST' as const, sortOrder: 6, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+          { fieldKey: 'guantes', label: 'Guantes', fieldType: 'CHECKLIST' as const, sortOrder: 2, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
+          { fieldKey: 'guante_malla', label: 'Guante de malla', fieldType: 'CHECKLIST' as const, sortOrder: 3, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
+          { fieldKey: 'cuchillo', label: 'Cuchillo', fieldType: 'CHECKLIST' as const, sortOrder: 4, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
+          { fieldKey: 'gancho', label: 'Gancho despostador', fieldType: 'CHECKLIST' as const, sortOrder: 5, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
+          { fieldKey: 'soporte_gancho', label: 'Soporte gancho deshuesador', fieldType: 'CHECKLIST' as const, sortOrder: 6, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
           { fieldKey: 'correccion', label: 'Corrección', fieldType: 'TEXT' as const, sortOrder: 7, manualOnly: true, config: { requiredIf: 'nc_or_observation' } },
         ], 1, { minRows: 1, maxRows: 24 }),
         textareaField('observaciones', 'Observaciones', 50),
@@ -128,8 +152,8 @@ export function getFormat4Fields(slug: string): FieldDef[] {
         textField('lote', 'Lote', 1, { required: true }),
         ...PRODUCTO_ETIQUETA('refri_sin_hueso', 'Producto refrigerado sin hueso', 10),
         ...PRODUCTO_ETIQUETA('refri_con_hueso', 'Producto refrigerado con hueso', 20),
-        ...PRODUCTO_ETIQUETA('cong_sin_hueso', 'Producto congelado sin hueso', 30),
-        ...PRODUCTO_ETIQUETA('cong_con_hueso', 'Producto congelado con hueso', 40),
+        ...PRODUCTO_ETIQUETA('cong_sin_hueso', 'Producto congelado sin hueso', 30, { etiquetaNa: true }),
+        ...PRODUCTO_ETIQUETA('cong_con_hueso', 'Producto congelado con hueso', 40, { etiquetaNa: true }),
         textareaField('observaciones', 'Observaciones', 50),
       ];
 

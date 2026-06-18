@@ -33,7 +33,8 @@ const TEMP_AREAS = [
 ];
 
 function sanitarySheet(
-  sections: { name: string; items: { key: string; label: string; fr: string }[] }[]
+  sections: { name: string; items: { key: string; label: string; fr: string }[] }[],
+  sheetOpts?: { revCncNa?: boolean }
 ): FieldDef[] {
   const allItems = sections.flatMap((sec) =>
     sec.items.map((item) => SANITARY_ITEM(item.key, item.label, item.fr, sec.name))
@@ -45,6 +46,7 @@ function sanitarySheet(
     itemChecklistField('operacion_sanitaria', 'Operación sanitaria', allItems, 3, {
       groupName: SANITARY_GROUP,
       columns: ['fr', 'rev_cnc', 'observation', 'corrective', 'final_cnc', 'responsible'],
+      revCncNa: sheetOpts?.revCncNa,
     }),
   ];
 }
@@ -72,7 +74,8 @@ export function getFormat2Fields(slug: string): FieldDef[] {
           'temperaturas',
           TEMP_AREAS.map((label, i) => ({ key: `t_${i}`, label })),
           3,
-          HOJA1
+          HOJA1,
+          { measureCncMode: 'cnc_na' }
         ),
         formalMeasureTableField(
           'titulacion',
@@ -226,7 +229,7 @@ export function getFormat2Fields(slug: string): FieldDef[] {
             { key: 'sd_esterilizadores', label: 'Esterilizadores', fr: 'Dr' },
           ],
         },
-      ]);
+      ], { revCncNa: true });
 
     case 'preoperativo-4':
       return [
@@ -256,7 +259,7 @@ export function getFormat2Fields(slug: string): FieldDef[] {
               { key: 'ha_techos', label: 'Techos y cielorraso', fr: 'TM' },
             ],
           },
-        ]),
+        ], { revCncNa: true }),
         selectField('material_extrano', '¿Presencia de material extraño en superficies y equipos?', ['Sí', 'No'], 50, {
           groupName: 'Presencia de material extraño',
           required: true,

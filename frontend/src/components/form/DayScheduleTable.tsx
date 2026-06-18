@@ -187,8 +187,7 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
                 </td>
                 <td className="px-2 py-1 border-r border-b border-gray-400">
                   <input
-                    type="number"
-                    step="0.1"
+                    type="text"
                     value={row.temperatura ?? ''}
                     onChange={(e) => updateRow(key, { temperatura: e.target.value })}
                     disabled={disabled}
