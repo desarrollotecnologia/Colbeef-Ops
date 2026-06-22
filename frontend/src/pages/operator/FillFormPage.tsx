@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Download, Send, Save } from 'lucide-react';
 
 import api from '@/lib/api';
+import axios from 'axios';
 
 import Layout from '@/components/Layout';
 
@@ -54,6 +55,7 @@ export default function FillFormPage() {
   const [missingFields, setMissingFields] = useState<MissingField[]>([]);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
 
 
@@ -96,70 +98,80 @@ export default function FillFormPage() {
 
 
   useEffect(() => {
+    let cancelled = false;
 
     async function init() {
+      setLoading(true);
+      setLoadError(null);
 
-      if (isNew && formatId) {
+      try {
+        let submissionId = id;
 
-        const { data } = await api.post('/submissions', { formatId });
+        if (isNew && formatId) {
+          const { data: created } = await api.post('/submissions', { formatId });
+          submissionId = created.id;
+          if (!cancelled) {
+            navigate(`/submissions/${created.id}`, { replace: true });
+          }
+        }
 
-        navigate(`/submissions/${data.id}`, { replace: true });
+        if (!submissionId) {
+          if (!cancelled) setLoadError('No se pudo abrir el formato.');
+          return;
+        }
 
-        return;
+        const { data } = await api.get(`/submissions/${submissionId}`);
+        if (cancelled) return;
 
-      }
+        setSubmission(data);
 
+        const editable = data.status === 'DRAFT' || data.status === 'REJECTED';
+        const dateStr = getEffectiveWorkDate(data, editable);
 
-
-      if (!id) return;
-
-
-
-      const { data } = await api.get(`/submissions/${id}`);
-
-      setSubmission(data);
-
-
-
-      const editable = data.status === 'DRAFT' || data.status === 'REJECTED';
-
-      const dateStr = getEffectiveWorkDate(data, editable);
-
-
-
-      const initial: Record<string, Record<string, unknown>> = {};
-
-      data.sheets?.forEach((s: { sheetId: string; data: Record<string, unknown> }) => {
-
-        const sheetDef = data.format?.sheets?.find((sh: { id: string }) => sh.id === s.sheetId);
-
-        const fields = sheetDef?.fields ?? [];
-
-        initial[s.sheetId] = applyAutoFields(fields, s.data || {}, {
-
-          workDate: dateStr,
-
-          userName: user?.fullName ?? '',
-
-          sheetData: s.data || {},
-
+        const initial: Record<string, Record<string, unknown>> = {};
+        data.sheets?.forEach((s: { sheetId: string; data: Record<string, unknown> }) => {
+          const sheetDef = data.format?.sheets?.find((sh: { id: string }) => sh.id === s.sheetId);
+          const fields = sheetDef?.fields ?? [];
+          initial[s.sheetId] = applyAutoFields(fields, s.data || {}, {
+            workDate: dateStr,
+            userName: user?.fullName ?? '',
+            sheetData: s.data || {},
+          });
         });
 
-      });
-
-      setFormData(initial);
-
-      setLoading(false);
-
+        setFormData(initial);
+      } catch (err) {
+        if (cancelled) return;
+        const message = axios.isAxiosError(err)
+          ? (err.response?.data as { error?: string })?.error ?? err.message
+          : 'Error al cargar el formato';
+        setLoadError(message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
-
-
-    init().catch(() => setLoading(false));
-
+    init();
+    return () => {
+      cancelled = true;
+    };
   }, [id, isNew, formatId, navigate, getEffectiveWorkDate, user?.fullName]);
 
 
+
+  if (loadError && !submission) {
+    return (
+      <Layout>
+        <div className="max-w-md mx-auto text-center py-20 px-4">
+          <p className="text-red-600 font-medium mb-2">No se pudo abrir el formato</p>
+          <p className="text-sm text-gray-600 mb-6">{loadError}</p>
+          <Button variant="outline" onClick={() => navigate('/')}>
+            Volver a formatos
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   if (loading || !submission) {
 

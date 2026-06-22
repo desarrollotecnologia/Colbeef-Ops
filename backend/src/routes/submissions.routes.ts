@@ -135,10 +135,7 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
         })),
       },
     },
-    include: {
-      format: true,
-      sheets: { include: { sheet: true } },
-    },
+    include: submissionInclude,
   });
 
   logUsageEvent({
