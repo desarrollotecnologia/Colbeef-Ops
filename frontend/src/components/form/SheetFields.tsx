@@ -17,6 +17,11 @@ import Format4Diario5 from './Format4Diario5';
 import Format5Sheet from './Format5Sheet';
 import Format6Sheet from './Format6Sheet';
 import Format7Sheet from './Format7Sheet';
+import Format8VehiculosSheet from './Format8VehiculosSheet';
+import Format9PhSheet from './Format9PhSheet';
+import Format10HabitosSheet from './Format10HabitosSheet';
+import Format11DevolucionesSheet from './Format11DevolucionesSheet';
+import Format12DecomisosSheet from './Format12DecomisosSheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const LEGEND_FOOTER = (
@@ -143,6 +148,51 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
     return (
       <div className="space-y-6">
         <Format7Sheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('inspeccion_items')) {
+    return (
+      <div className="space-y-6">
+        <Format8VehiculosSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('calibraciones')) {
+    return (
+      <div className="space-y-6">
+        <Format9PhSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('area') && has('personas')) {
+    return (
+      <div className="space-y-6">
+        <Format10HabitosSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('motivo') && has('registros')) {
+    return (
+      <div className="space-y-6">
+        <Format11DevolucionesSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('decomisos') && has('observaciones_fijas')) {
+    return (
+      <div className="space-y-6">
+        <Format12DecomisosSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
         {LEGEND_FOOTER}
       </div>
     );

@@ -1,6 +1,24 @@
 import ColbeefWordmark from './ColbeefWordmark';
 import { formatSpanishDateLong } from '@/lib/formatDate';
 
+const CALIDAD_CODES = new Set([
+  'SAI-CAL-F015',
+  'AC-FR-017',
+  'AC-FR-006',
+  'AC-FR-007',
+  'AC-FR-009',
+  'AC-FR-010',
+]);
+
+const VERSION_BY_CODE: Record<string, string> = {
+  'AC-FR-017': '03',
+  'AC-FR-006': '04',
+  'AC-FR-007': '03',
+  'AC-FR-009': '03',
+  'AC-FR-010': '02',
+  'AC-FR-018': '02',
+};
+
 interface Props {
   formatName: string;
   sheetName: string;
@@ -23,10 +41,9 @@ export default function FormatSheetHeader({
   empresa = 'COLBEEF S.A.S',
 }: Props) {
   const fecha = formatSpanishDateLong(workDate);
-  const sistemaLabel =
-    documentCode === 'AC-FR-017'
-      ? 'Sistema de Aseguramiento de la Calidad'
-      : 'Sistema de Aseguramiento de la Inocuidad';
+  const sistemaLabel = documentCode && CALIDAD_CODES.has(documentCode)
+    ? 'Sistema de Aseguramiento de la Calidad'
+    : 'Sistema de Aseguramiento de la Inocuidad';
 
   return (
     <div className="border-2 border-gray-800 rounded-sm overflow-hidden mb-6 bg-white">
@@ -44,7 +61,7 @@ export default function FormatSheetHeader({
         <div className="p-3 text-xs text-gray-800 space-y-0.5 flex flex-col justify-center">
           <p><span className="font-bold">Hoja:</span> {sheetIndex + 1} / {sheetTotal}</p>
           {documentCode && <p><span className="font-bold">Código:</span> {documentCode}</p>}
-          <p><span className="font-bold">Versión:</span> {documentCode === 'AC-FR-017' ? '03' : '2.0.0'}</p>
+          <p><span className="font-bold">Versión:</span> {(documentCode && VERSION_BY_CODE[documentCode]) ?? '2.0.0'}</p>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 bg-[#e8edf2] border-b border-gray-800 text-sm">

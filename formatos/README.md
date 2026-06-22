@@ -15,6 +15,11 @@ Documentación de campos para los 7 formatos operativos.
 | 5 | Recepción Canales Foráneas | 1 | ✓ | ✓ Recepción + inspección tabla |
 | 6 | Recepción Canales para Desposte | 1 | ✓ | ✓ Encabezado + inspección tabla |
 | 7 | Verificación Producto Terminado | 2 | ✓ | ✓ 4 bloques por lote + obs. generales |
+| 8 | Inspección de Vehículos | 1 | — | ✓ Checklist + carga + firmas |
+| 9 | Calibración pH-metro | 1 | — | ✓ Repetidor calibraciones |
+| 10 | Hábitos Higiénicos | 1 | — | ✓ Área + matriz personal |
+| 11 | Seguimiento Devoluciones | 1 | — | ✓ Encabezado + registros |
+| 12 | Decomisos | 1 | — | ✓ Tabla + totales auto |
 
 **Campos:** definidos en seeds (`backend/prisma/seeds/fields/`). Tras cambios ejecutar `npm run db:seed` y `scripts\update.bat` en servidor.
 
