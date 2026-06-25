@@ -159,15 +159,15 @@ export function getFormat1Fields(slug: string): FieldDef[] {
         itemChecklistField('refri_cabezas', 'Cuarto refrigeración cabezas, patas y manos', [
           'Carros uso general acero', 'Carros percheros', 'Estibas acero', 'Canalinas cajas cifonadas',
           'Pisos', 'Paredes', 'Cortinas', 'Puertas de ingreso',
-        ].map((l, i) => ({ key: `r_${i}`, label: l })), 1),
+        ].map((l, i) => ({ key: `r_${i}`, label: l })), 1, { mode: 'cnc_na' }),
         itemChecklistField('patas_manos', 'Proceso patas y manos', [
           'Descascadora', 'Mesones acero', 'Escaldadoras', 'Canalinas cajas cifonadas', 'Lavamanos piso',
           'Máquina pelapatas', 'Mangueras', 'Pisos', 'Canasta metálica', 'Carro porta canasta', 'Paredes', 'Puertas ingreso',
-        ].map((l, i) => ({ key: `p_${i}`, label: l })), 2),
+        ].map((l, i) => ({ key: `p_${i}`, label: l })), 2, { mode: 'cnc_na' }),
         itemChecklistField('visceras_blancas', 'Proceso vísceras blancas', [
           'Máquina lavacallos', 'Máquina lavalibros', 'Escaldadoras', 'Tinas acero', 'Mesones acero',
           'Tubería agua', 'Mangueras', 'Canalinas cajas cifonadas', 'Lavamanos piso', 'Pisos', 'Paredes', 'Puertas ingreso zona',
-        ].map((l, i) => ({ key: `v_${i}`, label: l })), 3),
+        ].map((l, i) => ({ key: `v_${i}`, label: l })), 3, { mode: 'cnc_na' }),
       ];
 
     case 'sub-p-6':

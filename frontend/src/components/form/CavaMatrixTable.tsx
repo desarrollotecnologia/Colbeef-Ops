@@ -73,6 +73,10 @@ interface Props {
   showScrollHint?: boolean;
   hideAreaLabel?: boolean;
   compact?: boolean;
+  /** Cuando la matriz está dividida en bloques, observaciones van por bloque */
+  obsScopeKey?: string;
+  /** Primer bloque: leer observation/corrective planos de datos viejos */
+  migrateLegacyObs?: boolean;
 }
 
 type ChecklistColumn = 'cnc' | 'observation' | 'corrective' | 'platforms' | 'cavaColumns';
@@ -94,6 +98,8 @@ export default function CavaMatrixTable({
   showScrollHint = true,
   hideAreaLabel = false,
   compact = false,
+  obsScopeKey,
+  migrateLegacyObs = false,
 }: Props) {
   const items = options.items ?? [];
   const areaLabel = hideAreaLabel ? undefined : options.areaLabel;
@@ -117,6 +123,30 @@ export default function CavaMatrixTable({
 
   const updateItem = (itemKey: string, patch: Partial<ChecklistItemData>) => {
     onChange({ ...value, [itemKey]: { ...value[itemKey], ...patch } });
+  };
+
+  const readObservation = (data: ChecklistItemData): string => {
+    if (!obsScopeKey) return data.observation ?? '';
+    if (data.observations?.[obsScopeKey] !== undefined) return data.observations[obsScopeKey] ?? '';
+    if (migrateLegacyObs && data.observation) return data.observation;
+    return '';
+  };
+
+  const readCorrective = (data: ChecklistItemData): string => {
+    if (!obsScopeKey) return data.corrective ?? '';
+    if (data.correctives?.[obsScopeKey] !== undefined) return data.correctives[obsScopeKey] ?? '';
+    if (migrateLegacyObs && data.corrective) return data.corrective;
+    return '';
+  };
+
+  const writeObservation = (data: ChecklistItemData, text: string): Partial<ChecklistItemData> => {
+    if (!obsScopeKey) return { observation: text };
+    return { observations: { ...(data.observations ?? {}), [obsScopeKey]: text } };
+  };
+
+  const writeCorrective = (data: ChecklistItemData, text: string): Partial<ChecklistItemData> => {
+    if (!obsScopeKey) return { corrective: text };
+    return { correctives: { ...(data.correctives ?? {}), [obsScopeKey]: text } };
   };
 
   if (columnDefs.length === 0) return null;
@@ -207,8 +237,8 @@ export default function CavaMatrixTable({
                     <td className={tdClass}>
                       <input
                         type="text"
-                        value={data.observation ?? ''}
-                        onChange={(e) => updateItem(item.key, { observation: e.target.value })}
+                        value={readObservation(data)}
+                        onChange={(e) => updateItem(item.key, writeObservation(data, e.target.value))}
                         disabled={disabled}
                         placeholder="—"
                         className={`${INPUT_CLASS} text-xs py-1`}
@@ -219,8 +249,8 @@ export default function CavaMatrixTable({
                     <td className="px-1 py-1 border-b border-gray-400">
                       <input
                         type="text"
-                        value={data.corrective ?? ''}
-                        onChange={(e) => updateItem(item.key, { corrective: e.target.value })}
+                        value={readCorrective(data)}
+                        onChange={(e) => updateItem(item.key, writeCorrective(data, e.target.value))}
                         disabled={disabled}
                         placeholder="—"
                         className={`${INPUT_CLASS} text-xs py-1`}

@@ -29,6 +29,10 @@ function checklistColumnList(options: FieldOptions): string[] {
   return raw as string[];
 }
 
+function chunkScopeKey(columnDefs: { key: string }[]): string {
+  return columnDefs.map((c) => c.key).join('|');
+}
+
 export default function CavaMatrixSplit({
   options,
   value,
@@ -86,6 +90,8 @@ export default function CavaMatrixSplit({
               showScrollHint={i === 0}
               hideAreaLabel={i > 0}
               compact
+              obsScopeKey={chunkScopeKey(chunk)}
+              migrateLegacyObs={i === 0}
             />
           </div>
         );

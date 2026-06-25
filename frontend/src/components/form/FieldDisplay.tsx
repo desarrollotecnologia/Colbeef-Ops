@@ -64,7 +64,23 @@ export default function FieldDisplay({ field, value }: Props) {
                 <span key={cava} className="ml-1 px-1 rounded text-xs bg-gray-100">{cava}:{v}</span>
               ) : null)}
               {d.observation && <p className="text-gray-600 text-xs mt-0.5">Obs: {d.observation}</p>}
+              {d.observations &&
+                Object.entries(d.observations).map(([scope, text]) =>
+                  text ? (
+                    <p key={scope} className="text-gray-600 text-xs mt-0.5">
+                      Obs ({scope.replace(/\|/g, ' · ')}): {text}
+                    </p>
+                  ) : null
+                )}
               {d.corrective && <p className="text-gray-600 text-xs">Corr: {d.corrective}</p>}
+              {d.correctives &&
+                Object.entries(d.correctives).map(([scope, text]) =>
+                  text ? (
+                    <p key={scope} className="text-gray-600 text-xs">
+                      Corr ({scope.replace(/\|/g, ' · ')}): {text}
+                    </p>
+                  ) : null
+                )}
             </div>
           );
         })}

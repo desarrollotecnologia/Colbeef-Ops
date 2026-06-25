@@ -143,6 +143,10 @@ export interface ChecklistItemData {
   final_cnc?: string;
   observation?: string;
   corrective?: string;
+  /** Observaciones por bloque de cavas (matriz dividida en pantalla) */
+  observations?: Record<string, string>;
+  /** Acciones correctivas por bloque de cavas */
+  correctives?: Record<string, string>;
   responsible?: string;
   platforms?: Record<string, string>;
   cavas?: Record<string, string>;
