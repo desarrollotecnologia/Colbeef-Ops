@@ -25,11 +25,12 @@ export function getFormat6Fields(_slug: string): FieldDef[] {
   return [
     textField('cava_almacenamiento', 'Cava de almacenamiento', 1, { required: true }),
     cncField('temp_cava_cnc', 'T°C cava — C/NC', 2, { required: true }),
-    numberField('cantidad_canales', 'Cantidad de canales', 3, { required: true }),
-    selectField('especie', 'Especie', ESPECIES, 4, { required: true }),
-    dateField('fecha_beneficio', 'Fecha de beneficio', 5, { required: true }),
-    textField('cliente', 'Cliente', 6, { required: true }),
-    textField('lote', 'Lote N°', 7, { required: true }),
+    numberField('temp_cava', 'T°C cava', 3, { config: { min: -30, max: 10 } }),
+    numberField('cantidad_canales', 'Cantidad de canales', 4, { required: true }),
+    selectField('especie', 'Especie', ESPECIES, 5, { required: true }),
+    dateField('fecha_beneficio', 'Fecha de beneficio', 6, { required: true }),
+    textField('cliente', 'Cliente', 7, { required: true }),
+    textField('lote', 'Lote N°', 8, { required: true }),
     repeaterField('inspeccion_canales', 'Inspección por código de canal', CANAL_COLS, 10, { minRows: 1, maxRows: 30 }),
     textareaField('observaciones', 'Observaciones', 50),
   ];
