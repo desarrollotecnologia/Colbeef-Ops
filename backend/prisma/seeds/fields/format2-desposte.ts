@@ -172,7 +172,7 @@ export function getFormat2Fields(slug: string): FieldDef[] {
             { key: 'por_mesones', label: 'Mesones', fr: 'Dr' },
           ],
         },
-      ]);
+      ], { revCncNa: true });
 
     case 'preoperativo-3':
       return sanitarySheet([

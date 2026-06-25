@@ -46,7 +46,6 @@ function isChecklistItemComplete(
   }
 
   if (columns.includes('rev_cnc') && !itemData.rev_cnc) return false;
-  if (columns.includes('final_cnc') && !itemData.final_cnc) return false;
   if (columns.includes('cnc') && !itemData.cnc) return false;
 
   return true;
