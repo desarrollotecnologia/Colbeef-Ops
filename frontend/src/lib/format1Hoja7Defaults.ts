@@ -23,33 +23,6 @@ export const AREA_REFRI_COLUMN_DEFS = [
   { key: 'PRE', mode: 'cnc' as const },
 ];
 
-export const AREAS_REFRIGERACION_COLUMN_DEFS = [
-  { key: 'PAN1', mode: 'cnc_na' as const },
-  { key: 'CAV2', mode: 'cnc_na' as const },
-  { key: 'CAV3', mode: 'cnc_na' as const },
-  { key: 'CAV4', mode: 'cnc_na' as const },
-  { key: 'FIL1', mode: 'cnc_na' as const },
-  { key: 'PAS2', mode: 'cnc_na' as const },
-  { key: 'DES1', mode: 'cnc_na' as const },
-  { key: 'CON1', mode: 'cnc_na' as const },
-  { key: 'FIL2', mode: 'cnc_na' as const },
-  { key: 'TUN1', mode: 'cnc_na' as const },
-  { key: 'LAV1', mode: 'cnc_na' as const },
-  { key: 'CAV5', mode: 'cnc_na' as const },
-  { key: 'BAÑ1', mode: 'cnc_na' as const },
-  { key: 'ESP1', mode: 'cnc_na' as const },
-  { key: 'ASE1', mode: 'cnc_na' as const },
-  { key: 'MAN1', mode: 'cnc_na' as const },
-  { key: 'PER1', mode: 'cnc_na' as const },
-];
-
-const AREAS_REFRIGERACION_ITEMS = [
-  'Entrada de canales', 'Pasillos', 'Filtros', 'Lavabos y lava botas', 'Puerta de ingreso',
-  'Despacho de carne y vísceras', 'Cuarto de decomisos', 'Túnel de oreo', 'Lavado de canastillas',
-  'Lavado de ganchos', 'Muelle de carga', 'Baños', 'Sala de espera de conductores',
-  'Cuarto de aseo', 'Cuarto de mantenimiento',
-].map((label, i) => ({ key: `arz_${i}`, label }));
-
 function mergeOptions(field: FormatField, patch: Partial<FieldOptions>): FormatField {
   return { ...field, options: { ...field.options, ...patch } };
 }
@@ -69,38 +42,5 @@ export function resolveHoja7Field(field: FormatField | undefined): FormatField |
     }
   }
 
-  if (field.fieldKey === 'areas_refrigeracion') {
-    const cols = field.options?.columnDefs ?? [];
-    if (cols.length < AREAS_REFRIGERACION_COLUMN_DEFS.length) {
-      return mergeOptions(field, {
-        columnDefs: AREAS_REFRIGERACION_COLUMN_DEFS,
-        columns: ['cavaColumns', 'observation', 'corrective'],
-        items: field.options?.items?.length ? field.options.items : AREAS_REFRIGERACION_ITEMS,
-        areaLabel: 'Áreas de refrigeración',
-        matrixRowLabel: 'Área',
-      });
-    }
-  }
-
   return field;
-}
-
-export function syntheticAreasRefrigeracionField(fields: FormatField[]): FormatField | undefined {
-  if (fields.some((f) => f.fieldKey === 'areas_refrigeracion')) return undefined;
-  return {
-    id: 'synthetic-areas-refrigeracion',
-    fieldKey: 'areas_refrigeracion',
-    label: 'Áreas de refrigeración',
-    fieldType: 'CHECKLIST',
-    required: false,
-    manualOnly: true,
-    sortOrder: 3,
-    options: {
-      columnDefs: AREAS_REFRIGERACION_COLUMN_DEFS,
-      columns: ['cavaColumns', 'observation', 'corrective'],
-      items: AREAS_REFRIGERACION_ITEMS,
-      areaLabel: 'Áreas de refrigeración',
-      matrixRowLabel: 'Área',
-    },
-  };
 }

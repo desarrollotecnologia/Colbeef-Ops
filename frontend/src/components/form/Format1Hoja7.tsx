@@ -1,5 +1,5 @@
 import type { FormatField, ChecklistItemData } from '@/types';
-import { resolveHoja7Field, syntheticAreasRefrigeracionField } from '@/lib/format1Hoja7Defaults';
+import { resolveHoja7Field } from '@/lib/format1Hoja7Defaults';
 import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import ItemChecklist from './ItemChecklist';
 import CavaMatrixSplit from './CavaMatrixSplit';
@@ -48,9 +48,6 @@ function MatrixSection({
 export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: Props) {
   const pcField = fields.find((f) => f.fieldKey === 'pc_comestibles');
   const refri = resolveHoja7Field(fields.find((f) => f.fieldKey === 'area_refri'));
-  const areasRefrig =
-    resolveHoja7Field(fields.find((f) => f.fieldKey === 'areas_refrigeracion')) ??
-    syntheticAreasRefrigeracionField(fields);
   const obsField = fields.find((f) => f.fieldKey === 'observaciones');
   const acField = fields.find((f) => f.fieldKey === 'acciones_correctivas');
 
@@ -97,21 +94,6 @@ export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: 
           />
         </div>
       ) : null}
-
-      {areasRefrig && areasRefrig.options?.columnDefs?.length && (
-        <MatrixSection
-          field={areasRefrig}
-          sheetData={sheetData}
-          onUpdate={onUpdate}
-          disabled={disabled}
-          splitAt={[6, 12]}
-          subtitles={[
-            'Ubicaciones — PAN1 · CAV2 · CAV3 · CAV4 · FIL1 · PAS2',
-            'Ubicaciones — DES1 · CON1 · FIL2 · TUN1 · LAV1 · CAV5',
-            'Ubicaciones — BAÑ1 · ESP1 · ASE1 · MAN1 · PER1',
-          ]}
-        />
-      )}
 
       {(obsField || acField) && (
         <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-800">
