@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
-import { renderDecomisosSheet, renderVehiculosSheet } from './submissionPdfFormatLayouts';
+import { renderDecomisosSheet, renderVehiculosSheet, drawCompactSheetHeader } from './submissionPdfFormatLayouts';
 
 type PdfDoc = InstanceType<typeof PDFDocument>;
 
@@ -133,24 +133,16 @@ function drawSheetHeader(
   return y + 10;
 }
 
-function drawSignatures(
-  doc: PdfDoc,
-  submission: SubmissionForPdf,
-  y: number
-) {
+function drawSignatures(doc: PdfDoc, submission: SubmissionForPdf, y: number) {
   const { width } = pageSize(doc);
   const bottom = contentBottom(doc);
   if (y > bottom - 40) y = bottom - 40;
 
-  const colW = (width - MARGIN * 2) / 2;
   doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ELABORÓ', MARGIN, y);
-  doc.fontSize(9).font('Helvetica').fillColor('#111').text(submission.operator.fullName, MARGIN, y + 10, { width: colW - 10 });
-  doc.moveTo(MARGIN, y + 24).lineTo(MARGIN + colW - 16, y + 24).strokeColor('#666').stroke();
-
-  const verifico = submission.reviewedBy?.fullName ?? '—';
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('VERIFICÓ', MARGIN + colW, y);
-  doc.fontSize(9).font('Helvetica').fillColor('#111').text(verifico, MARGIN + colW, y + 10, { width: colW - 10 });
-  doc.moveTo(MARGIN + colW, y + 24).lineTo(width - MARGIN, y + 24).strokeColor('#666').stroke();
+  doc.fontSize(9).font('Helvetica').fillColor('#111').text(submission.operator.fullName, MARGIN, y + 10, {
+    width: (width - MARGIN * 2) / 2 - 10,
+  });
+  doc.moveTo(MARGIN, y + 24).lineTo(MARGIN + (width - MARGIN * 2) / 2 - 16, y + 24).strokeColor('#666').stroke();
 
   return y + 32;
 }
@@ -394,9 +386,12 @@ function renderSheetPage(
   sheetIndex: number,
   totalSheets: number
 ) {
-  let y = drawSheetHeader(doc, submission, sheet, sheetIndex, totalSheets);
   const fields = sheet.fields.filter((f) => f.fieldKey !== 'empresa');
   const code = submission.format.code;
+  let y =
+    code === 'INSPECCION_VEHICULOS'
+      ? drawCompactSheetHeader(doc, submission, sheet.name)
+      : drawSheetHeader(doc, submission, sheet, sheetIndex, totalSheets);
 
   if (code === 'INSPECCION_VEHICULOS') {
     y = renderVehiculosSheet(doc, fields, sheetData, y);

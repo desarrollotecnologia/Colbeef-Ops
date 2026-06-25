@@ -16,8 +16,22 @@ const DECOMISO_COLS: FieldDef[] = [
   { fieldKey: 'absceso_kg', label: 'Absceso (kg)', fieldType: 'NUMBER' as const, sortOrder: 3, manualOnly: true, config: { min: 0 } },
   { fieldKey: 'fibrosis_kg', label: 'Fibrosis (kg)', fieldType: 'NUMBER' as const, sortOrder: 4, manualOnly: true, config: { min: 0 } },
   { fieldKey: 'vacuna_kg', label: 'Residuos de vacuna (kg)', fieldType: 'NUMBER' as const, sortOrder: 5, manualOnly: true, config: { min: 0 } },
-  { fieldKey: 'parcial_kg', label: 'Decomiso parcial (kg)', fieldType: 'NUMBER' as const, sortOrder: 6, manualOnly: true, config: { min: 0 } },
-  { fieldKey: 'total_kg', label: 'Decomiso total (kg)', fieldType: 'NUMBER' as const, sortOrder: 7, manualOnly: true, config: { min: 0 } },
+  {
+    fieldKey: 'decomiso_parcial',
+    label: 'Decomiso parcial',
+    fieldType: 'CHECKLIST' as const,
+    sortOrder: 6,
+    manualOnly: true,
+    options: { mode: 'cnc', choices: ['Parcial'] },
+  },
+  {
+    fieldKey: 'decomiso_total',
+    label: 'Decomiso total',
+    fieldType: 'CHECKLIST' as const,
+    sortOrder: 7,
+    manualOnly: true,
+    options: { mode: 'cnc', choices: ['Total'] },
+  },
 ];
 
 const OBS_FIJAS = 'ANEXO FOTOS EN CORREO ELECTRONICO';
