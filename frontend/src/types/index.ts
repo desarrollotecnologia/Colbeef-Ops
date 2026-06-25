@@ -107,6 +107,8 @@ export interface FieldOptions {
   areaLabel?: string;
   revCncNa?: boolean;
   matrixRowLabel?: string;
+  multiple?: boolean;
+  maxPhotos?: number;
 }
 
 export interface RepeaterColumn {

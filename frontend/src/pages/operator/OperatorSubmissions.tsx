@@ -89,8 +89,7 @@ export default function OperatorSubmissions() {
                       <Icon size={14} />
                       {cfg.label}
                     </span>
-                    {sub.status === 'APPROVED' && (
-                      <Button
+                    <Button
                         variant="outline"
                         size="sm"
                         loading={pdfLoadingId === sub.id}
@@ -106,7 +105,6 @@ export default function OperatorSubmissions() {
                       >
                         <Download size={16} /> PDF
                       </Button>
-                    )}
                     {sub.status === 'DRAFT' && (
                       <button
                         type="button"

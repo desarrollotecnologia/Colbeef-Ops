@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions, RepeaterColumn } from '@/types';
 import ChoiceButtons from './ChoiceButtons';
-import { INPUT_CLASS } from '@/lib/formUtils';
+import { INPUT_CLASS, showRequiredIndicator } from '@/lib/formUtils';
 import Button from '@/components/Button';
 
 const LACTICO_MAP: Record<string, string> = { '2.2': '1.98', '2.3': '2.07' };
@@ -154,7 +154,7 @@ export default function LacticoTitrationRepeater({ options, value, onChange, dis
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {col('hora')!.label}
-                  {col('hora')!.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(col('hora')!.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
                 <TitulacionCell
                   col={col('hora')!}
@@ -168,7 +168,7 @@ export default function LacticoTitrationRepeater({ options, value, onChange, dis
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {col('volumen_naoh')!.label}
-                  {col('volumen_naoh')!.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(col('volumen_naoh')!.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
                 <TitulacionCell
                   col={col('volumen_naoh')!}
@@ -193,7 +193,7 @@ export default function LacticoTitrationRepeater({ options, value, onChange, dis
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {col('cnc')!.label}
-                  {col('cnc')!.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(col('cnc')!.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
                 <TitulacionCell
                   col={col('cnc')!}

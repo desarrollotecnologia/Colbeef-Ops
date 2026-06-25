@@ -1,5 +1,5 @@
 import type { FormatField } from '@/types';
-import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
+import { SECTION_HEADER_CLASS, showRequiredIndicator } from '@/lib/formUtils';
 import FormField from './FormField';
 import AutoValue from './AutoValue';
 import { isAutoField } from '@/lib/autoFill';
@@ -27,7 +27,7 @@ export default function InspectionTable({ title, subtitle, fields, sheetData, on
               {fields.map((f) => (
                 <th key={f.id} className="px-2 py-2 text-left text-[11px] font-semibold text-gray-700 uppercase whitespace-nowrap">
                   {f.label}
-                  {f.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(f.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </th>
               ))}
             </tr>

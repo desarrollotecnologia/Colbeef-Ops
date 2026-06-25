@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions, RepeaterColumn } from '@/types';
 import ChoiceButtons from './ChoiceButtons';
-import { INPUT_CLASS, isTemperatureInput } from '@/lib/formUtils';
+import { INPUT_CLASS, isTemperatureInput, showRequiredIndicator } from '@/lib/formUtils';
 import Button from '@/components/Button';
 
 interface Props {
@@ -168,7 +168,7 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
               {columns.map((col) => (
                 <th key={col.key} className={thClass}>
                   {col.label}
-                  {col.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(col.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </th>
               ))}
               {!disabled && rows.length > minRows && <th className="w-8" />}

@@ -166,7 +166,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
                     <input type="time" value={row.hora ?? ''} onChange={(e) => updateRow(item.key, { hora: e.target.value })} disabled={disabled} className={`${INPUT_CLASS} text-xs py-1.5`} />
                   </td>
                   <td className={tdClass}>
-                    <input type="text" value={row.temperatura ?? ''} onChange={(e) => updateRow(item.key, { temperatura: e.target.value })} disabled={disabled} placeholder="—" className={`${INPUT_CLASS} text-xs py-1.5`} />
+                    <input type="text" inputMode="decimal" value={row.temperatura ?? ''} onChange={(e) => updateRow(item.key, { temperatura: e.target.value })} disabled={disabled} placeholder="Ej: 2,5" className={`${INPUT_CLASS} text-xs py-1.5`} />
                   </td>
                   {cncCols.map((sub) => (
                     <td

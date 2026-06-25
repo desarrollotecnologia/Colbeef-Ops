@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions } from '@/types';
-import { INPUT_CLASS } from '@/lib/formUtils';
+import { INPUT_CLASS, parseLocaleNumber } from '@/lib/formUtils';
 import Button from '@/components/Button';
 
 type MatrixValue = Record<string, { hora: string; temperatura: string; observaciones: string }[]>;
@@ -14,7 +14,7 @@ interface Props {
 
 function calcProm(readings: MatrixValue[string]): string {
   const nums = (readings ?? [])
-    .map((r) => parseFloat(r.temperatura))
+    .map((r) => parseLocaleNumber(r.temperatura))
     .filter((n) => !isNaN(n));
   if (nums.length === 0) return '—';
   return (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1);
@@ -76,9 +76,11 @@ export default function MatrixField({ options, value, onChange, disabled }: Prop
                     <label className="text-xs text-gray-500">Temp °C</label>
                     <input
                       type="text"
+                      inputMode="decimal"
                       value={reading.temperatura}
                       onChange={(e) => updateRow(area, idx, 'temperatura', e.target.value)}
                       disabled={disabled}
+                      placeholder="Ej: 2,5"
                       className={INPUT_CLASS}
                     />
                   </div>

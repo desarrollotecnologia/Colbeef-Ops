@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions, RepeaterColumn } from '@/types';
 import ChoiceButtons from './ChoiceButtons';
-import { INPUT_CLASS } from '@/lib/formUtils';
+import { INPUT_CLASS, isTemperatureInput, showRequiredIndicator } from '@/lib/formUtils';
 import Button from '@/components/Button';
 
 interface Props {
@@ -61,15 +61,17 @@ function CardCell({
   }
 
   if (type === 'NUMBER') {
+    const textInput = isTemperatureInput(col.key, col.label);
     return (
       <input
-        type="number"
+        type={textInput ? 'text' : 'number'}
+        inputMode={textInput ? 'decimal' : undefined}
         value={value !== undefined && value !== null ? String(value) : ''}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        min={col.config?.min}
-        max={col.config?.max}
-        step="0.01"
+        min={textInput ? undefined : col.config?.min}
+        max={textInput ? undefined : col.config?.max}
+        step={textInput ? undefined : '0.01'}
         className={INPUT_CLASS}
       />
     );
@@ -158,7 +160,7 @@ export default function CardRepeater({ options, value, onChange, disabled }: Pro
                 <div key={col.key} className={isWide ? 'sm:col-span-2 lg:col-span-3' : ''}>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     {col.label}
-                    {col.required && <span className="text-red-500 ml-0.5">*</span>}
+                    {showRequiredIndicator(col.required) && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
                   <CardCell
                     col={col}

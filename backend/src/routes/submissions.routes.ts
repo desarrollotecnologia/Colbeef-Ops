@@ -170,12 +170,16 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
   }
 
   const canDownload =
-    submission.status === SubmissionStatus.APPROVED ||
-    (isAdmin && submission.status === SubmissionStatus.PENDING_REVIEW);
+    isAdmin ||
+    (submission.operatorId === req.user!.userId &&
+      (submission.status === SubmissionStatus.APPROVED ||
+        submission.status === SubmissionStatus.DRAFT ||
+        submission.status === SubmissionStatus.PENDING_REVIEW ||
+        submission.status === SubmissionStatus.REJECTED));
 
   if (!canDownload) {
     return res.status(400).json({
-      error: 'El PDF está disponible cuando el formato está aprobado o pendiente de revisión (admin).',
+      error: 'No tiene permiso para descargar el PDF de este envío.',
     });
   }
 

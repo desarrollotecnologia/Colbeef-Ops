@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions, RepeaterColumn } from '@/types';
 import ChoiceButtons from './ChoiceButtons';
-import { INPUT_CLASS } from '@/lib/formUtils';
+import { INPUT_CLASS, isTemperatureInput, showRequiredIndicator } from '@/lib/formUtils';
 import Button from '@/components/Button';
 
 interface Props {
@@ -61,15 +61,17 @@ function CloroCell({
   }
 
   if (type === 'NUMBER') {
+    const textInput = isTemperatureInput(col.key, col.label);
     return (
       <input
-        type="number"
+        type={textInput ? 'text' : 'number'}
+        inputMode={textInput ? 'decimal' : undefined}
         value={value !== undefined && value !== null ? String(value) : ''}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        min={col.config?.min}
-        max={col.config?.max}
-        step="0.01"
+        min={textInput ? undefined : col.config?.min}
+        max={textInput ? undefined : col.config?.max}
+        step={textInput ? undefined : '0.01'}
         className={INPUT_CLASS}
       />
     );
@@ -154,7 +156,7 @@ export default function CloroResidualRepeater({ options, value, onChange, disabl
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {col('hora')!.label}
-                  {col('hora')!.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(col('hora')!.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
                 <CloroCell
                   col={col('hora')!}
@@ -168,7 +170,7 @@ export default function CloroResidualRepeater({ options, value, onChange, disabl
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {col('punto_toma')!.label}
-                  {col('punto_toma')!.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(col('punto_toma')!.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
                 <CloroCell
                   col={col('punto_toma')!}
@@ -182,7 +184,7 @@ export default function CloroResidualRepeater({ options, value, onChange, disabl
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {col('cloro_residual')!.label}
-                  {col('cloro_residual')!.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(col('cloro_residual')!.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
                 <CloroCell
                   col={col('cloro_residual')!}
@@ -196,7 +198,7 @@ export default function CloroResidualRepeater({ options, value, onChange, disabl
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {col('cnc')!.label}
-                  {col('cnc')!.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {showRequiredIndicator(col('cnc')!.required) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
                 <CloroCell
                   col={col('cnc')!}

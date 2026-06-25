@@ -1,6 +1,9 @@
 import { FormatField } from '@prisma/client';
 import { getDayKey, slugifyPoint } from './dayKey';
 
+/** Si es false, ningún campo bloquea entregar a revisión */
+const ENFORCE_REQUIRED_FIELDS = false;
+
 type ChecklistItemData = {
   cnc?: string;
   rev_cnc?: string;
@@ -15,19 +18,37 @@ type FieldOptions = {
   pediluviosLayout?: 'operativo' | 'simple';
   schedule?: Record<string, string[]>;
   items?: { key: string }[];
-  columns?: string[];
+  columns?: string[] | { key: string; label?: string; type?: string; required?: boolean }[];
   columnDefs?: { key: string }[];
   cavaColumns?: string[];
   platformCount?: number;
   minRows?: number;
-  columns_def?: { key: string; required?: boolean }[];
+  matrix?: boolean;
+  columns_def?: { key: string; required?: boolean; label?: string; type?: string }[];
 };
+
+function hasTemperatureValue(value: unknown): boolean {
+  return String(value ?? '').trim().length > 0;
+}
+
+function isTemperatureKey(key: string, label?: string): boolean {
+  const k = key.toLowerCase();
+  const lbl = (label ?? '').toLowerCase();
+  if (k.includes('temperatura') || k === 'temp' || k.startsWith('temp_')) return true;
+  if (lbl.includes('temperatura') || lbl.includes('t°c') || lbl.includes('t°')) return true;
+  if (/temp\s*°/.test(lbl)) return true;
+  return false;
+}
+
+function checklistColumnKeys(options: FieldOptions): string[] {
+  return (options.columns ?? ['cnc']).map((c) => (typeof c === 'string' ? c : c.key));
+}
 
 function isChecklistItemComplete(
   itemData: ChecklistItemData,
   options: FieldOptions
 ): boolean {
-  const columns = options.columns ?? ['cnc'];
+  const columns = checklistColumnKeys(options);
 
   if (columns.includes('cavaColumns')) {
     const defs =
@@ -64,6 +85,8 @@ export function isFieldComplete(
   value: unknown,
   workDate: Date
 ): boolean {
+  if (!ENFORCE_REQUIRED_FIELDS) return true;
+
   const options = (field.options ?? {}) as FieldOptions;
 
   if (field.fieldKey === 'empresa') return true;
@@ -80,7 +103,7 @@ export function isFieldComplete(
       } else if (tableType === 'temperaturas') {
         if (!row.cnc) return false;
         if (row.cnc === 'NA') continue;
-        if (!row.hora || !row.temperatura) return false;
+        if (!row.hora || !hasTemperatureValue(row.temperatura)) return false;
       } else if (tableType === 'titulacion') {
         if (!row.hora || !row.volumen_naoh || !row.cnc) return false;
       } else if (tableType === 'equipos') {
@@ -110,7 +133,7 @@ export function isFieldComplete(
       const row = data[key] ?? {};
       if (tableType === 'cloro') {
         if (!row.cloro_residual || !row.cnc) return false;
-      } else if (!row.temperatura || !row.cnc) {
+      } else if (!hasTemperatureValue(row.temperatura) || !row.cnc) {
         return false;
       }
     }
@@ -124,20 +147,38 @@ export function isFieldComplete(
     );
   }
 
+  if (field.fieldType === 'REPEATER' && options.matrix) {
+    if (!field.required) return true;
+    const data = (value as Record<string, Record<string, string>[]>) ?? {};
+    return Object.values(data).some(
+      (readings) =>
+        Array.isArray(readings) &&
+        readings.some((row) => row.hora || hasTemperatureValue(row.temperatura) || row.observaciones)
+    );
+  }
+
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
-    const minRows = options.minRows ?? 1;
+    const minRows = options.minRows ?? (field.required ? 1 : 0);
     if (rows.length < minRows) return false;
     const cols = options.columns ?? options.columns_def ?? [];
     return rows.every((row) =>
       cols
         .filter((c) => typeof c === 'object' && c !== null && 'required' in c && c.required)
         .every((c) => {
-          const col = c as { key: string };
+          const col = c as { key: string; label?: string; type?: string };
           const cell = (row as Record<string, unknown>)[col.key];
+          if (isTemperatureKey(col.key, col.label)) {
+            return hasTemperatureValue(cell);
+          }
           return cell !== undefined && cell !== null && cell !== '';
         })
     );
+  }
+
+  if (field.fieldType === 'NUMBER' && isTemperatureKey(field.fieldKey)) {
+    if (!field.required) return true;
+    return hasTemperatureValue(value);
   }
 
   if (field.required) {

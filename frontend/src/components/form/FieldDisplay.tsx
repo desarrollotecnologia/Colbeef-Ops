@@ -1,5 +1,6 @@
 import type { ChecklistItemData, FormatField } from '@/types';
 import { formatDisplayValue } from '@/lib/formUtils';
+import { normalizePhotoValue } from './PhotoInput';
 
 interface Props {
   field: FormatField;
@@ -13,8 +14,20 @@ export default function FieldDisplay({ field, value }: Props) {
     return <span className="text-gray-400">—</span>;
   }
 
-  if (field.fieldType === 'PHOTO' && typeof value === 'string') {
-    return <img src={value} alt={field.label} className="max-h-32 rounded border border-gray-200" />;
+  if (field.fieldType === 'PHOTO') {
+    const multiple = opts.multiple;
+    const photos = normalizePhotoValue(value, multiple);
+    if (photos.length === 0) return <span className="text-gray-400">—</span>;
+    if (photos.length === 1 && !multiple) {
+      return <img src={photos[0]} alt={field.label} className="max-h-32 rounded border border-gray-200" />;
+    }
+    return (
+      <div className="flex flex-wrap gap-2">
+        {photos.map((src, i) => (
+          <img key={i} src={src} alt={`${field.label} ${i + 1}`} className="max-h-24 rounded border border-gray-200" />
+        ))}
+      </div>
+    );
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.layout === 'day_schedule_table') {

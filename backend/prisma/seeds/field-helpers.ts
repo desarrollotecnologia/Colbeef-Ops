@@ -318,7 +318,7 @@ export function hourlyMatrixField(
       showProm: opts?.showProm ?? false,
       columns: [
         { key: 'hora', label: 'Hora', type: 'TIME' },
-        { key: 'temperatura', label: 'Temperatura °C', type: 'NUMBER' },
+        { key: 'temperatura', label: 'Temperatura °C', type: 'TEXT' },
         { key: 'observaciones', label: 'Observaciones', type: 'TEXT', required: false },
       ],
     },

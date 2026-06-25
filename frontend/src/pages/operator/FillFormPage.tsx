@@ -23,6 +23,7 @@ import { formatWorkDateShort, getWorkDateString, toWorkDateString } from '@/lib/
 
 import { downloadSubmissionPdf } from '@/lib/downloadPdf';
 import { getIncompleteFields, isSheetComplete } from '@/lib/sheetCompletion';
+import { ENFORCE_REQUIRED_FIELDS } from '@/lib/formUtils';
 
 import type { FormSubmission, FormatField, MissingField } from '@/types';
 
@@ -283,6 +284,12 @@ export default function FillFormPage() {
 
     try {
 
+      if (canEdit) {
+
+        await saveAllSheets();
+
+      }
+
       await downloadSubmissionPdf(submission.id);
 
     } catch (err) {
@@ -389,7 +396,7 @@ export default function FillFormPage() {
 
         </p>
 
-        {canEdit && (
+        {canEdit && ENFORCE_REQUIRED_FIELDS && (
 
           <p className="text-xs text-amber-700 mt-1">
 
@@ -543,6 +550,12 @@ export default function FillFormPage() {
 
         <div className="flex flex-wrap items-center gap-2">
 
+          <Button variant="outline" onClick={handleDownloadPdf} loading={pdfLoading}>
+
+            <Download size={18} /> Descargar PDF
+
+          </Button>
+
           {canEdit && (
 
             <>
@@ -564,16 +577,6 @@ export default function FillFormPage() {
               )}
 
             </>
-
-          )}
-
-          {submission.status === 'APPROVED' && (
-
-            <Button variant="outline" onClick={handleDownloadPdf} loading={pdfLoading}>
-
-              <Download size={18} /> Descargar PDF
-
-            </Button>
 
           )}
 

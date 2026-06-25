@@ -10,10 +10,10 @@ interface Props {
 }
 
 const PRODUCT_BLOCKS = [
-  { prefix: 'refri_sin_hueso', title: 'Producto refrigerado sin hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC · Video Jet C/NC/NA · Foto' },
-  { prefix: 'refri_con_hueso', title: 'Producto refrigerado con hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC · Video Jet C/NC/NA · Foto' },
-  { prefix: 'cong_sin_hueso', title: 'Producto congelado sin hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC/NA · Video Jet C/NC/NA · Foto' },
-  { prefix: 'cong_con_hueso', title: 'Producto congelado con hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC/NA · Video Jet C/NC/NA · Foto' },
+  { prefix: 'refri_sin_hueso', title: 'Producto refrigerado sin hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC · Video Jet C/NC/NA · Fotos (varias por lote)' },
+  { prefix: 'refri_con_hueso', title: 'Producto refrigerado con hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC · Video Jet C/NC/NA · Fotos (varias por lote)' },
+  { prefix: 'cong_sin_hueso', title: 'Producto congelado sin hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC/NA · Video Jet C/NC/NA · Fotos (varias por lote)' },
+  { prefix: 'cong_con_hueso', title: 'Producto congelado con hueso', subtitle: 'Empaque Vacío/Granel · Etiqueta C/NC/NA · Video Jet C/NC/NA · Fotos (varias por lote)' },
 ];
 
 export default function Format4Diario5({ fields, sheetData, onUpdate, disabled }: Props) {

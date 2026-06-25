@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
+import { renderDecomisosSheet, renderVehiculosSheet } from './submissionPdfFormatLayouts';
 
 type PdfDoc = InstanceType<typeof PDFDocument>;
 
@@ -31,6 +32,7 @@ type SheetWithFields = FormatSheet & { fields: FormatField[] };
 
 type SubmissionForPdf = FormSubmission & {
   format: {
+    code: string;
     name: string;
     documentCode: string | null;
     sheets: SheetWithFields[];
@@ -337,6 +339,29 @@ function renderField(
     return renderChecklistTable(doc, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
   }
 
+  if (field.fieldType === 'PHOTO') {
+    const photos: string[] = [];
+    if (Array.isArray(value)) {
+      photos.push(...value.filter((v): v is string => typeof v === 'string' && v.startsWith('data:image')));
+    } else if (typeof value === 'string' && value.startsWith('data:image')) {
+      photos.push(value);
+    }
+    if (photos.length === 0) {
+      return drawTextValue(doc, '—', MARGIN, y, maxW);
+    }
+    let py = y;
+    for (const src of photos.slice(0, 6)) {
+      if (py > contentBottom(doc) - 60) break;
+      try {
+        doc.image(src, MARGIN, py, { fit: [120, 80] });
+        py += 86;
+      } catch {
+        py = drawTextValue(doc, '(imagen no disponible)', MARGIN, py, maxW);
+      }
+    }
+    return py + 4;
+  }
+
   if (field.fieldType === 'TEXTAREA') {
     return drawTextValue(doc, String(value ?? ''), MARGIN, y, maxW);
   }
@@ -371,11 +396,18 @@ function renderSheetPage(
 ) {
   let y = drawSheetHeader(doc, submission, sheet, sheetIndex, totalSheets);
   const fields = sheet.fields.filter((f) => f.fieldKey !== 'empresa');
+  const code = submission.format.code;
 
-  for (const field of fields) {
-    if (y > contentBottom(doc) - 20) break;
-    y = renderField(doc, field, sheetData[field.fieldKey], y);
-    y += 4;
+  if (code === 'INSPECCION_VEHICULOS') {
+    y = renderVehiculosSheet(doc, fields, sheetData, y);
+  } else if (code === 'DECOMISOS') {
+    y = renderDecomisosSheet(doc, fields, sheetData, y);
+  } else {
+    for (const field of fields) {
+      if (y > contentBottom(doc) - 20) break;
+      y = renderField(doc, field, sheetData[field.fieldKey], y);
+      y += 4;
+    }
   }
 
   drawSignatures(doc, submission, contentBottom(doc) - 28);
@@ -401,7 +433,10 @@ export function generateSubmissionPdf(submission: SubmissionForPdf): Promise<Buf
     formatSheets.forEach((sheet, index) => {
       const sheetData =
         (submission.sheets.find((s) => s.sheetId === sheet.id)?.data as Record<string, unknown>) ?? {};
-      const landscape = needsLandscape(sheet.fields);
+      const landscape =
+        needsLandscape(sheet.fields) ||
+        submission.format.code === 'DECOMISOS' ||
+        submission.format.code === 'INSPECCION_VEHICULOS';
       doc.addPage({
         size: 'A4',
         layout: landscape ? 'landscape' : 'portrait',

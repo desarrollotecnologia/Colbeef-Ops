@@ -1,6 +1,5 @@
-import { Camera } from 'lucide-react';
 import type { ChecklistItemData, FormatField, RepeaterColumn } from '@/types';
-import { INPUT_CLASS, isTemperatureInput } from '@/lib/formUtils';
+import { INPUT_CLASS, isTemperatureInput, showRequiredIndicator } from '@/lib/formUtils';
 import { isAutoField } from '@/lib/autoFill';
 import ChoiceButtons from './ChoiceButtons';
 import ItemChecklist from './ItemChecklist';
@@ -11,6 +10,7 @@ import CloroResidualRepeater from './CloroResidualRepeater';
 import LacticoTitrationRepeater from './LacticoTitrationRepeater';
 import CardRepeater from './CardRepeater';
 import AutoValue from './AutoValue';
+import PhotoInput from './PhotoInput';
 
 interface Props {
   field: FormatField;
@@ -25,7 +25,7 @@ function FieldLabel({ field, show }: { field: FormatField; show: boolean }) {
   return (
     <label className="block text-sm font-medium text-gray-700 mb-1">
       {field.label}
-      {field.required && <span className="text-red-500 ml-1">*</span>}
+      {showRequiredIndicator(field.required) && <span className="text-red-500 ml-1">*</span>}
     </label>
   );
 }
@@ -208,32 +208,17 @@ export default function FormField({ field, value, onChange, disabled, compact }:
   }
 
   if (field.fieldType === 'PHOTO') {
-    const src = typeof value === 'string' ? value : '';
     return (
       <div>
         <FieldLabel field={field} show={showLabel} />
-        {src && (
-          <img src={src} alt={field.label} className="mb-2 max-h-40 rounded-lg border border-gray-200" />
-        )}
-        {!disabled && (
-          <label className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-400 transition-colors">
-            <Camera size={20} className="text-gray-400" />
-            <span className="text-sm text-gray-600">{src ? 'Cambiar foto' : 'Tomar / subir foto'}</span>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => onChange(reader.result as string);
-                reader.readAsDataURL(file);
-              }}
-            />
-          </label>
-        )}
+        <PhotoInput
+          label={field.label}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          multiple={opts.multiple}
+          maxPhotos={opts.maxPhotos}
+        />
       </div>
     );
   }
@@ -260,14 +245,15 @@ export default function FormField({ field, value, onChange, disabled, compact }:
       <div>
         <FieldLabel field={field} show={showLabel} />
         <input
-          type={textInput ? 'text' : 'number'}
-          value={value !== undefined && value !== null ? String(value) : ''}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          min={textInput ? undefined : field.config?.min}
-          max={textInput ? undefined : field.config?.max}
-          placeholder={field.placeholder}
-          className={INPUT_CLASS}
+        type={textInput ? 'text' : 'number'}
+        inputMode={textInput ? 'decimal' : undefined}
+        value={value !== undefined && value !== null ? String(value) : ''}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        min={textInput ? undefined : field.config?.min}
+        max={textInput ? undefined : field.config?.max}
+        placeholder={textInput ? 'Ej: 2,5' : field.placeholder}
+        className={INPUT_CLASS}
         />
       </div>
     );
@@ -315,7 +301,7 @@ export default function FormField({ field, value, onChange, disabled, compact }:
         />
         <span className="text-sm font-medium text-gray-700">
           {field.label}
-          {field.required && <span className="text-red-500 ml-1">*</span>}
+          {showRequiredIndicator(field.required) && <span className="text-red-500 ml-1">*</span>}
         </span>
       </label>
     );

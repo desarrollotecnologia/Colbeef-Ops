@@ -1,5 +1,6 @@
 import type { ChecklistItemData, FormatField } from '@/types';
 import { getDayKey } from '@/lib/autoFill';
+import { ENFORCE_REQUIRED_FIELDS, hasTemperatureValue, isTemperatureInput } from '@/lib/formUtils';
 
 function slugifyPoint(label: string): string {
   return label
@@ -45,6 +46,8 @@ export function isFieldComplete(
   value: unknown,
   workDate: string
 ): boolean {
+  if (!ENFORCE_REQUIRED_FIELDS) return true;
+
   const options = field.options ?? {};
 
   if (options.layout === 'formal_measure_table') {
@@ -60,7 +63,7 @@ export function isFieldComplete(
       if (tableType === 'temperaturas') {
         if (!row.cnc) return false;
         if (row.cnc === 'NA') return true;
-        return Boolean(row.hora && row.temperatura);
+        return Boolean(row.hora && hasTemperatureValue(row.temperatura));
       }
       if (tableType === 'titulacion') {
         return Boolean(row.hora && row.volumen_naoh && row.cnc);
@@ -91,7 +94,7 @@ export function isFieldComplete(
       if (tableType === 'cloro') {
         return Boolean(row.cloro_residual && row.cnc);
       }
-      return Boolean(row.temperatura && row.cnc);
+      return Boolean(hasTemperatureValue(row.temperatura) && row.cnc);
     });
   }
 
@@ -100,20 +103,38 @@ export function isFieldComplete(
     return options.items.every((item) => isChecklistItemComplete(data[item.key] ?? {}, options));
   }
 
+  if (field.fieldType === 'REPEATER' && options.matrix) {
+    if (!field.required) return true;
+    const data = (value as Record<string, Record<string, string>[]>) ?? {};
+    return Object.values(data).some(
+      (readings) =>
+        Array.isArray(readings) &&
+        readings.some((row) => row.hora || hasTemperatureValue(row.temperatura) || row.observaciones)
+    );
+  }
+
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
-    const minRows = options.minRows ?? 1;
+    const minRows = options.minRows ?? (field.required ? 1 : 0);
     if (rows.length < minRows) return false;
     const cols = options.columns ?? options.columns_def ?? [];
     return rows.every((row) =>
       cols
         .filter((c) => typeof c === 'object' && c.required)
         .every((c) => {
-          const col = c as { key: string };
+          const col = c as { key: string; label?: string; type?: string };
           const cell = (row as Record<string, unknown>)[col.key];
+          if (isTemperatureInput(col.key, col.label) || col.type === 'NUMBER' && isTemperatureInput(col.key, col.label)) {
+            return hasTemperatureValue(cell);
+          }
           return cell !== undefined && cell !== null && cell !== '';
         })
     );
+  }
+
+  if (field.fieldType === 'NUMBER' && isTemperatureInput(field.fieldKey, field.label)) {
+    if (!field.required) return true;
+    return hasTemperatureValue(value);
   }
 
   if (field.required) {

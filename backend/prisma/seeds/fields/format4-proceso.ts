@@ -56,7 +56,10 @@ const PRODUCTO_ETIQUETA = (
     ? cncNaField(`${prefix}_etiqueta`, `${label} — Etiqueta`, sort + 1, { groupName: label, required: true })
     : cncField(`${prefix}_etiqueta`, `${label} — Etiqueta`, sort + 1, { groupName: label, required: true }),
   cncNaField(`${prefix}_videojet`, `${label} — Video Jet`, sort + 2, { groupName: label }),
-  photoField(`${prefix}_foto`, `${label} — Foto etiqueta`, sort + 3, { groupName: label }),
+  photoField(`${prefix}_foto`, `${label} — Fotos etiqueta`, sort + 3, {
+    groupName: label,
+    options: { multiple: true, maxPhotos: 20 },
+  }),
 ];
 
 const POES_4H_COLS: FieldDef[] = [
@@ -134,6 +137,16 @@ export function getFormat4Fields(slug: string): FieldDef[] {
 
     case 'diario-4':
       return [
+        textField('lote', 'Lote', 1, { required: true }),
+        ...PRODUCTO_ETIQUETA('refri_sin_hueso', 'Producto refrigerado sin hueso', 10),
+        ...PRODUCTO_ETIQUETA('refri_con_hueso', 'Producto refrigerado con hueso', 20),
+        ...PRODUCTO_ETIQUETA('cong_sin_hueso', 'Producto congelado sin hueso', 30, { etiquetaNa: true }),
+        ...PRODUCTO_ETIQUETA('cong_con_hueso', 'Producto congelado con hueso', 40, { etiquetaNa: true }),
+        textareaField('observaciones', 'Observaciones', 50),
+      ];
+
+    case 'diario-5':
+      return [
         repeaterField('poes_manipulador', 'POES operativo manipulador (cada hora)', [
           { fieldKey: 'hora', label: 'Hora', fieldType: 'TIME' as const, sortOrder: 0, manualOnly: true, required: true },
           { fieldKey: 'operario', label: 'Operario', fieldType: 'TEXT' as const, sortOrder: 1, manualOnly: true, required: true },
@@ -144,16 +157,6 @@ export function getFormat4Fields(slug: string): FieldDef[] {
           { fieldKey: 'soporte_gancho', label: 'Soporte gancho deshuesador', fieldType: 'CHECKLIST' as const, sortOrder: 6, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
           { fieldKey: 'correccion', label: 'Corrección', fieldType: 'TEXT' as const, sortOrder: 7, manualOnly: true, config: { requiredIf: 'nc_or_observation' } },
         ], 1, { minRows: 1, maxRows: 24 }),
-        textareaField('observaciones', 'Observaciones', 50),
-      ];
-
-    case 'diario-5':
-      return [
-        textField('lote', 'Lote', 1, { required: true }),
-        ...PRODUCTO_ETIQUETA('refri_sin_hueso', 'Producto refrigerado sin hueso', 10),
-        ...PRODUCTO_ETIQUETA('refri_con_hueso', 'Producto refrigerado con hueso', 20),
-        ...PRODUCTO_ETIQUETA('cong_sin_hueso', 'Producto congelado sin hueso', 30, { etiquetaNa: true }),
-        ...PRODUCTO_ETIQUETA('cong_con_hueso', 'Producto congelado con hueso', 40, { etiquetaNa: true }),
         textareaField('observaciones', 'Observaciones', 50),
       ];
 
