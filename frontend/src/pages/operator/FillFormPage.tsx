@@ -56,6 +56,7 @@ export default function FillFormPage() {
   const [missingFields, setMissingFields] = useState<MissingField[]>([]);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfFullLoading, setPdfFullLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
 
@@ -279,29 +280,32 @@ export default function FillFormPage() {
 
 
   const handleDownloadPdf = async () => {
-
+    if (!currentSheet) return;
     setPdfLoading(true);
-
     try {
-
       if (canEdit) {
-
-        await saveAllSheets();
-
+        await saveCurrentSheet();
       }
-
-      await downloadSubmissionPdf(submission.id);
-
+      await downloadSubmissionPdf(submission.id, { sheetId: currentSheet.id });
     } catch (err) {
-
       setSaveMessage(err instanceof Error ? err.message : 'No se pudo descargar el PDF.');
-
     } finally {
-
       setPdfLoading(false);
-
     }
+  };
 
+  const handleDownloadFullPdf = async () => {
+    setPdfFullLoading(true);
+    try {
+      if (canEdit) {
+        await saveAllSheets();
+      }
+      await downloadSubmissionPdf(submission.id, { scope: 'all' });
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : 'No se pudo descargar el PDF completo.');
+    } finally {
+      setPdfFullLoading(false);
+    }
   };
 
 
@@ -549,12 +553,14 @@ export default function FillFormPage() {
 
 
         <div className="flex flex-wrap items-center gap-2">
-
           <Button variant="outline" onClick={handleDownloadPdf} loading={pdfLoading}>
-
-            <Download size={18} /> Descargar PDF
-
+            <Download size={18} /> PDF hoja actual
           </Button>
+          {sheets.length > 1 && (
+            <Button variant="outline" onClick={handleDownloadFullPdf} loading={pdfFullLoading}>
+              <Download size={18} /> PDF todas las hojas
+            </Button>
+          )}
 
           {canEdit && (
 

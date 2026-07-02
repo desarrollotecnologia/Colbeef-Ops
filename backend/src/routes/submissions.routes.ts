@@ -153,7 +153,7 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
   res.status(201).json(submission);
 });
 
-// Descargar PDF del formato completo (una página por hoja)
+// Descargar PDF: ?sheetId=uuid (solo esa hoja) | ?scope=all (todas con separadores)
 router.get('/:id/pdf', async (req: Request, res: Response) => {
   const submission = await prisma.formSubmission.findUnique({
     where: { id: paramId(req.params.id) },
@@ -184,8 +184,29 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
   }
 
   try {
-    const pdfBuffer = await generateSubmissionPdf(submission);
-    const filename = buildPdfFilename(submission);
+    const sheetId = typeof req.query.sheetId === 'string' ? req.query.sheetId : undefined;
+    const scopeAll = req.query.scope === 'all';
+
+    const pdfOptions = sheetId
+      ? { sheetId }
+      : scopeAll
+        ? { sheetBoundaries: true }
+        : undefined;
+
+    const pdfBuffer = await generateSubmissionPdf(submission, pdfOptions);
+
+    let sheetName: string | undefined;
+    if (sheetId) {
+      sheetName = submission.format.sheets.find((s) => s.id === sheetId)?.name;
+      if (!sheetName) {
+        return res.status(400).json({ error: 'Hoja no encontrada en el formato.' });
+      }
+    }
+
+    const filename = buildPdfFilename(submission, {
+      sheetName,
+      allSheets: scopeAll && !sheetId,
+    });
     logUsageEvent({
       eventType: UsageEventType.PDF_DOWNLOADED,
       userId: req.user!.userId,

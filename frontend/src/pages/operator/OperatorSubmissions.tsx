@@ -97,7 +97,7 @@ export default function OperatorSubmissions() {
                           e.preventDefault();
                           setPdfLoadingId(sub.id);
                           try {
-                            await downloadSubmissionPdf(sub.id);
+                            await downloadSubmissionPdf(sub.id, { scope: 'all' });
                           } finally {
                             setPdfLoadingId(null);
                           }

@@ -47,6 +47,7 @@ export default function AdminReviewPage() {
 
   const [actionLoading, setActionLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfFullLoading, setPdfFullLoading] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
 
@@ -157,26 +158,31 @@ export default function AdminReviewPage() {
 
     submission.status === 'APPROVED' || submission.status === 'PENDING_REVIEW';
 
+  const currentSheet = sheets[currentSheetIndex];
+
   const handleDownloadPdf = async () => {
-
+    if (!currentSheet) return;
     setPdfLoading(true);
-
     setPdfError(null);
-
     try {
-
-      await downloadSubmissionPdf(submission.id);
-
+      await downloadSubmissionPdf(submission.id, { sheetId: currentSheet.id });
     } catch (err) {
-
       setPdfError(err instanceof Error ? err.message : 'No se pudo descargar el PDF');
-
     } finally {
-
       setPdfLoading(false);
-
     }
+  };
 
+  const handleDownloadFullPdf = async () => {
+    setPdfFullLoading(true);
+    setPdfError(null);
+    try {
+      await downloadSubmissionPdf(submission.id, { scope: 'all' });
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : 'No se pudo descargar el PDF completo');
+    } finally {
+      setPdfFullLoading(false);
+    }
   };
 
 
@@ -322,13 +328,16 @@ export default function AdminReviewPage() {
           )}
 
           {canDownloadPdf && (
-
-            <Button variant="outline" onClick={handleDownloadPdf} loading={pdfLoading}>
-
-              <Download size={18} /> Descargar PDF
-
-            </Button>
-
+            <>
+              <Button variant="outline" onClick={handleDownloadPdf} loading={pdfLoading}>
+                <Download size={18} /> PDF hoja actual
+              </Button>
+              {sheets.length > 1 && (
+                <Button variant="outline" onClick={handleDownloadFullPdf} loading={pdfFullLoading}>
+                  <Download size={18} /> PDF todas las hojas
+                </Button>
+              )}
+            </>
           )}
 
         </div>

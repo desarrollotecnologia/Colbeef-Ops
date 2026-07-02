@@ -87,6 +87,46 @@ export function drawSectionBanner(
   return y + h + 4;
 }
 
+export function drawSheetBoundaryStart(
+  doc: PdfDoc,
+  sheetIndex: number,
+  totalSheets: number,
+  sheetName: string,
+  startY = MARGIN
+): number {
+  const w = pageWidth(doc) - MARGIN * 2;
+  const h = 20;
+  doc.rect(MARGIN, startY, w, h).fill('#166534');
+  doc
+    .fontSize(8.5)
+    .font('Helvetica-Bold')
+    .fillColor('#fff')
+    .text(`HOJA ${sheetIndex + 1} DE ${totalSheets} · ${sheetName.toUpperCase()}`, MARGIN + 6, startY + 5, {
+      width: w - 12,
+      align: 'center',
+    });
+  return startY + h + 6;
+}
+
+export function drawSheetBoundaryEnd(
+  doc: PdfDoc,
+  sheetIndex: number,
+  totalSheets: number,
+  sheetName: string
+): void {
+  const w = pageWidth(doc) - MARGIN * 2;
+  const y = pageHeight(doc) - MARGIN - 14;
+  doc.moveTo(MARGIN, y).lineTo(MARGIN + w, y).strokeColor('#166534').lineWidth(1.5).stroke();
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor('#166534')
+    .text(`— FIN HOJA ${sheetIndex + 1} DE ${totalSheets}: ${sheetName.toUpperCase()} —`, MARGIN, y + 3, {
+      width: w,
+      align: 'center',
+    });
+}
+
 export function drawMainSheetHeader(
   doc: PdfDoc,
   opts: {
@@ -98,67 +138,118 @@ export function drawMainSheetHeader(
     workDate: Date;
     operatorName: string;
     compact?: boolean;
+    startY?: number;
   }
 ): number {
   const width = pageWidth(doc);
   const w = width - MARGIN * 2;
-  let y = MARGIN;
+  const y0 = opts.startY ?? MARGIN;
   const logoW = opts.compact ? 70 : 88;
-  const rowH = opts.compact ? 44 : 52;
+  const pad = 6;
 
-  doc.rect(MARGIN, y, w, rowH).strokeColor('#333').lineWidth(1).stroke();
-  doc.moveTo(MARGIN + logoW + 8, y).lineTo(MARGIN + logoW + 8, y + rowH).strokeColor('#333').stroke();
-  doc.moveTo(MARGIN + w * 0.62, y).lineTo(MARGIN + w * 0.62, y + rowH).strokeColor('#333').stroke();
-
-  const logo = resolveLogoPath();
-  if (logo) {
-    try {
-      doc.image(logo, MARGIN + 6, y + 6, { width: logoW - 12 });
-    } catch {
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN + 8, y + 16);
-    }
-  } else {
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN + 8, y + 16);
-  }
-
-  const titleX = MARGIN + logoW + 14;
-  const titleW = w * 0.62 - logoW - 20;
-  doc.fontSize(opts.compact ? 5.5 : 6).font('Helvetica-Bold').fillColor('#555').text(sistemaLabel(opts.documentCode), titleX, y + 8, {
-    width: titleW,
-    align: 'center',
-  });
-  doc.fontSize(opts.compact ? 7 : 8).fillColor('#111').text(opts.formatName.toUpperCase(), titleX, y + (opts.compact ? 16 : 18), {
-    width: titleW,
-    align: 'center',
-  });
-  doc.fontSize(opts.compact ? 6 : 7).fillColor('#1a5f2a').text('COLBEEF S.A.S', titleX, y + (opts.compact ? 28 : 32), {
-    width: titleW,
-    align: 'center',
-  });
-
+  const titleX = MARGIN + logoW + 12;
+  const titleW = w * 0.62 - logoW - 16;
   const metaX = MARGIN + w * 0.62 + 8;
   const metaW = w * 0.38 - 16;
-  doc.fontSize(6.5).font('Helvetica').fillColor('#111');
-  doc.text(`Hoja: ${opts.sheetIndex + 1} / ${opts.totalSheets}`, metaX, y + 10, { width: metaW });
-  if (opts.documentCode) {
-    doc.text(`Código: ${opts.documentCode}`, metaX, y + 20, { width: metaW });
-    doc.text(`Versión: ${VERSION_BY_CODE[opts.documentCode] ?? '2.0.0'}`, metaX, y + 30, { width: metaW });
+
+  const sistFont = opts.compact ? 5.5 : 6;
+  const nameFont = opts.compact ? 6.5 : 7;
+  const empresaFont = opts.compact ? 6 : 6.5;
+  const sistema = sistemaLabel(opts.documentCode);
+  const formatTitle = opts.formatName.toUpperCase();
+
+  doc.fontSize(sistFont).font('Helvetica-Bold');
+  const sistH = doc.heightOfString(sistema, { width: titleW, align: 'center' });
+  doc.fontSize(nameFont).font('Helvetica-Bold');
+  const nameH = doc.heightOfString(formatTitle, { width: titleW, align: 'center' });
+  doc.fontSize(empresaFont).font('Helvetica-Bold');
+  const empH = doc.heightOfString('COLBEEF S.A.S', { width: titleW, align: 'center' });
+
+  const titleBlockH = pad + sistH + 4 + nameH + 4 + empH + pad;
+  const metaLineH = opts.compact ? 9 : 10;
+  const metaLines = opts.documentCode ? 3 : 1;
+  const metaH = pad + metaLines * metaLineH + pad;
+  const rowH = Math.max(titleBlockH, metaH, logoW + pad * 2, opts.compact ? 50 : 58);
+
+  doc.rect(MARGIN, y0, w, rowH).strokeColor('#333').lineWidth(1).stroke();
+  doc.moveTo(MARGIN + logoW + 8, y0).lineTo(MARGIN + logoW + 8, y0 + rowH).strokeColor('#333').stroke();
+  doc.moveTo(MARGIN + w * 0.62, y0).lineTo(MARGIN + w * 0.62, y0 + rowH).strokeColor('#333').stroke();
+
+  const logo = resolveLogoPath();
+  const logoImgH = logoW - 16;
+  const logoY = y0 + (rowH - logoImgH) / 2;
+  if (logo) {
+    try {
+      doc.image(logo, MARGIN + 6, logoY, { width: logoW - 12 });
+    } catch {
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN + 8, y0 + rowH / 2 - 5);
+    }
+  } else {
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN + 8, y0 + rowH / 2 - 5);
   }
 
-  y += rowH;
-  const barH = opts.compact ? 18 : 22;
+  let ty = y0 + pad;
+  doc.fontSize(sistFont).font('Helvetica-Bold').fillColor('#555').text(sistema, titleX, ty, {
+    width: titleW,
+    align: 'center',
+    lineGap: 1,
+  });
+  ty += sistH + 4;
+  doc.fontSize(nameFont).font('Helvetica-Bold').fillColor('#111').text(formatTitle, titleX, ty, {
+    width: titleW,
+    align: 'center',
+    lineGap: 1,
+  });
+  ty += nameH + 4;
+  doc.fontSize(empresaFont).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF S.A.S', titleX, ty, {
+    width: titleW,
+    align: 'center',
+  });
+
+  doc.fontSize(opts.compact ? 6 : 6.5).font('Helvetica').fillColor('#111');
+  let my = y0 + pad;
+  doc.text(`Hoja: ${opts.sheetIndex + 1} / ${opts.totalSheets}`, metaX, my, { width: metaW });
+  my += metaLineH;
+  if (opts.documentCode) {
+    doc.text(`Código: ${opts.documentCode}`, metaX, my, { width: metaW });
+    my += metaLineH;
+    doc.text(`Versión: ${VERSION_BY_CODE[opts.documentCode] ?? '2.0.0'}`, metaX, my, { width: metaW });
+  }
+
+  let y = y0 + rowH;
+  const colW = w / 3;
+  const fechaStr = formatWorkDate(opts.workDate);
+  const metaFont = opts.compact ? 6 : 6.5;
+
+  doc.fontSize(metaFont).font('Helvetica-Bold');
+  const fechaLabelH = doc.heightOfString('Fecha: ', { width: colW - 10 });
+  doc.font('Helvetica');
+  const fechaValH = doc.heightOfString(fechaStr, { width: colW - 14 });
+  doc.font('Helvetica-Bold');
+  const opLabelH = doc.heightOfString('Operario: ', { width: colW - 10 });
+  doc.font('Helvetica');
+  const opValH = doc.heightOfString(opts.operatorName, { width: colW - 14 });
+  doc.font('Helvetica-Bold');
+  const hojaLabelH = doc.heightOfString('Hoja: ', { width: colW - 10 });
+  doc.font('Helvetica');
+  const hojaValH = doc.heightOfString(opts.sheetName, { width: colW - 14 });
+
+  const barH = Math.max(
+    fechaLabelH + fechaValH,
+    opLabelH + opValH,
+    hojaLabelH + hojaValH
+  ) + 10;
+
   doc.rect(MARGIN, y, w, barH).fill('#e8edf2');
   doc.rect(MARGIN, y, w, barH).strokeColor('#333').lineWidth(0.5).stroke();
 
-  const colW = w / 3;
-  const barY = y + (opts.compact ? 5 : 6);
-  doc.fontSize(opts.compact ? 6 : 6.5).font('Helvetica-Bold').fillColor('#111');
-  doc.text('Fecha: ', MARGIN + 6, barY, { continued: true, width: colW - 8 });
-  doc.font('Helvetica').text(formatWorkDate(opts.workDate), { width: colW - 8 });
-  doc.font('Helvetica-Bold').text('Operario: ', MARGIN + colW + 6, barY, { continued: true, width: colW - 8 });
-  doc.font('Helvetica').text(opts.operatorName, { width: colW - 8 });
-  doc.font('Helvetica-Bold').text('Hoja: ', MARGIN + colW * 2 + 6, barY, { continued: true, width: colW - 8 });
-  doc.font('Helvetica').text(opts.sheetName, { width: colW - 8 });
+  const barY = y + 5;
+  doc.fontSize(metaFont).font('Helvetica-Bold').fillColor('#111').text('Fecha:', MARGIN + 6, barY, { width: colW - 10 });
+  doc.font('Helvetica').text(fechaStr, MARGIN + 6, barY + fechaLabelH, { width: colW - 10, lineGap: 0.5 });
+  doc.font('Helvetica-Bold').text('Operario:', MARGIN + colW + 6, barY, { width: colW - 10 });
+  doc.font('Helvetica').text(opts.operatorName, MARGIN + colW + 6, barY + opLabelH, { width: colW - 10, lineGap: 0.5 });
+  doc.font('Helvetica-Bold').text('Hoja:', MARGIN + colW * 2 + 6, barY, { width: colW - 10 });
+  doc.font('Helvetica').text(opts.sheetName, MARGIN + colW * 2 + 6, barY + hojaLabelH, { width: colW - 10, lineGap: 0.5 });
 
   y += barH + 8;
   doc.moveTo(MARGIN, y).lineTo(MARGIN + w, y).strokeColor('#999').lineWidth(0.5).stroke();
@@ -209,7 +300,12 @@ export type SheetPageContext = {
   compactHeader?: boolean;
 };
 
-export function startSheetPage(doc: PdfDoc, ctx: SheetPageContext, continued = false): number {
+export function startSheetPage(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  continued = false,
+  pageOpts?: { sheetBoundary?: boolean }
+): number {
   doc.addPage({
     size: 'A4',
     layout: ctx.landscape ? 'landscape' : 'portrait',
@@ -217,6 +313,10 @@ export function startSheetPage(doc: PdfDoc, ctx: SheetPageContext, continued = f
   });
   if (continued) {
     return drawContinuationHeader(doc, ctx.formatName, ctx.sheetName, ctx.sheetIndex, ctx.totalSheets);
+  }
+  let startY = MARGIN;
+  if (pageOpts?.sheetBoundary) {
+    startY = drawSheetBoundaryStart(doc, ctx.sheetIndex, ctx.totalSheets, ctx.sheetName, MARGIN);
   }
   return drawMainSheetHeader(doc, {
     formatName: ctx.formatName,
@@ -227,6 +327,7 @@ export function startSheetPage(doc: PdfDoc, ctx: SheetPageContext, continued = f
     workDate: ctx.workDate,
     operatorName: ctx.operatorName,
     compact: ctx.compactHeader,
+    startY,
   });
 }
 

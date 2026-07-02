@@ -1,11 +1,12 @@
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
 import PDFDocument from 'pdfkit';
+import { getDayKey, slugifyPoint } from '../utils/dayKey';
 import { renderDecomisosSheet, renderVehiculosSheet } from './submissionPdfFormatLayouts';
 import {
   MARGIN,
   contentBottom,
-  drawMainSheetHeader,
   drawSectionBanner,
+  drawSheetBoundaryEnd,
   drawSignatures,
   ensurePageSpace,
   formatWorkDate,
@@ -20,14 +21,17 @@ type FieldOptions = {
   layout?: string;
   tableType?: string;
   mode?: string;
-  items?: { key: string; label: string; section?: string }[];
-  columns?: string[];
+  items?: { key: string; label: string; section?: string; naTemp?: boolean; naPresion?: boolean }[];
+  columns?: string[] | { key: string; label: string }[];
   columnDefs?: { key: string; mode?: string }[];
   cavaColumns?: string[];
   platformCount?: number;
   choices?: string[];
   columns_def?: { key: string; label: string }[];
   entryLabel?: string;
+  schedule?: Record<string, string[]>;
+  areaLabel?: string;
+  pediluviosLayout?: string;
 };
 
 type ChecklistItemData = {
@@ -44,6 +48,13 @@ type ChecklistItemData = {
 
 type SheetWithFields = FormatSheet & { fields: FormatField[] };
 
+export type PdfGenerationOptions = {
+  /** Solo incluir esta hoja del formato (por id) */
+  sheetId?: string;
+  /** Barras de inicio/fin entre hojas (PDF completo) */
+  sheetBoundaries?: boolean;
+};
+
 export type SubmissionForPdf = FormSubmission & {
   format: {
     code: string;
@@ -56,11 +67,17 @@ export type SubmissionForPdf = FormSubmission & {
   sheets: { sheetId: string; data: unknown }[];
 };
 
+function stringColumns(opts: FieldOptions): string[] {
+  const raw = opts.columns;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((c): c is string => typeof c === 'string');
+}
+
 function needsLandscape(fields: FormatField[]): boolean {
   return fields.some((f) => {
     const opts = (f.options ?? {}) as FieldOptions;
     const colCount = opts.columnDefs?.length ?? opts.cavaColumns?.length ?? 0;
-    return colCount >= 6 || (opts.columns?.includes('platforms') && (opts.platformCount ?? 0) >= 5);
+    return colCount >= 6 || (stringColumns(opts).includes('platforms') && (opts.platformCount ?? 0) >= 5);
   });
 }
 
@@ -111,6 +128,30 @@ function drawTableRowBorder(doc: PdfDoc, y: number, h: number, fill?: string) {
   doc.rect(MARGIN, y, w, h).strokeColor('#ccc').lineWidth(0.4).stroke();
 }
 
+function markCnc(cnc: string, choice: string): string {
+  return cnc === choice ? 'X' : '';
+}
+
+function checklistColumnFlags(opts: FieldOptions) {
+  const raw = opts.columns;
+  const cols =
+    Array.isArray(raw) && raw.length > 0 && typeof raw[0] === 'string'
+      ? (raw as string[])
+      : ['cnc', 'observation', 'corrective'];
+  return {
+    showCnc: cols.includes('cnc'),
+    showObs: cols.includes('observation'),
+    showCorr: cols.includes('corrective'),
+  };
+}
+
+function scheduleForField(field: FormatField, opts: FieldOptions): Record<string, string[]> {
+  const fromOpts = opts.schedule;
+  if (fromOpts && Object.keys(fromOpts).length > 0) return fromOpts;
+  const fromConfig = (field.config as { schedule?: Record<string, string[]> } | null)?.schedule;
+  return fromConfig ?? {};
+}
+
 function renderSimpleChecklist(
   doc: PdfDoc,
   ctx: SheetPageContext,
@@ -120,29 +161,32 @@ function renderSimpleChecklist(
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
   const items = opts.items ?? [];
+  const { showCnc, showObs, showCorr } = checklistColumnFlags(opts);
   const showNa = hasNa(opts);
-  const showObs = opts.columns?.includes('observation');
-  const showCorr = opts.columns?.includes('corrective');
   const tableW = pageWidth(doc) - MARGIN * 2;
   let y = startY;
 
-  const cW = showNa ? 16 : 12;
+  y = drawSectionBanner(doc, y, field.label, field.helpText ?? 'C / NC — marque con X', true);
+
+  const cW = 14;
   const cCols = showNa ? 3 : 2;
-  const labelW = showObs || showCorr ? 120 : tableW - cW * cCols - 8;
-  const obsW = showObs ? (showCorr ? (tableW - labelW - cW * cCols) / 2 : tableW - labelW - cW * cCols) : 0;
-  const corrW = showCorr ? (showObs ? obsW : tableW - labelW - cW * cCols) : 0;
+  const labelW = Math.min(150, tableW - (showCnc ? cW * cCols : 0) - (showObs ? 90 : 0) - (showCorr ? 80 : 0) - 8);
+  const obsW = showObs ? 90 : 0;
+  const corrW = showCorr ? 80 : 0;
 
   y = ensurePageSpace(doc, ctx, y, 14);
   doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
   drawTableRowBorder(doc, y, 12, '#f3f4f6');
   doc.text('Equipo / superficie', MARGIN + 3, y + 2, { width: labelW });
   let x = MARGIN + labelW;
-  doc.text('C', x, y + 2, { width: cW, align: 'center' });
-  doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
-  if (showNa) doc.text('NA', x + cW * 2, y + 2, { width: cW, align: 'center' });
-  x += cW * cCols;
+  if (showCnc) {
+    doc.text('C', x, y + 2, { width: cW, align: 'center' });
+    doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+    if (showNa) doc.text('NA', x + cW * 2, y + 2, { width: cW, align: 'center' });
+    x += cW * cCols;
+  }
   if (showObs) doc.text('Observaciones', x, y + 2, { width: obsW });
-  if (showCorr) doc.text('Acción correctiva', x + (showObs ? obsW : 0), y + 2, { width: corrW });
+  if (showCorr) doc.text('Acción correctiva', x + obsW, y + 2, { width: corrW });
   y += 12;
 
   let lastSection = '';
@@ -164,10 +208,12 @@ function renderSimpleChecklist(
     drawTableRowBorder(doc, y, rowH);
     doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(item.label, MARGIN + 3, y + 2, { width: labelW - 4 });
     x = MARGIN + labelW;
-    doc.text(cnc === 'C' ? 'X' : '', x, y + 2, { width: cW, align: 'center' });
-    doc.text(cnc === 'NC' ? 'X' : '', x + cW, y + 2, { width: cW, align: 'center' });
-    if (showNa) doc.text(cnc === 'NA' ? 'X' : '', x + cW * 2, y + 2, { width: cW, align: 'center' });
-    x += cW * cCols;
+    if (showCnc) {
+      doc.text(markCnc(cnc, 'C'), x, y + 2, { width: cW, align: 'center' });
+      doc.text(markCnc(cnc, 'NC'), x + cW, y + 2, { width: cW, align: 'center' });
+      if (showNa) doc.text(markCnc(cnc, 'NA'), x + cW * 2, y + 2, { width: cW, align: 'center' });
+      x += cW * cCols;
+    }
     if (showObs) {
       doc.text(readScopedText(data, undefined, 'observation'), x, y + 2, { width: obsW - 2 });
     }
@@ -192,10 +238,11 @@ function renderCavaMatrix(
     opts.columnDefs?.length
       ? opts.columnDefs
       : (opts.cavaColumns ?? []).map((key) => ({ key, mode: 'cnc_na' as const }));
-  const showObs = opts.columns?.includes('observation');
-  const showCorr = opts.columns?.includes('corrective');
+  const colFlags = stringColumns(opts);
+  const showObs = colFlags.includes('observation');
+  const showCorr = colFlags.includes('corrective');
   const chunks = defs.length > 5 ? chunkArray(defs, 5) : [defs];
-  let y = startY;
+  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? 'C / NC / NA por cava', true);
 
   chunks.forEach((chunk, ci) => {
     const scope = chunkScopeKey(chunk);
@@ -273,18 +320,30 @@ function renderPlatformsTable(
   const items = opts.items ?? [];
   const count = opts.platformCount ?? 5;
   const tableW = pageWidth(doc) - MARGIN * 2;
-  const labelW = 100;
-  const platW = (tableW - labelW) / (count * 2);
+  const labelW = 95;
+  const platSubW = 11;
   let y = startY;
 
+  y = drawSectionBanner(doc, y, field.label, `PLAT 1 – ${count} · C / NC por plataforma`, true);
+
   y = ensurePageSpace(doc, ctx, y, 14);
-  doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
+  doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
   drawTableRowBorder(doc, y, 11, '#f3f4f6');
   doc.text('Equipo / superficie', MARGIN + 3, y + 2, { width: labelW });
+  let x = MARGIN + labelW;
   for (let i = 1; i <= count; i++) {
-    doc.text(`PLAT ${i}`, MARGIN + labelW + (i - 1) * platW * 2, y + 2, { width: platW * 2, align: 'center' });
+    doc.text(`P${i}`, x, y + 1, { width: platSubW * 2, align: 'center' });
+    x += platSubW * 2;
   }
   y += 11;
+  drawTableRowBorder(doc, y, 9, '#fafafa');
+  x = MARGIN + labelW;
+  for (let i = 0; i < count; i++) {
+    doc.text('C', x, y + 1, { width: platSubW, align: 'center' });
+    doc.text('NC', x + platSubW, y + 1, { width: platSubW, align: 'center' });
+    x += platSubW * 2;
+  }
+  y += 9;
 
   for (const item of items) {
     const data = value[item.key] ?? {};
@@ -292,10 +351,12 @@ function renderPlatformsTable(
     y = ensurePageSpace(doc, ctx, y, rowH);
     drawTableRowBorder(doc, y, rowH);
     doc.fontSize(5.5).font('Helvetica').text(item.label, MARGIN + 3, y + 1, { width: labelW - 4 });
+    x = MARGIN + labelW;
     for (let i = 1; i <= count; i++) {
       const v = data.platforms?.[String(i)] ?? '';
-      doc.text(v || '·', MARGIN + labelW + (i - 1) * platW * 2, y + 1, { width: platW, align: 'center' });
-      doc.text('', MARGIN + labelW + (i - 1) * platW * 2 + platW, y + 1, { width: platW });
+      doc.text(markCnc(v, 'C'), x, y + 1, { width: platSubW, align: 'center' });
+      doc.text(markCnc(v, 'NC'), x + platSubW, y + 1, { width: platSubW, align: 'center' });
+      x += platSubW * 2;
     }
     y += rowH;
   }
@@ -374,69 +435,225 @@ function renderDaySchedule(
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
   const tableType = opts.tableType ?? 'cloro';
+  const schedule = scheduleForField(field, opts);
+  const dayKey = getDayKey(ctx.workDate);
+  const points = schedule[dayKey] ?? [];
   let y = startY;
   const w = pageWidth(doc) - MARGIN * 2;
 
+  if (points.length === 0) {
+    doc.fontSize(6.5).font('Helvetica').fillColor('#666').text('No hay puntos programados para este día.', MARGIN, y);
+    return y + 14;
+  }
+
   if (tableType === 'cloro') {
-    const cols = [
-      { label: 'Punto', w: 80 },
-      { label: 'Hora', w: 36 },
-      { label: 'Cloro', w: 40 },
-      { label: 'C/NC', w: 28 },
-      { label: 'Observaciones', w: w - 184 },
-    ];
+    const puntoW = Math.min(110, w * 0.28);
+    const cloroW = 52;
+    const phW = 22;
+    const cW = 12;
+    const obsW = w - puntoW - cloroW - phW - cW * 2;
+
     y = ensurePageSpace(doc, ctx, y, 12);
     drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
     let x = MARGIN;
-    doc.fontSize(6).font('Helvetica-Bold');
-    cols.forEach((c) => {
-      doc.text(c.label, x, y + 2, { width: c.w });
-      x += c.w;
-    });
+    doc.text('Puntos inspeccionados', x + 2, y + 2, { width: puntoW });
+    x += puntoW;
+    doc.text('Cloro (0.3–2 ppm)', x, y + 2, { width: cloroW, align: 'center' });
+    x += cloroW;
+    doc.text('pH', x, y + 2, { width: phW, align: 'center' });
+    x += phW;
+    doc.text('C', x, y + 2, { width: cW, align: 'center' });
+    doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+    doc.text('Observaciones', x + cW * 2 + 2, y + 2, { width: obsW - 4 });
     y += 11;
-    for (const [key, row] of Object.entries(value ?? {})) {
+
+    for (const punto of points) {
+      const key = slugifyPoint(punto);
+      const row = value[key] ?? {};
+      const cnc = row.cnc ?? '';
       y = ensurePageSpace(doc, ctx, y, 10);
       drawTableRowBorder(doc, y, 10);
+      doc.fontSize(5.5).font('Helvetica').fillColor('#111');
       x = MARGIN;
-      doc.fontSize(5.5).font('Helvetica');
-      const cells = [key.replace(/_/g, ' '), row.hora ?? '', row.cloro_residual ?? '', row.cnc ?? '', row.observaciones ?? ''];
-      cols.forEach((c, i) => {
-        doc.text(cells[i] ?? '', x, y + 1, { width: c.w - 2 });
-        x += c.w;
-      });
+      doc.text(punto, x + 2, y + 1, { width: puntoW - 4 });
+      x += puntoW;
+      doc.text(row.cloro_residual ?? '—', x, y + 1, { width: cloroW, align: 'center' });
+      x += cloroW;
+      doc.text('7.0', x, y + 1, { width: phW, align: 'center' });
+      x += phW;
+      doc.text(markCnc(cnc, 'C'), x, y + 1, { width: cW, align: 'center' });
+      doc.text(markCnc(cnc, 'NC'), x + cW, y + 1, { width: cW, align: 'center' });
+      doc.text(row.observaciones ?? '—', x + cW * 2 + 2, y + 1, { width: obsW - 4 });
       y += 10;
     }
   } else {
-    const cols = [
-      { label: 'Punto', w: 100 },
-      { label: 'Hora', w: 36 },
-      { label: 'Temp °C', w: 44 },
-      { label: 'C/NC', w: 28 },
-      { label: 'Observaciones', w: w - 208 },
-    ];
+    const puntoW = Math.min(120, w * 0.32);
+    const tempW = 48;
+    const cW = 12;
+    const obsW = w - puntoW - tempW - cW * 2;
+
     y = ensurePageSpace(doc, ctx, y, 12);
     drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
     let x = MARGIN;
-    doc.fontSize(6).font('Helvetica-Bold');
-    cols.forEach((c) => {
-      doc.text(c.label, x, y + 2, { width: c.w });
-      x += c.w;
-    });
+    doc.text('Puntos de inspección', x + 2, y + 2, { width: puntoW });
+    x += puntoW;
+    doc.text('Temp °C', x, y + 2, { width: tempW, align: 'center' });
+    x += tempW;
+    doc.text('C', x, y + 2, { width: cW, align: 'center' });
+    doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+    doc.text('Observación', x + cW * 2 + 2, y + 2, { width: obsW - 4 });
     y += 11;
-    for (const [key, row] of Object.entries(value ?? {})) {
+
+    for (const punto of points) {
+      const key = slugifyPoint(punto);
+      const row = value[key] ?? {};
+      const cnc = row.cnc ?? '';
       y = ensurePageSpace(doc, ctx, y, 10);
       drawTableRowBorder(doc, y, 10);
+      doc.fontSize(5.5).font('Helvetica').fillColor('#111');
       x = MARGIN;
-      doc.fontSize(5.5).font('Helvetica');
-      const cells = [key.replace(/_/g, ' '), row.hora ?? '', row.temperatura ?? '', row.cnc ?? '', row.observaciones ?? ''];
-      cols.forEach((c, i) => {
-        doc.text(cells[i] ?? '', x, y + 1, { width: c.w - 2 });
-        x += c.w;
-      });
+      doc.text(punto, x + 2, y + 1, { width: puntoW - 4 });
+      x += puntoW;
+      doc.text(row.temperatura ?? '—', x, y + 1, { width: tempW, align: 'center' });
+      x += tempW;
+      doc.text(markCnc(cnc, 'C'), x, y + 1, { width: cW, align: 'center' });
+      doc.text(markCnc(cnc, 'NC'), x + cW, y + 1, { width: cW, align: 'center' });
+      doc.text(row.observaciones ?? '—', x + cW * 2 + 2, y + 1, { width: obsW - 4 });
       y += 10;
     }
   }
   return y + 6;
+}
+
+type MeasureRow = Record<string, string>;
+
+function renderFormalMeasureTable(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  value: Record<string, MeasureRow>,
+  startY: number
+): number {
+  const opts = (field.options ?? {}) as FieldOptions;
+  const items = opts.items ?? [];
+  const tableType = opts.tableType ?? 'cloro';
+  const showNa = opts.mode === 'cnc_na';
+  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
+  const w = pageWidth(doc) - MARGIN * 2;
+
+  const drawCncCells = (x: number, rowY: number, cnc: string, cW: number) => {
+    doc.text(markCnc(cnc, 'C'), x, rowY, { width: cW, align: 'center' });
+    doc.text(markCnc(cnc, 'NC'), x + cW, rowY, { width: cW, align: 'center' });
+    if (showNa) doc.text(markCnc(cnc, 'NA'), x + cW * 2, rowY, { width: cW, align: 'center' });
+  };
+
+  if (tableType === 'cloro') {
+    const cols = [
+      { l: '#', w: 14 },
+      { l: 'Hora', w: 34 },
+      { l: 'Punto de toma', w: 90 },
+      { l: 'pH', w: 22 },
+      { l: 'Cloro', w: 36 },
+    ];
+    const cW = 12;
+    const cCols = showNa ? 3 : 2;
+    const corrW = w - cols.reduce((a, c) => a + c.w, 0) - cW * cCols;
+
+    y = ensurePageSpace(doc, ctx, y, 12);
+    drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    doc.fontSize(5.5).font('Helvetica-Bold');
+    let x = MARGIN;
+    cols.forEach((c) => {
+      doc.text(c.l, x, y + 2, { width: c.w, align: c.l === '#' ? 'center' : 'left' });
+      x += c.w;
+    });
+    doc.text('C', x, y + 2, { width: cW, align: 'center' });
+    doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+    if (showNa) doc.text('NA', x + cW * 2, y + 2, { width: cW, align: 'center' });
+    doc.text('Corrección', x + cW * cCols, y + 2, { width: corrW });
+    y += 11;
+
+    items.forEach((item, idx) => {
+      const row = value[item.key] ?? {};
+      const cnc = row.cnc ?? '';
+      y = ensurePageSpace(doc, ctx, y, 10);
+      drawTableRowBorder(doc, y, 10);
+      doc.fontSize(5.5).font('Helvetica');
+      x = MARGIN;
+      doc.text(String(idx + 1), x, y + 1, { width: cols[0].w, align: 'center' });
+      x += cols[0].w;
+      doc.text(row.hora ?? '—', x, y + 1, { width: cols[1].w });
+      x += cols[1].w;
+      doc.text(row.punto_toma ?? item.label, x, y + 1, { width: cols[2].w });
+      x += cols[2].w;
+      doc.text(row.ph ?? '7.0', x, y + 1, { width: cols[3].w, align: 'center' });
+      x += cols[3].w;
+      doc.text(row.cloro_residual ?? '—', x, y + 1, { width: cols[4].w, align: 'center' });
+      x += cols[4].w;
+      drawCncCells(x, y + 1, cnc, cW);
+      x += cW * cCols;
+      doc.text(row.corrective ?? row.observation ?? '—', x, y + 1, { width: corrW });
+      y += 10;
+    });
+    return y + 6;
+  }
+
+  if (tableType === 'temperaturas') {
+    const cols = [
+      { l: 'Área', w: 100 },
+      { l: 'Hora', w: 34 },
+      { l: 'Temp °C', w: 40 },
+    ];
+    const cW = 12;
+    const cCols = showNa ? 3 : 2;
+    const obsW = w - cols.reduce((a, c) => a + c.w, 0) - cW * cCols;
+
+    y = ensurePageSpace(doc, ctx, y, 12);
+    drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    doc.fontSize(5.5).font('Helvetica-Bold');
+    let x = MARGIN;
+    cols.forEach((c) => {
+      doc.text(c.l, x, y + 2, { width: c.w });
+      x += c.w;
+    });
+    doc.text('C', x, y + 2, { width: cW, align: 'center' });
+    doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+    if (showNa) doc.text('NA', x + cW * 2, y + 2, { width: cW, align: 'center' });
+    doc.text('Obs.', x + cW * cCols, y + 2, { width: obsW });
+    y += 11;
+
+    items.forEach((item) => {
+      const row = value[item.key] ?? {};
+      const cnc = row.cnc ?? '';
+      y = ensurePageSpace(doc, ctx, y, 10);
+      drawTableRowBorder(doc, y, 10);
+      doc.fontSize(5.5).font('Helvetica');
+      x = MARGIN;
+      doc.text(item.label, x, y + 1, { width: cols[0].w });
+      x += cols[0].w;
+      doc.text(row.hora ?? '—', x, y + 1, { width: cols[1].w });
+      x += cols[1].w;
+      doc.text(row.temperatura ?? '—', x, y + 1, { width: cols[2].w, align: 'center' });
+      x += cols[2].w;
+      drawCncCells(x, y + 1, cnc, cW);
+      x += cW * cCols;
+      doc.text(row.observation ?? '—', x, y + 1, { width: obsW });
+      y += 10;
+    });
+    return y + 6;
+  }
+
+  // Fallback: list rows as text
+  items.forEach((item) => {
+    const row = value[item.key] ?? {};
+    const parts = Object.entries(row).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
+    y = ensurePageSpace(doc, ctx, y, 10);
+    doc.fontSize(5.5).font('Helvetica').text(`${item.label}: ${parts.join(' · ') || '—'}`, MARGIN, y, { width: w });
+    y += 10;
+  });
+  return y + 4;
 }
 
 function renderField(
@@ -451,19 +668,27 @@ function renderField(
   const maxW = pageWidth(doc) - MARGIN * 2;
 
   y = ensurePageSpace(doc, ctx, y, 18);
-  if (field.fieldType !== 'CHECKLIST' || !opts.items?.length) {
+  const isItemChecklist = field.fieldType === 'CHECKLIST' && Boolean(opts.items?.length);
+  const isDaySchedule = field.fieldType === 'CHECKLIST' && opts.layout === 'day_schedule_table';
+  const isFormalMeasure = field.fieldType === 'CHECKLIST' && opts.layout === 'formal_measure_table';
+
+  if (!isItemChecklist && !isFormalMeasure) {
     y = drawSectionBanner(doc, y, field.label, field.helpText ?? undefined, true);
   }
 
-  if (field.fieldType === 'CHECKLIST' && opts.layout === 'day_schedule_table') {
+  if (isDaySchedule) {
     return renderDaySchedule(doc, ctx, field, (value as Record<string, Record<string, string>>) ?? {}, y);
   }
 
+  if (isFormalMeasure) {
+    return renderFormalMeasureTable(doc, ctx, field, (value as Record<string, MeasureRow>) ?? {}, y);
+  }
+
   if (field.fieldType === 'CHECKLIST' && opts.items?.length) {
-    if (opts.columns?.includes('cavaColumns') || opts.columnDefs?.length || opts.cavaColumns?.length) {
+    if (stringColumns(opts).includes('cavaColumns') || opts.columnDefs?.length || opts.cavaColumns?.length) {
       return renderCavaMatrix(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
     }
-    if (opts.columns?.includes('platforms')) {
+    if (stringColumns(opts).includes('platforms')) {
       return renderPlatformsTable(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
     }
     return renderSimpleChecklist(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
@@ -525,13 +750,19 @@ function renderField(
   return y + 14;
 }
 
+type RenderSheetOptions = {
+  showBoundaries?: boolean;
+  isLastInPdf?: boolean;
+};
+
 function renderSheetPage(
   doc: PdfDoc,
   submission: SubmissionForPdf,
   sheet: SheetWithFields,
   sheetData: Record<string, unknown>,
   sheetIndex: number,
-  totalSheets: number
+  totalSheets: number,
+  renderOpts?: RenderSheetOptions
 ) {
   const landscape =
     needsLandscape(sheet.fields) ||
@@ -554,7 +785,7 @@ function renderSheetPage(
   const fields = sheet.fields.filter((f) => f.fieldKey !== 'empresa');
   const code = submission.format.code;
 
-  let y = startSheetPage(doc, ctx);
+  let y = startSheetPage(doc, ctx, false, { sheetBoundary: renderOpts?.showBoundaries });
 
   if (code === 'INSPECCION_VEHICULOS') {
     y = renderVehiculosSheet(doc, fields, sheetData, y);
@@ -568,9 +799,20 @@ function renderSheetPage(
   }
 
   drawSignatures(doc, submission.operator.fullName, contentBottom(doc) - 28);
+
+  if (renderOpts?.showBoundaries && !renderOpts.isLastInPdf) {
+    drawSheetBoundaryEnd(doc, ctx.sheetIndex, ctx.totalSheets, ctx.sheetName);
+  }
 }
 
-export function generateSubmissionPdf(submission: SubmissionForPdf): Promise<Buffer> {
+function sortedFormatSheets(submission: SubmissionForPdf): SheetWithFields[] {
+  return [...submission.format.sheets].sort((a, b) => a.sheetOrder - b.sheetOrder);
+}
+
+export function generateSubmissionPdf(
+  submission: SubmissionForPdf,
+  options?: PdfGenerationOptions
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ autoFirstPage: false, bufferPages: true });
     const chunks: Buffer[] = [];
@@ -578,31 +820,58 @@ export function generateSubmissionPdf(submission: SubmissionForPdf): Promise<Buf
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const formatSheets = [...submission.format.sheets].sort((a, b) => a.sheetOrder - b.sheetOrder);
+    const allSheets = sortedFormatSheets(submission);
+    let sheetsToRender = allSheets;
 
-    if (formatSheets.length === 0) {
+    if (options?.sheetId) {
+      sheetsToRender = allSheets.filter((s) => s.id === options.sheetId);
+      if (sheetsToRender.length === 0) {
+        reject(new Error('Hoja no encontrada en el formato'));
+        return;
+      }
+    }
+
+    if (sheetsToRender.length === 0) {
       doc.addPage({ size: 'A4', margin: MARGIN });
       doc.fontSize(12).text('Formato sin hojas configuradas.', MARGIN, MARGIN);
       doc.end();
       return;
     }
 
-    formatSheets.forEach((sheet, index) => {
+    const totalSheetsInFormat = allSheets.length;
+    const showBoundaries =
+      Boolean(options?.sheetBoundaries) && sheetsToRender.length > 1 && !options?.sheetId;
+
+    sheetsToRender.forEach((sheet, index) => {
+      const sheetIndex = allSheets.findIndex((s) => s.id === sheet.id);
       const sheetData =
         (submission.sheets.find((s) => s.sheetId === sheet.id)?.data as Record<string, unknown>) ?? {};
-      renderSheetPage(doc, submission, sheet, sheetData, index, formatSheets.length);
+      renderSheetPage(doc, submission, sheet, sheetData, sheetIndex, totalSheetsInFormat, {
+        showBoundaries,
+        isLastInPdf: index === sheetsToRender.length - 1,
+      });
     });
 
     doc.end();
   });
 }
 
-export function buildPdfFilename(submission: SubmissionForPdf): string {
+export function buildPdfFilename(
+  submission: SubmissionForPdf,
+  opts?: { sheetName?: string; allSheets?: boolean }
+): string {
   const date =
     submission.workDate instanceof Date
       ? submission.workDate.toISOString().slice(0, 10)
       : String(submission.workDate).slice(0, 10);
   const code = submission.format.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 40);
+  const sanitize = (s: string) => s.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 30);
+  if (opts?.sheetName) {
+    return `${code}_${sanitize(opts.sheetName)}_${date}.pdf`;
+  }
+  if (opts?.allSheets) {
+    return `${code}_completo_${date}.pdf`;
+  }
   return `${code}_${date}.pdf`;
 }
 

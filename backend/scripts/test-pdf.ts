@@ -21,7 +21,7 @@ const mockSubmission = {
   updatedAt: new Date(),
   format: {
     code: 'PREOP_BENEFICIO',
-    name: 'Preoperativo Planta Beneficio',
+    name: 'Preoperativo de Planta Beneficio',
     documentCode: 'SAI-CAL-F015',
     sheets: [
       {
@@ -32,10 +32,37 @@ const mockSubmission = {
         slug: 'zona-sangria',
         fields: [
           {
-            id: 'f1',
+            id: 'f-cloro',
+            sheetId: 'sheet-1',
+            fieldKey: 'cloro_registros',
+            label: 'Control cloro residual',
+            fieldType: 'CHECKLIST',
+            required: false,
+            manualOnly: true,
+            autoFillRule: null,
+            options: {
+              layout: 'day_schedule_table',
+              tableType: 'cloro',
+              schedule: {
+                wednesday: ['Patas y manos', 'Víscera roja', 'Marcación canales'],
+              },
+            },
+            config: {
+              schedule: {
+                wednesday: ['Patas y manos', 'Víscera roja', 'Marcación canales'],
+              },
+            },
+            placeholder: null,
+            defaultValue: null,
+            sortOrder: 2,
+            groupName: 'Control cloro',
+            helpText: null,
+          },
+          {
+            id: 'f-zs',
             sheetId: 'sheet-1',
             fieldKey: 'zona_sangria',
-            label: 'Zona sangría',
+            label: 'Zona insensibilización y sangría',
             fieldType: 'CHECKLIST',
             required: false,
             manualOnly: true,
@@ -51,43 +78,8 @@ const mockSubmission = {
             config: null,
             placeholder: null,
             defaultValue: null,
-            sortOrder: 1,
+            sortOrder: 21,
             groupName: 'Zona sangría',
-            helpText: null,
-          },
-        ],
-      },
-      {
-        id: 'sheet-8',
-        formatId: 'fmt-1',
-        sheetOrder: 8,
-        name: 'Cavas',
-        slug: 'cavas',
-        fields: [
-          {
-            id: 'f8',
-            sheetId: 'sheet-8',
-            fieldKey: 'condensacion',
-            label: 'Condensación',
-            fieldType: 'CHECKLIST',
-            required: false,
-            manualOnly: true,
-            autoFillRule: null,
-            options: {
-              mode: 'cnc_na',
-              items: [{ key: 'almacenamiento', label: 'Área de almacenamiento' }],
-              columns: ['cavaColumns'],
-              columnDefs: [
-                { key: 'C#10', mode: 'cnc_na' },
-                { key: 'C#9', mode: 'cnc_na' },
-                { key: 'PRE', mode: 'cnc' },
-              ],
-            },
-            config: null,
-            placeholder: null,
-            defaultValue: null,
-            sortOrder: 1,
-            groupName: 'Condensación',
             helpText: null,
           },
         ],
@@ -100,19 +92,13 @@ const mockSubmission = {
     {
       sheetId: 'sheet-1',
       data: {
+        cloro_registros: {
+          patas_y_manos: { cloro_residual: '0.8', cnc: 'C', observaciones: 'OK' },
+          vscera_roja: { cloro_residual: '1.1', cnc: 'NC', observaciones: 'Revisar' },
+        },
         zona_sangria: {
           zs_0: { cnc: 'C', observation: 'OK' },
           zs_1: { cnc: 'NC', observation: 'Revisar', corrective: 'Limpiar' },
-        },
-      },
-    },
-    {
-      sheetId: 'sheet-8',
-      data: {
-        condensacion: {
-          almacenamiento: {
-            cavas: { 'C#10': 'C', 'C#9': 'NA', PRE: 'C' },
-          },
         },
       },
     },

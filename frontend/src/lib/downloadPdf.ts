@@ -11,12 +11,33 @@ async function parseBlobError(data: Blob): Promise<string> {
   }
 }
 
+export type PdfDownloadOptions = {
+  /** Solo esta hoja del formato */
+  sheetId?: string;
+  /** Todas las hojas con separadores visuales */
+  scope?: 'all';
+  suggestedName?: string;
+};
+
 export async function downloadSubmissionPdf(
   submissionId: string,
-  suggestedName?: string
+  options?: PdfDownloadOptions | string
 ): Promise<void> {
+  const opts: PdfDownloadOptions =
+    typeof options === 'string' ? { suggestedName: options } : (options ?? {});
+
+  const params = new URLSearchParams();
+  if (opts.sheetId) {
+    params.set('sheetId', opts.sheetId);
+  } else if (opts.scope === 'all') {
+    params.set('scope', 'all');
+  }
+
+  const query = params.toString();
+  const url = `/submissions/${submissionId}/pdf${query ? `?${query}` : ''}`;
+
   try {
-    const response = await api.get(`/submissions/${submissionId}/pdf`, {
+    const response = await api.get(url, {
       responseType: 'blob',
     });
 
@@ -32,19 +53,19 @@ export async function downloadSubmissionPdf(
     }
 
     const disposition = response.headers['content-disposition'] as string | undefined;
-    let filename = suggestedName ?? `formato-${submissionId}.pdf`;
+    let filename = opts.suggestedName ?? `formato-${submissionId}.pdf`;
     const match = disposition?.match(/filename="?([^";\n]+)"?/);
     if (match?.[1]) filename = match[1];
 
     const blob = new Blob([blobData], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
+    const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
+    link.href = blobUrl;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
-    window.URL.revokeObjectURL(url);
+    window.URL.revokeObjectURL(blobUrl);
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.data instanceof Blob) {
       throw new Error(await parseBlobError(err.response.data));

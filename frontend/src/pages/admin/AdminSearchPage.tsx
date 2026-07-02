@@ -99,7 +99,7 @@ export default function AdminSearchPage() {
                     onClick={async () => {
                       setPdfLoadingId(sub.id);
                       try {
-                        await downloadSubmissionPdf(sub.id);
+                        await downloadSubmissionPdf(sub.id, { scope: 'all' });
                       } finally {
                         setPdfLoadingId(null);
                       }
