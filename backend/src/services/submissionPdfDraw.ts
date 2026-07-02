@@ -95,17 +95,17 @@ export function drawSheetBoundaryStart(
   startY = MARGIN
 ): number {
   const w = pageWidth(doc) - MARGIN * 2;
-  const h = 20;
-  doc.rect(MARGIN, startY, w, h).fill('#166534');
+  const h = 14;
+  doc.fillColor('#166534').rect(MARGIN, startY, w, h).fill();
   doc
-    .fontSize(8.5)
+    .fontSize(7.5)
     .font('Helvetica-Bold')
     .fillColor('#fff')
-    .text(`HOJA ${sheetIndex + 1} DE ${totalSheets} · ${sheetName.toUpperCase()}`, MARGIN + 6, startY + 5, {
-      width: w - 12,
+    .text(`HOJA ${sheetIndex + 1} DE ${totalSheets} · ${sheetName.toUpperCase()}`, MARGIN + 4, startY + 3, {
+      width: w - 8,
       align: 'center',
     });
-  return startY + h + 6;
+  return startY + h + 4;
 }
 
 export function drawSheetBoundaryEnd(
@@ -144,17 +144,19 @@ export function drawMainSheetHeader(
   const width = pageWidth(doc);
   const w = width - MARGIN * 2;
   const y0 = opts.startY ?? MARGIN;
-  const logoW = opts.compact ? 70 : 88;
-  const pad = 6;
+  const compact = opts.compact ?? false;
+  const logoW = compact ? 56 : 64;
+  const logoH = compact ? 22 : 26;
+  const pad = compact ? 3 : 4;
 
-  const titleX = MARGIN + logoW + 12;
-  const titleW = w * 0.62 - logoW - 16;
-  const metaX = MARGIN + w * 0.62 + 8;
-  const metaW = w * 0.38 - 16;
+  const titleX = MARGIN + logoW + 8;
+  const titleW = w * 0.62 - logoW - 12;
+  const metaX = MARGIN + w * 0.62 + 6;
+  const metaW = w * 0.38 - 12;
 
-  const sistFont = opts.compact ? 5.5 : 6;
-  const nameFont = opts.compact ? 6.5 : 7;
-  const empresaFont = opts.compact ? 6 : 6.5;
+  const sistFont = compact ? 5 : 5.5;
+  const nameFont = compact ? 6 : 6.5;
+  const empresaFont = compact ? 5.5 : 6;
   const sistema = sistemaLabel(opts.documentCode);
   const formatTitle = opts.formatName.toUpperCase();
 
@@ -165,48 +167,48 @@ export function drawMainSheetHeader(
   doc.fontSize(empresaFont).font('Helvetica-Bold');
   const empH = doc.heightOfString('COLBEEF S.A.S', { width: titleW, align: 'center' });
 
-  const titleBlockH = pad + sistH + 4 + nameH + 4 + empH + pad;
-  const metaLineH = opts.compact ? 9 : 10;
+  const titleBlockH = pad + sistH + 2 + nameH + 2 + empH + pad;
+  const metaLineH = compact ? 7.5 : 8;
   const metaLines = opts.documentCode ? 3 : 1;
   const metaH = pad + metaLines * metaLineH + pad;
-  const rowH = Math.max(titleBlockH, metaH, logoW + pad * 2, opts.compact ? 50 : 58);
+  const logoBoxH = logoH + pad * 2;
+  const rowH = Math.max(titleBlockH, metaH, logoBoxH);
 
-  doc.rect(MARGIN, y0, w, rowH).strokeColor('#333').lineWidth(1).stroke();
-  doc.moveTo(MARGIN + logoW + 8, y0).lineTo(MARGIN + logoW + 8, y0 + rowH).strokeColor('#333').stroke();
+  doc.rect(MARGIN, y0, w, rowH).strokeColor('#333').lineWidth(0.75).stroke();
+  doc.moveTo(MARGIN + logoW + 6, y0).lineTo(MARGIN + logoW + 6, y0 + rowH).strokeColor('#333').stroke();
   doc.moveTo(MARGIN + w * 0.62, y0).lineTo(MARGIN + w * 0.62, y0 + rowH).strokeColor('#333').stroke();
 
   const logo = resolveLogoPath();
-  const logoImgH = logoW - 16;
-  const logoY = y0 + (rowH - logoImgH) / 2;
+  const logoY = y0 + (rowH - logoH) / 2;
   if (logo) {
     try {
-      doc.image(logo, MARGIN + 6, logoY, { width: logoW - 12 });
+      doc.image(logo, MARGIN + 4, logoY, { height: logoH });
     } catch {
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN + 8, y0 + rowH / 2 - 5);
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN + 6, logoY + 6);
     }
   } else {
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN + 8, y0 + rowH / 2 - 5);
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN + 6, logoY + 6);
   }
 
   let ty = y0 + pad;
   doc.fontSize(sistFont).font('Helvetica-Bold').fillColor('#555').text(sistema, titleX, ty, {
     width: titleW,
     align: 'center',
-    lineGap: 1,
+    lineGap: 0,
   });
-  ty += sistH + 4;
+  ty += sistH + 2;
   doc.fontSize(nameFont).font('Helvetica-Bold').fillColor('#111').text(formatTitle, titleX, ty, {
     width: titleW,
     align: 'center',
-    lineGap: 1,
+    lineGap: 0,
   });
-  ty += nameH + 4;
+  ty += nameH + 2;
   doc.fontSize(empresaFont).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF S.A.S', titleX, ty, {
     width: titleW,
     align: 'center',
   });
 
-  doc.fontSize(opts.compact ? 6 : 6.5).font('Helvetica').fillColor('#111');
+  doc.fontSize(compact ? 5.5 : 6).font('Helvetica').fillColor('#111');
   let my = y0 + pad;
   doc.text(`Hoja: ${opts.sheetIndex + 1} / ${opts.totalSheets}`, metaX, my, { width: metaW });
   my += metaLineH;
@@ -219,41 +221,37 @@ export function drawMainSheetHeader(
   let y = y0 + rowH;
   const colW = w / 3;
   const fechaStr = formatWorkDate(opts.workDate);
-  const metaFont = opts.compact ? 6 : 6.5;
+  const metaFont = compact ? 5.5 : 6;
 
   doc.fontSize(metaFont).font('Helvetica-Bold');
-  const fechaLabelH = doc.heightOfString('Fecha: ', { width: colW - 10 });
+  const fechaLabelH = doc.heightOfString('Fecha:', { width: colW - 8 });
   doc.font('Helvetica');
-  const fechaValH = doc.heightOfString(fechaStr, { width: colW - 14 });
+  const fechaValH = doc.heightOfString(fechaStr, { width: colW - 10 });
   doc.font('Helvetica-Bold');
-  const opLabelH = doc.heightOfString('Operario: ', { width: colW - 10 });
+  const opLabelH = doc.heightOfString('Operario:', { width: colW - 8 });
   doc.font('Helvetica');
-  const opValH = doc.heightOfString(opts.operatorName, { width: colW - 14 });
+  const opValH = doc.heightOfString(opts.operatorName, { width: colW - 10 });
   doc.font('Helvetica-Bold');
-  const hojaLabelH = doc.heightOfString('Hoja: ', { width: colW - 10 });
+  const hojaLabelH = doc.heightOfString('Hoja:', { width: colW - 8 });
   doc.font('Helvetica');
-  const hojaValH = doc.heightOfString(opts.sheetName, { width: colW - 14 });
+  const hojaValH = doc.heightOfString(opts.sheetName, { width: colW - 10 });
 
-  const barH = Math.max(
-    fechaLabelH + fechaValH,
-    opLabelH + opValH,
-    hojaLabelH + hojaValH
-  ) + 10;
+  const barH = Math.max(fechaLabelH + fechaValH, opLabelH + opValH, hojaLabelH + hojaValH) + 6;
 
-  doc.rect(MARGIN, y, w, barH).fill('#e8edf2');
-  doc.rect(MARGIN, y, w, barH).strokeColor('#333').lineWidth(0.5).stroke();
+  doc.fillColor('#e8edf2').rect(MARGIN, y, w, barH).fill();
+  doc.strokeColor('#333').lineWidth(0.5).rect(MARGIN, y, w, barH).stroke();
 
-  const barY = y + 5;
-  doc.fontSize(metaFont).font('Helvetica-Bold').fillColor('#111').text('Fecha:', MARGIN + 6, barY, { width: colW - 10 });
-  doc.font('Helvetica').text(fechaStr, MARGIN + 6, barY + fechaLabelH, { width: colW - 10, lineGap: 0.5 });
-  doc.font('Helvetica-Bold').text('Operario:', MARGIN + colW + 6, barY, { width: colW - 10 });
-  doc.font('Helvetica').text(opts.operatorName, MARGIN + colW + 6, barY + opLabelH, { width: colW - 10, lineGap: 0.5 });
-  doc.font('Helvetica-Bold').text('Hoja:', MARGIN + colW * 2 + 6, barY, { width: colW - 10 });
-  doc.font('Helvetica').text(opts.sheetName, MARGIN + colW * 2 + 6, barY + hojaLabelH, { width: colW - 10, lineGap: 0.5 });
+  const barY = y + 3;
+  doc.fontSize(metaFont).font('Helvetica-Bold').fillColor('#111').text('Fecha:', MARGIN + 4, barY, { width: colW - 8 });
+  doc.font('Helvetica').text(fechaStr, MARGIN + 4, barY + fechaLabelH, { width: colW - 8, lineGap: 0 });
+  doc.font('Helvetica-Bold').text('Operario:', MARGIN + colW + 4, barY, { width: colW - 8 });
+  doc.font('Helvetica').text(opts.operatorName, MARGIN + colW + 4, barY + opLabelH, { width: colW - 8, lineGap: 0 });
+  doc.font('Helvetica-Bold').text('Hoja:', MARGIN + colW * 2 + 4, barY, { width: colW - 8 });
+  doc.font('Helvetica').text(opts.sheetName, MARGIN + colW * 2 + 4, barY + hojaLabelH, { width: colW - 8, lineGap: 0 });
 
-  y += barH + 8;
+  y += barH + 4;
   doc.moveTo(MARGIN, y).lineTo(MARGIN + w, y).strokeColor('#999').lineWidth(0.5).stroke();
-  return y + 8;
+  return y + 4;
 }
 
 export function drawContinuationHeader(

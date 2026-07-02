@@ -81,6 +81,12 @@ function needsLandscape(fields: FormatField[]): boolean {
   });
 }
 
+const COMPACT_HEADER_CODES = new Set(['INSPECCION_VEHICULOS', 'DECOMISOS', 'DEVOLUCIONES']);
+
+function usesCompactHeader(formatCode: string): boolean {
+  return COMPACT_HEADER_CODES.has(formatCode);
+}
+
 function chunkArray<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
@@ -833,7 +839,7 @@ function renderSheetPage(
     workDate: submission.workDate,
     operatorName: submission.operator.fullName,
     formatCode: submission.format.code,
-    compactHeader: submission.format.code === 'INSPECCION_VEHICULOS',
+    compactHeader: usesCompactHeader(submission.format.code),
   };
 
   const fields = sheet.fields.filter((f) => f.fieldKey !== 'empresa');
