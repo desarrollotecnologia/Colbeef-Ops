@@ -1,7 +1,13 @@
 import type { FormatField } from '@prisma/client';
-import type PDFDocument from 'pdfkit';
-
-type PdfDoc = InstanceType<typeof PDFDocument>;
+import {
+  MARGIN,
+  contentBottom,
+  drawMainSheetHeader,
+  drawSectionBanner,
+  pageWidth,
+  str,
+  type PdfDoc,
+} from './submissionPdfDraw';
 
 type ChecklistItemData = {
   cnc?: string;
@@ -14,36 +20,8 @@ type FieldOptions = {
   columns_def?: { key: string; label: string }[];
 };
 
-const MARGIN = 28;
-
-function pageWidth(doc: PdfDoc) {
-  return doc.page.width;
-}
-
-function contentBottom(doc: PdfDoc) {
-  return doc.page.height - MARGIN - 20;
-}
-
-function str(value: unknown): string {
-  if (value === undefined || value === null || value === '') return '—';
-  if (Array.isArray(value)) return value.join(', ');
-  return String(value);
-}
-
 function markCell(value: unknown, expected: string): string {
   return String(value ?? '') === expected ? 'X' : '';
-}
-
-function drawSectionBanner(doc: PdfDoc, y: number, title: string, subtitle?: string, compact = false): number {
-  const w = pageWidth(doc) - MARGIN * 2;
-  const h = compact ? (subtitle ? 16 : 12) : subtitle ? 22 : 16;
-  doc.rect(MARGIN, y, w, h).fill('#dcfce7');
-  doc.fillColor('#111').fontSize(compact ? 6.5 : 8).font('Helvetica-Bold').text(title.toUpperCase(), MARGIN + 4, y + 3, { width: w - 8 });
-  if (subtitle) {
-    doc.fontSize(compact ? 5.5 : 6.5).font('Helvetica').fillColor('#444').text(subtitle, MARGIN + 4, y + (compact ? 10 : 13), { width: w - 8 });
-    return y + h + 2;
-  }
-  return y + h + 2;
 }
 
 function drawFieldGrid(
@@ -91,29 +69,26 @@ function drawRepeaterTable(
   const rowH = compact ? 9 : 11;
 
   doc.fontSize(fs).font('Helvetica-Bold').fillColor('#333');
+  doc.rect(MARGIN, cy, w, rowH).fill('#f3f4f6').strokeColor('#ccc').lineWidth(0.4).stroke();
   columns.forEach((col, i) => {
-    doc.text(col.label, MARGIN + i * colW + 2, cy, { width: colW - 4 });
+    doc.text(col.label, MARGIN + i * colW + 2, cy + 2, { width: colW - 4 });
   });
   cy += rowH;
-  doc.moveTo(MARGIN, cy).lineTo(MARGIN + w, cy).strokeColor('#999').lineWidth(0.5).stroke();
-  cy += 2;
 
   if (rows.length === 0) {
-    doc.fontSize(7).font('Helvetica').fillColor('#666').text('Sin registros', MARGIN, cy);
+    doc.fontSize(7).font('Helvetica').fillColor('#666').text('Sin registros', MARGIN, cy + 2);
     return cy + 12;
   }
 
   rows.forEach((row, ri) => {
     if (cy > contentBottom(doc) - rowH) return;
-    if (ri % 2 === 1) {
-      doc.rect(MARGIN, cy - 1, w, rowH).fill('#f9fafb');
-      doc.fillColor('#111');
-    }
+    if (ri % 2 === 1) doc.rect(MARGIN, cy, w, rowH).fill('#f9fafb');
+    doc.rect(MARGIN, cy, w, rowH).strokeColor('#ccc').lineWidth(0.4).stroke();
     columns.forEach((col, i) => {
       let cell = str(row[col.key]);
       if (col.key === 'decomiso_parcial') cell = markCell(row[col.key], 'Parcial') || '—';
       if (col.key === 'decomiso_total') cell = markCell(row[col.key], 'Total') || '—';
-      doc.fontSize(compact ? 6 : 7).font('Helvetica').fillColor('#111').text(cell, MARGIN + i * colW + 2, cy, {
+      doc.fontSize(compact ? 6 : 7).font('Helvetica').fillColor('#111').text(cell, MARGIN + i * colW + 2, cy + 1, {
         width: colW - 4,
         align: col.key.startsWith('decomiso_') ? 'center' : 'left',
       });
@@ -307,7 +282,7 @@ export function renderDecomisosSheet(
 
     const { totals, pesoTotal } = decomisoTotals(rows);
     const w = pageWidth(doc) - MARGIN * 2;
-    doc.rect(MARGIN, y, w, 12).fill('#f3f4f6');
+    doc.rect(MARGIN, y, w, 12).fill('#f3f4f6').strokeColor('#ccc').stroke();
     doc.fontSize(6).font('Helvetica-Bold').fillColor('#111');
     doc.text('Σ', MARGIN + 4, y + 2, { width: 20 });
     doc.text(String(totals.unidades || '—'), MARGIN + 70, y + 2, { width: 40, align: 'center' });
@@ -318,7 +293,7 @@ export function renderDecomisosSheet(
       x += tw;
     });
     y += 14;
-    doc.rect(MARGIN, y, w, 14).fill('#dcfce7');
+    doc.rect(MARGIN, y, w, 14).fill('#dcfce7').strokeColor('#ccc').stroke();
     doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#111').text(
       `Peso total de decomisos: ${pesoTotal.toFixed(2)} kg`,
       MARGIN,
@@ -350,23 +325,18 @@ export function renderDecomisosSheet(
 export function drawCompactSheetHeader(
   doc: PdfDoc,
   submission: { format: { name: string; documentCode: string | null }; workDate: Date; operator: { fullName: string } },
-  sheetName: string
+  sheetName: string,
+  sheetIndex = 0,
+  totalSheets = 1
 ): number {
-  const width = pageWidth(doc);
-  let y = MARGIN;
-
-  doc.fontSize(8).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF S.A.S', MARGIN, y);
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#333')
-    .text(submission.format.name.toUpperCase(), MARGIN + 120, y, { width: width - MARGIN * 2 - 120 });
-  if (submission.format.documentCode) {
-    doc.fontSize(6).text(`Código: ${submission.format.documentCode}`, width - MARGIN - 100, y, { width: 100, align: 'right' });
-  }
-  y += 12;
-  doc.fontSize(6.5).font('Helvetica').fillColor('#111')
-    .text(`Fecha: ${submission.workDate.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}`, MARGIN, y);
-  doc.text(`Operario: ${submission.operator.fullName}`, MARGIN + 180, y);
-  doc.text(`Hoja: ${sheetName}`, MARGIN + 380, y);
-  y += 10;
-  doc.moveTo(MARGIN, y).lineTo(width - MARGIN, y).strokeColor('#999').lineWidth(0.5).stroke();
-  return y + 6;
+  return drawMainSheetHeader(doc, {
+    formatName: submission.format.name,
+    documentCode: submission.format.documentCode,
+    sheetName,
+    sheetIndex,
+    totalSheets,
+    workDate: submission.workDate,
+    operatorName: submission.operator.fullName,
+    compact: true,
+  });
 }

@@ -20,6 +20,7 @@ const mockSubmission = {
   createdAt: new Date(),
   updatedAt: new Date(),
   format: {
+    code: 'PREOP_BENEFICIO',
     name: 'Preoperativo Planta Beneficio',
     documentCode: 'SAI-CAL-F015',
     sheets: [

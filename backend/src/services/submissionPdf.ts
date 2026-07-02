@@ -1,21 +1,33 @@
-import fs from 'fs';
-import path from 'path';
-import PDFDocument from 'pdfkit';
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
-import { renderDecomisosSheet, renderVehiculosSheet, drawCompactSheetHeader } from './submissionPdfFormatLayouts';
-
-type PdfDoc = InstanceType<typeof PDFDocument>;
+import PDFDocument from 'pdfkit';
+import { renderDecomisosSheet, renderVehiculosSheet } from './submissionPdfFormatLayouts';
+import {
+  MARGIN,
+  contentBottom,
+  drawMainSheetHeader,
+  drawSectionBanner,
+  drawSignatures,
+  ensurePageSpace,
+  formatWorkDate,
+  pageWidth,
+  startSheetPage,
+  str,
+  type PdfDoc,
+  type SheetPageContext,
+} from './submissionPdfDraw';
 
 type FieldOptions = {
   layout?: string;
   tableType?: string;
   mode?: string;
-  items?: { key: string; label: string }[];
+  items?: { key: string; label: string; section?: string }[];
   columns?: string[];
   columnDefs?: { key: string; mode?: string }[];
   cavaColumns?: string[];
   platformCount?: number;
   choices?: string[];
+  columns_def?: { key: string; label: string }[];
+  entryLabel?: string;
 };
 
 type ChecklistItemData = {
@@ -24,13 +36,15 @@ type ChecklistItemData = {
   final_cnc?: string;
   observation?: string;
   corrective?: string;
+  observations?: Record<string, string>;
+  correctives?: Record<string, string>;
   platforms?: Record<string, string>;
   cavas?: Record<string, string>;
 };
 
 type SheetWithFields = FormatSheet & { fields: FormatField[] };
 
-type SubmissionForPdf = FormSubmission & {
+export type SubmissionForPdf = FormSubmission & {
   format: {
     code: string;
     name: string;
@@ -42,226 +56,318 @@ type SubmissionForPdf = FormSubmission & {
   sheets: { sheetId: string; data: unknown }[];
 };
 
-const MARGIN = 28;
-const FOOTER_H = 36;
-
-function formatWorkDate(date: Date): string {
-  return date.toLocaleDateString('es-CO', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'America/Bogota',
-  });
-}
-
-function resolveLogoPath(): string | null {
-  const candidates = [
-    path.join(__dirname, '../../../frontend/public/colbeef-wordmark.png'),
-    path.join(__dirname, '../../../frontend/dist/colbeef-wordmark.png'),
-    path.join(process.cwd(), 'frontend/public/colbeef-wordmark.png'),
-  ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
-  }
-  return null;
-}
-
-function pageSize(doc: PdfDoc) {
-  return { width: doc.page.width, height: doc.page.height };
-}
-
-function contentBottom(doc: PdfDoc) {
-  return pageSize(doc).height - MARGIN - FOOTER_H;
-}
-
 function needsLandscape(fields: FormatField[]): boolean {
   return fields.some((f) => {
     const opts = (f.options ?? {}) as FieldOptions;
-    const colCount =
-      opts.columnDefs?.length ?? opts.cavaColumns?.length ?? 0;
+    const colCount = opts.columnDefs?.length ?? opts.cavaColumns?.length ?? 0;
     return colCount >= 6 || (opts.columns?.includes('platforms') && (opts.platformCount ?? 0) >= 5);
   });
 }
 
-function drawSheetHeader(
-  doc: PdfDoc,
-  submission: SubmissionForPdf,
-  sheet: SheetWithFields,
-  sheetIndex: number,
-  totalSheets: number
-) {
-  const { width } = pageSize(doc);
-  const logo = resolveLogoPath();
-  let y = MARGIN;
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+  return chunks;
+}
 
-  if (logo) {
-    try {
-      doc.image(logo, MARGIN, y, { width: 90 });
-    } catch {
-      doc.fontSize(14).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN, y);
-    }
-  } else {
-    doc.fontSize(14).font('Helvetica-Bold').fillColor('#1a5f2a').text('COLBEEF', MARGIN, y);
+function chunkScopeKey(defs: { key: string }[]): string {
+  return defs.map((d) => d.key).join('|');
+}
+
+function readScopedText(
+  data: ChecklistItemData,
+  scopeKey: string | undefined,
+  field: 'observation' | 'corrective',
+  migrateLegacy = false
+): string {
+  const mapKey = field === 'observation' ? 'observations' : 'correctives';
+  const flatKey = field;
+  if (scopeKey) {
+    const scoped = data[mapKey]?.[scopeKey];
+    if (scoped !== undefined) return scoped;
+    if (migrateLegacy && data[flatKey]) return data[flatKey] ?? '';
+    return '';
   }
-
-  const centerX = width / 2;
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#333')
-    .text('SISTEMA DE ASEGURAMIENTO DE LA INOCUIDAD', centerX - 120, y, { width: 240, align: 'center' });
-  doc.fontSize(9).text(submission.format.name.toUpperCase(), centerX - 120, y + 12, { width: 240, align: 'center' });
-  doc.fontSize(8).fillColor('#444').text('COLBEEF S.A.S', centerX - 120, y + 26, { width: 240, align: 'center' });
-
-  const metaX = width - MARGIN - 110;
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#333')
-    .text(`Hoja: ${sheetIndex + 1} / ${totalSheets}`, metaX, y, { width: 110, align: 'right' });
-  if (submission.format.documentCode) {
-    doc.text(`Código: ${submission.format.documentCode}`, metaX, y + 10, { width: 110, align: 'right' });
+  if (data[mapKey] && Object.keys(data[mapKey]!).length > 0) {
+    return Object.entries(data[mapKey]!)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k.replace(/\|/g, ' · ')}: ${v}`)
+      .join(' | ');
   }
-
-  y += 48;
-  doc.moveTo(MARGIN, y).lineTo(width - MARGIN, y).strokeColor('#333').lineWidth(1).stroke();
-  y += 6;
-
-  doc.fontSize(8).font('Helvetica-Bold').fillColor('#111')
-    .text(`Fecha: ${formatWorkDate(submission.workDate)}`, MARGIN, y);
-  doc.text(`Operario: ${submission.operator.fullName}`, MARGIN + 200, y);
-  doc.text(`Hoja: ${sheet.name}`, MARGIN + 400, y, { width: width - MARGIN - 400 - MARGIN });
-
-  y += 14;
-  doc.moveTo(MARGIN, y).lineTo(width - MARGIN, y).strokeColor('#999').lineWidth(0.5).stroke();
-
-  return y + 10;
+  return data[flatKey] ?? '';
 }
 
-function drawSignatures(doc: PdfDoc, submission: SubmissionForPdf, y: number) {
-  const { width } = pageSize(doc);
-  const bottom = contentBottom(doc);
-  if (y > bottom - 40) y = bottom - 40;
-
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ELABORÓ', MARGIN, y);
-  doc.fontSize(9).font('Helvetica').fillColor('#111').text(submission.operator.fullName, MARGIN, y + 10, {
-    width: (width - MARGIN * 2) / 2 - 10,
-  });
-  doc.moveTo(MARGIN, y + 24).lineTo(MARGIN + (width - MARGIN * 2) / 2 - 16, y + 24).strokeColor('#666').stroke();
-
-  return y + 32;
+function hasNa(opts: FieldOptions): boolean {
+  return opts.mode === 'cnc_na' || (opts.choices?.includes('NA') ?? false);
 }
 
-function ensureSpace(doc: PdfDoc, y: number, needed: number): number {
-  if (y + needed <= contentBottom(doc)) return y;
-  return y;
+function subColsFor(mode?: string): ('C' | 'NC' | 'NA')[] {
+  return mode === 'cnc' ? ['C', 'NC'] : ['C', 'NC', 'NA'];
 }
 
-function drawFieldLabel(doc: PdfDoc, label: string, x: number, y: number, maxW: number) {
-  doc.fontSize(8).font('Helvetica-Bold').fillColor('#333').text(label, x, y, { width: maxW });
-  return doc.heightOfString(label, { width: maxW }) + y + 2;
+function drawTableRowBorder(doc: PdfDoc, y: number, h: number, fill?: string) {
+  const w = pageWidth(doc) - MARGIN * 2;
+  if (fill) doc.rect(MARGIN, y, w, h).fill(fill);
+  doc.rect(MARGIN, y, w, h).strokeColor('#ccc').lineWidth(0.4).stroke();
 }
 
-function drawTextValue(doc: PdfDoc, text: string, x: number, y: number, maxW: number) {
-  doc.fontSize(8).font('Helvetica').fillColor('#111').text(text || '—', x, y, { width: maxW });
-  return doc.heightOfString(text || '—', { width: maxW }) + y + 6;
-}
-
-function renderChecklistTable(
+function renderSimpleChecklist(
   doc: PdfDoc,
+  ctx: SheetPageContext,
   field: FormatField,
   value: Record<string, ChecklistItemData>,
   startY: number
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
   const items = opts.items ?? [];
-  const { width } = pageSize(doc);
-  const tableW = width - MARGIN * 2;
+  const showNa = hasNa(opts);
+  const showObs = opts.columns?.includes('observation');
+  const showCorr = opts.columns?.includes('corrective');
+  const tableW = pageWidth(doc) - MARGIN * 2;
   let y = startY;
 
-  if (opts.columns?.includes('cavaColumns') || opts.columnDefs?.length || opts.cavaColumns?.length) {
-    const defs =
-      opts.columnDefs?.length
-        ? opts.columnDefs
-        : (opts.cavaColumns ?? []).map((key) => ({ key, mode: 'cnc_na' }));
-    const itemColW = 90;
-    const subW = Math.min(14, (tableW - itemColW) / (defs.length * 3));
+  const cW = showNa ? 16 : 12;
+  const cCols = showNa ? 3 : 2;
+  const labelW = showObs || showCorr ? 120 : tableW - cW * cCols - 8;
+  const obsW = showObs ? (showCorr ? (tableW - labelW - cW * cCols) / 2 : tableW - labelW - cW * cCols) : 0;
+  const corrW = showCorr ? (showObs ? obsW : tableW - labelW - cW * cCols) : 0;
 
-    doc.fontSize(6).font('Helvetica-Bold');
-    doc.text('Ítem', MARGIN, y, { width: itemColW });
-    let x = MARGIN + itemColW;
-    for (const col of defs) {
-      const span = col.mode === 'cnc' ? 2 : 3;
-      doc.text(col.key, x, y, { width: subW * span, align: 'center' });
-      x += subW * span;
-    }
-    y += 10;
+  y = ensurePageSpace(doc, ctx, y, 14);
+  doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
+  drawTableRowBorder(doc, y, 12, '#f3f4f6');
+  doc.text('Equipo / superficie', MARGIN + 3, y + 2, { width: labelW });
+  let x = MARGIN + labelW;
+  doc.text('C', x, y + 2, { width: cW, align: 'center' });
+  doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+  if (showNa) doc.text('NA', x + cW * 2, y + 2, { width: cW, align: 'center' });
+  x += cW * cCols;
+  if (showObs) doc.text('Observaciones', x, y + 2, { width: obsW });
+  if (showCorr) doc.text('Acción correctiva', x + (showObs ? obsW : 0), y + 2, { width: corrW });
+  y += 12;
 
-    for (const item of items) {
-      if (y > contentBottom(doc) - 12) break;
-      const data = value[item.key] ?? {};
-      doc.fontSize(5.5).font('Helvetica').text(item.label, MARGIN, y, { width: itemColW - 2 });
-      x = MARGIN + itemColW;
-      for (const col of defs) {
-        const v = data.cavas?.[col.key] ?? '';
-        const span = col.mode === 'cnc' ? 2 : 3;
-        doc.text(v || '·', x, y, { width: subW * span, align: 'center' });
-        x += subW * span;
-      }
-      y += 9;
-    }
-    return y + 4;
-  }
-
-  if (opts.columns?.includes('platforms')) {
-    const count = opts.platformCount ?? 5;
-    const itemColW = 100;
-    const platW = (tableW - itemColW) / (count * 2);
-    doc.fontSize(6).font('Helvetica-Bold').text('Ítem', MARGIN, y, { width: itemColW });
-    for (let i = 1; i <= count; i++) {
-      doc.text(`P${i}`, MARGIN + itemColW + (i - 1) * platW * 2, y, { width: platW * 2, align: 'center' });
-    }
-    y += 10;
-    for (const item of items) {
-      if (y > contentBottom(doc) - 12) break;
-      const data = value[item.key] ?? {};
-      doc.fontSize(5.5).font('Helvetica').text(item.label, MARGIN, y, { width: itemColW - 2 });
-      for (let i = 1; i <= count; i++) {
-        const v = data.platforms?.[String(i)] ?? '';
-        doc.text(v || '·', MARGIN + itemColW + (i - 1) * platW * 2, y, { width: platW, align: 'center' });
-        doc.text('', MARGIN + itemColW + (i - 1) * platW * 2 + platW, y, { width: platW });
-      }
-      y += 9;
-    }
-    return y + 4;
-  }
-
-  const cW = 22;
-  const obsW = tableW - 140 - cW * 3;
-  doc.fontSize(6).font('Helvetica-Bold');
-  doc.text('Equipo / superficie', MARGIN, y, { width: 130 });
-  doc.text('C', MARGIN + 132, y, { width: cW, align: 'center' });
-  doc.text('NC', MARGIN + 132 + cW, y, { width: cW, align: 'center' });
-  if (opts.choices?.includes('NA') || opts.mode === 'cnc_na') {
-    doc.text('NA', MARGIN + 132 + cW * 2, y, { width: cW, align: 'center' });
-  }
-  doc.text('Observaciones', MARGIN + 132 + cW * 3, y, { width: obsW });
-  y += 10;
-
+  let lastSection = '';
   for (const item of items) {
-    if (y > contentBottom(doc) - 12) break;
+    if (item.section && item.section !== lastSection) {
+      lastSection = item.section;
+      y = ensurePageSpace(doc, ctx, y, 11);
+      drawTableRowBorder(doc, y, 10, '#dcfce7');
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#111').text(item.section.toUpperCase(), MARGIN + 3, y + 2, {
+        width: tableW - 6,
+      });
+      y += 10;
+    }
+
     const data = value[item.key] ?? {};
     const cnc = data.cnc ?? '';
-    doc.fontSize(5.5).font('Helvetica').text(item.label, MARGIN, y, { width: 128 });
-    doc.text(cnc === 'C' ? 'X' : '', MARGIN + 132, y, { width: cW, align: 'center' });
-    doc.text(cnc === 'NC' ? 'X' : '', MARGIN + 132 + cW, y, { width: cW, align: 'center' });
-    if (opts.choices?.includes('NA') || opts.mode === 'cnc_na') {
-      doc.text(cnc === 'NA' ? 'X' : '', MARGIN + 132 + cW * 2, y, { width: cW, align: 'center' });
+    const rowH = 11;
+    y = ensurePageSpace(doc, ctx, y, rowH);
+    drawTableRowBorder(doc, y, rowH);
+    doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(item.label, MARGIN + 3, y + 2, { width: labelW - 4 });
+    x = MARGIN + labelW;
+    doc.text(cnc === 'C' ? 'X' : '', x, y + 2, { width: cW, align: 'center' });
+    doc.text(cnc === 'NC' ? 'X' : '', x + cW, y + 2, { width: cW, align: 'center' });
+    if (showNa) doc.text(cnc === 'NA' ? 'X' : '', x + cW * 2, y + 2, { width: cW, align: 'center' });
+    x += cW * cCols;
+    if (showObs) {
+      doc.text(readScopedText(data, undefined, 'observation'), x, y + 2, { width: obsW - 2 });
     }
-    const obs = [data.observation, data.corrective].filter(Boolean).join(' / ');
-    doc.text(obs, MARGIN + 132 + cW * 3, y, { width: obsW });
-    y += 9;
+    if (showCorr) {
+      doc.text(readScopedText(data, undefined, 'corrective'), x + (showObs ? obsW : 0), y + 2, { width: corrW - 2 });
+    }
+    y += rowH;
   }
-  return y + 4;
+  return y + 6;
+}
+
+function renderCavaMatrix(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  value: Record<string, ChecklistItemData>,
+  startY: number
+): number {
+  const opts = (field.options ?? {}) as FieldOptions;
+  const items = opts.items ?? [];
+  const defs =
+    opts.columnDefs?.length
+      ? opts.columnDefs
+      : (opts.cavaColumns ?? []).map((key) => ({ key, mode: 'cnc_na' as const }));
+  const showObs = opts.columns?.includes('observation');
+  const showCorr = opts.columns?.includes('corrective');
+  const chunks = defs.length > 5 ? chunkArray(defs, 5) : [defs];
+  let y = startY;
+
+  chunks.forEach((chunk, ci) => {
+    const scope = chunkScopeKey(chunk);
+    const subtitle = `${ci + 1}/${chunks.length} · ${chunk[0]?.key} … ${chunk[chunk.length - 1]?.key}`;
+    y = ensurePageSpace(doc, ctx, y, 20);
+    y = drawSectionBanner(doc, y, field.label, subtitle, true);
+
+    const tableW = pageWidth(doc) - MARGIN * 2;
+    const labelW = 88;
+    const subW = 9;
+    const obsW = showObs ? 70 : 0;
+    const corrW = showCorr ? 60 : 0;
+    const cavaW = tableW - labelW - obsW - corrW;
+
+    y = ensurePageSpace(doc, ctx, y, 14);
+    doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
+    drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    doc.text('Equipo / superficie', MARGIN + 2, y + 2, { width: labelW });
+    let x = MARGIN + labelW;
+    for (const col of chunk) {
+      const subs = subColsFor(col.mode);
+      doc.text(col.key, x, y + 1, { width: subs.length * subW, align: 'center' });
+      x += subs.length * subW;
+    }
+    if (showObs) doc.text('Obs.', MARGIN + labelW + cavaW, y + 2, { width: obsW });
+    if (showCorr) doc.text('AC', MARGIN + labelW + cavaW + obsW, y + 2, { width: corrW });
+    y += 11;
+
+    x = MARGIN + labelW;
+    drawTableRowBorder(doc, y, 9, '#fafafa');
+    for (const col of chunk) {
+      for (const sub of subColsFor(col.mode)) {
+        doc.text(sub, x, y + 1, { width: subW, align: 'center' });
+        x += subW;
+      }
+    }
+    y += 9;
+
+    for (const item of items) {
+      const data = value[item.key] ?? {};
+      const rowH = 10;
+      y = ensurePageSpace(doc, ctx, y, rowH);
+      drawTableRowBorder(doc, y, rowH);
+      doc.fontSize(5).font('Helvetica').fillColor('#111').text(item.label, MARGIN + 2, y + 1, { width: labelW - 4 });
+      x = MARGIN + labelW;
+      for (const col of chunk) {
+        const mark = data.cavas?.[col.key] ?? '';
+        for (const sub of subColsFor(col.mode)) {
+          doc.text(mark === sub ? 'X' : '', x, y + 1, { width: subW, align: 'center' });
+          x += subW;
+        }
+      }
+      if (showObs) {
+        doc.text(readScopedText(data, scope, 'observation', ci === 0), MARGIN + labelW + cavaW, y + 1, { width: obsW - 2 });
+      }
+      if (showCorr) {
+        doc.text(readScopedText(data, scope, 'corrective', ci === 0), MARGIN + labelW + cavaW + obsW, y + 1, { width: corrW - 2 });
+      }
+      y += rowH;
+    }
+    y += 4;
+  });
+
+  return y;
+}
+
+function renderPlatformsTable(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  value: Record<string, ChecklistItemData>,
+  startY: number
+): number {
+  const opts = (field.options ?? {}) as FieldOptions;
+  const items = opts.items ?? [];
+  const count = opts.platformCount ?? 5;
+  const tableW = pageWidth(doc) - MARGIN * 2;
+  const labelW = 100;
+  const platW = (tableW - labelW) / (count * 2);
+  let y = startY;
+
+  y = ensurePageSpace(doc, ctx, y, 14);
+  doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
+  drawTableRowBorder(doc, y, 11, '#f3f4f6');
+  doc.text('Equipo / superficie', MARGIN + 3, y + 2, { width: labelW });
+  for (let i = 1; i <= count; i++) {
+    doc.text(`PLAT ${i}`, MARGIN + labelW + (i - 1) * platW * 2, y + 2, { width: platW * 2, align: 'center' });
+  }
+  y += 11;
+
+  for (const item of items) {
+    const data = value[item.key] ?? {};
+    const rowH = 10;
+    y = ensurePageSpace(doc, ctx, y, rowH);
+    drawTableRowBorder(doc, y, rowH);
+    doc.fontSize(5.5).font('Helvetica').text(item.label, MARGIN + 3, y + 1, { width: labelW - 4 });
+    for (let i = 1; i <= count; i++) {
+      const v = data.platforms?.[String(i)] ?? '';
+      doc.text(v || '·', MARGIN + labelW + (i - 1) * platW * 2, y + 1, { width: platW, align: 'center' });
+      doc.text('', MARGIN + labelW + (i - 1) * platW * 2 + platW, y + 1, { width: platW });
+    }
+    y += rowH;
+  }
+  return y + 6;
+}
+
+function renderRepeaterTable(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  rows: Record<string, unknown>[],
+  startY: number
+): number {
+  const opts = (field.options ?? {}) as FieldOptions;
+  const rawCols = opts.columns;
+  let cols: { key: string; label: string }[] = opts.columns_def ?? [];
+  if (Array.isArray(rawCols) && rawCols[0] && typeof rawCols[0] === 'object' && 'key' in (rawCols[0] as object)) {
+    cols = rawCols as unknown as { key: string; label: string }[];
+  }
+  if (cols.length === 0) {
+    let y = startY;
+    rows.forEach((row, i) => {
+      const parts = Object.entries(row)
+        .filter(([, v]) => v !== '' && v != null)
+        .map(([k, v]) => `${k}: ${v}`);
+      y = ensurePageSpace(doc, ctx, y, 10);
+      doc.fontSize(6.5).font('Helvetica').text(`${i + 1}. ${parts.join(' · ')}`, MARGIN, y, {
+        width: pageWidth(doc) - MARGIN * 2,
+      });
+      y += 10;
+    });
+    return y + 4;
+  }
+
+  const tableW = pageWidth(doc) - MARGIN * 2;
+  const colW = tableW / cols.length;
+  let y = startY;
+  const headerH = 11;
+
+  y = ensurePageSpace(doc, ctx, y, headerH);
+  drawTableRowBorder(doc, y, headerH, '#f3f4f6');
+  doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
+  cols.forEach((col, i) => doc.text(col.label, MARGIN + i * colW + 2, y + 2, { width: colW - 4 }));
+  y += headerH;
+
+  if (rows.length === 0) {
+    doc.fontSize(6).font('Helvetica').fillColor('#666').text('Sin registros', MARGIN, y + 2);
+    return y + 12;
+  }
+
+  rows.forEach((row, ri) => {
+    const rowH = 10;
+    y = ensurePageSpace(doc, ctx, y, rowH);
+    if (ri % 2 === 1) drawTableRowBorder(doc, y, rowH, '#f9fafb');
+    else drawTableRowBorder(doc, y, rowH);
+    cols.forEach((col, i) => {
+      let cell = str(row[col.key]);
+      if (col.key === 'decomiso_parcial') cell = String(row[col.key] ?? '') === 'Parcial' ? 'X' : '—';
+      if (col.key === 'decomiso_total') cell = String(row[col.key] ?? '') === 'Total' ? 'X' : '—';
+      doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(cell, MARGIN + i * colW + 2, y + 1, {
+        width: colW - 4,
+        align: col.key.startsWith('decomiso_') ? 'center' : 'left',
+      });
+    });
+    y += rowH;
+  });
+  return y + 6;
 }
 
 function renderDaySchedule(
   doc: PdfDoc,
+  ctx: SheetPageContext,
   field: FormatField,
   value: Record<string, Record<string, string>>,
   startY: number
@@ -269,41 +375,65 @@ function renderDaySchedule(
   const opts = (field.options ?? {}) as FieldOptions;
   const tableType = opts.tableType ?? 'cloro';
   let y = startY;
-  const { width } = pageSize(doc);
+  const w = pageWidth(doc) - MARGIN * 2;
 
   if (tableType === 'cloro') {
+    const cols = [
+      { label: 'Punto', w: 80 },
+      { label: 'Hora', w: 36 },
+      { label: 'Cloro', w: 40 },
+      { label: 'C/NC', w: 28 },
+      { label: 'Observaciones', w: w - 184 },
+    ];
+    y = ensurePageSpace(doc, ctx, y, 12);
+    drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    let x = MARGIN;
     doc.fontSize(6).font('Helvetica-Bold');
-    doc.text('Punto', MARGIN, y, { width: 80 });
-    doc.text('Cloro', MARGIN + 82, y, { width: 40 });
-    doc.text('pH', MARGIN + 124, y, { width: 30 });
-    doc.text('C/NC', MARGIN + 156, y, { width: 30 });
-    doc.text('Observaciones', MARGIN + 188, y, { width: width - MARGIN - 188 });
-    y += 10;
+    cols.forEach((c) => {
+      doc.text(c.label, x, y + 2, { width: c.w });
+      x += c.w;
+    });
+    y += 11;
     for (const [key, row] of Object.entries(value ?? {})) {
-      if (y > contentBottom(doc) - 10) break;
+      y = ensurePageSpace(doc, ctx, y, 10);
+      drawTableRowBorder(doc, y, 10);
+      x = MARGIN;
       doc.fontSize(5.5).font('Helvetica');
-      doc.text(key.replace(/_/g, ' '), MARGIN, y, { width: 80 });
-      doc.text(row.cloro_residual ?? '', MARGIN + 82, y, { width: 40 });
-      doc.text(row.ph ?? '7.0', MARGIN + 124, y, { width: 30 });
-      doc.text(row.cnc ?? '', MARGIN + 156, y, { width: 30 });
-      doc.text(row.observaciones ?? '', MARGIN + 188, y, { width: width - MARGIN - 188 });
-      y += 9;
+      const cells = [key.replace(/_/g, ' '), row.hora ?? '', row.cloro_residual ?? '', row.cnc ?? '', row.observaciones ?? ''];
+      cols.forEach((c, i) => {
+        doc.text(cells[i] ?? '', x, y + 1, { width: c.w - 2 });
+        x += c.w;
+      });
+      y += 10;
     }
   } else {
+    const cols = [
+      { label: 'Punto', w: 100 },
+      { label: 'Hora', w: 36 },
+      { label: 'Temp °C', w: 44 },
+      { label: 'C/NC', w: 28 },
+      { label: 'Observaciones', w: w - 208 },
+    ];
+    y = ensurePageSpace(doc, ctx, y, 12);
+    drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    let x = MARGIN;
     doc.fontSize(6).font('Helvetica-Bold');
-    doc.text('Punto', MARGIN, y, { width: 100 });
-    doc.text('Temp °C', MARGIN + 102, y, { width: 50 });
-    doc.text('C/NC', MARGIN + 154, y, { width: 30 });
-    doc.text('Observaciones', MARGIN + 186, y, { width: width - MARGIN - 186 });
-    y += 10;
+    cols.forEach((c) => {
+      doc.text(c.label, x, y + 2, { width: c.w });
+      x += c.w;
+    });
+    y += 11;
     for (const [key, row] of Object.entries(value ?? {})) {
-      if (y > contentBottom(doc) - 10) break;
+      y = ensurePageSpace(doc, ctx, y, 10);
+      drawTableRowBorder(doc, y, 10);
+      x = MARGIN;
       doc.fontSize(5.5).font('Helvetica');
-      doc.text(key.replace(/_/g, ' '), MARGIN, y, { width: 100 });
-      doc.text(row.temperatura ?? '', MARGIN + 102, y, { width: 50 });
-      doc.text(row.cnc ?? '', MARGIN + 154, y, { width: 30 });
-      doc.text(row.observaciones ?? '', MARGIN + 186, y, { width: width - MARGIN - 186 });
-      y += 9;
+      const cells = [key.replace(/_/g, ' '), row.hora ?? '', row.temperatura ?? '', row.cnc ?? '', row.observaciones ?? ''];
+      cols.forEach((c, i) => {
+        doc.text(cells[i] ?? '', x, y + 1, { width: c.w - 2 });
+        x += c.w;
+      });
+      y += 10;
     }
   }
   return y + 6;
@@ -311,24 +441,32 @@ function renderDaySchedule(
 
 function renderField(
   doc: PdfDoc,
+  ctx: SheetPageContext,
   field: FormatField,
   value: unknown,
   y: number
 ): number {
   if (field.fieldKey === 'empresa') return y;
-  const { width } = pageSize(doc);
-  const maxW = width - MARGIN * 2;
   const opts = (field.options ?? {}) as FieldOptions;
+  const maxW = pageWidth(doc) - MARGIN * 2;
 
-  y = ensureSpace(doc, y, 14);
-  y = drawFieldLabel(doc, field.label, MARGIN, y, maxW);
+  y = ensurePageSpace(doc, ctx, y, 18);
+  if (field.fieldType !== 'CHECKLIST' || !opts.items?.length) {
+    y = drawSectionBanner(doc, y, field.label, field.helpText ?? undefined, true);
+  }
 
   if (field.fieldType === 'CHECKLIST' && opts.layout === 'day_schedule_table') {
-    return renderDaySchedule(doc, field, value as Record<string, Record<string, string>>, y);
+    return renderDaySchedule(doc, ctx, field, (value as Record<string, Record<string, string>>) ?? {}, y);
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.items?.length) {
-    return renderChecklistTable(doc, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
+    if (opts.columns?.includes('cavaColumns') || opts.columnDefs?.length || opts.cavaColumns?.length) {
+      return renderCavaMatrix(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
+    }
+    if (opts.columns?.includes('platforms')) {
+      return renderPlatformsTable(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
+    }
+    return renderSimpleChecklist(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
   }
 
   if (field.fieldType === 'PHOTO') {
@@ -339,43 +477,52 @@ function renderField(
       photos.push(value);
     }
     if (photos.length === 0) {
-      return drawTextValue(doc, '—', MARGIN, y, maxW);
+      doc.fontSize(7).font('Helvetica').fillColor('#666').text('—', MARGIN, y);
+      return y + 12;
     }
     let py = y;
-    for (const src of photos.slice(0, 6)) {
-      if (py > contentBottom(doc) - 60) break;
+    for (const src of photos.slice(0, 8)) {
+      py = ensurePageSpace(doc, ctx, py, 70);
       try {
-        doc.image(src, MARGIN, py, { fit: [120, 80] });
-        py += 86;
+        doc.image(src, MARGIN, py, { fit: [130, 90] });
+        py += 96;
       } catch {
-        py = drawTextValue(doc, '(imagen no disponible)', MARGIN, py, maxW);
+        doc.fontSize(7).text('(imagen no disponible)', MARGIN, py);
+        py += 12;
       }
     }
     return py + 4;
   }
 
   if (field.fieldType === 'TEXTAREA') {
-    return drawTextValue(doc, String(value ?? ''), MARGIN, y, maxW);
+    doc.fontSize(7).font('Helvetica').fillColor('#111').text(str(value), MARGIN, y, { width: maxW });
+    return y + doc.heightOfString(str(value), { width: maxW }) + 8;
   }
 
   if (field.fieldType === 'REPEATER' && Array.isArray(value)) {
-    const rows = value as Record<string, unknown>[];
+    return renderRepeaterTable(doc, ctx, field, value as Record<string, unknown>[], y);
+  }
+
+  if (field.fieldType === 'REPEATER' && typeof value === 'object' && value !== null) {
+    const entries = Object.entries(value as Record<string, unknown>);
     let ry = y;
-    rows.forEach((row, i) => {
-      const parts = Object.entries(row)
-        .filter(([, v]) => v !== '' && v != null)
-        .map(([k, v]) => `${k}: ${v}`);
-      doc.fontSize(7).font('Helvetica').text(`${i + 1}. ${parts.join(' · ')}`, MARGIN, ry, { width: maxW });
-      ry += 10;
-    });
-    return ry + 4;
+    for (const [area, rows] of entries) {
+      ry = ensurePageSpace(doc, ctx, ry, 14);
+      ry = drawSectionBanner(doc, ry, area, undefined, true);
+      if (Array.isArray(rows)) {
+        ry = renderRepeaterTable(doc, ctx, field, rows as Record<string, unknown>[], ry);
+      }
+    }
+    return ry;
   }
 
   if (Array.isArray(value)) {
-    return drawTextValue(doc, value.join(', '), MARGIN, y, maxW);
+    doc.fontSize(7).font('Helvetica').text(value.join(', '), MARGIN, y, { width: maxW });
+    return y + 14;
   }
 
-  return drawTextValue(doc, String(value ?? ''), MARGIN, y, maxW);
+  doc.fontSize(7).font('Helvetica').fillColor('#111').text(str(value), MARGIN, y, { width: maxW });
+  return y + 14;
 }
 
 function renderSheetPage(
@@ -386,12 +533,28 @@ function renderSheetPage(
   sheetIndex: number,
   totalSheets: number
 ) {
+  const landscape =
+    needsLandscape(sheet.fields) ||
+    submission.format.code === 'DECOMISOS' ||
+    submission.format.code === 'INSPECCION_VEHICULOS';
+
+  const ctx: SheetPageContext = {
+    landscape,
+    formatName: submission.format.name,
+    documentCode: submission.format.documentCode,
+    sheetName: sheet.name,
+    sheetIndex,
+    totalSheets,
+    workDate: submission.workDate,
+    operatorName: submission.operator.fullName,
+    formatCode: submission.format.code,
+    compactHeader: submission.format.code === 'INSPECCION_VEHICULOS',
+  };
+
   const fields = sheet.fields.filter((f) => f.fieldKey !== 'empresa');
   const code = submission.format.code;
-  let y =
-    code === 'INSPECCION_VEHICULOS'
-      ? drawCompactSheetHeader(doc, submission, sheet.name)
-      : drawSheetHeader(doc, submission, sheet, sheetIndex, totalSheets);
+
+  let y = startSheetPage(doc, ctx);
 
   if (code === 'INSPECCION_VEHICULOS') {
     y = renderVehiculosSheet(doc, fields, sheetData, y);
@@ -399,13 +562,12 @@ function renderSheetPage(
     y = renderDecomisosSheet(doc, fields, sheetData, y);
   } else {
     for (const field of fields) {
-      if (y > contentBottom(doc) - 20) break;
-      y = renderField(doc, field, sheetData[field.fieldKey], y);
+      y = renderField(doc, ctx, field, sheetData[field.fieldKey], y);
       y += 4;
     }
   }
 
-  drawSignatures(doc, submission, contentBottom(doc) - 28);
+  drawSignatures(doc, submission.operator.fullName, contentBottom(doc) - 28);
 }
 
 export function generateSubmissionPdf(submission: SubmissionForPdf): Promise<Buffer> {
@@ -428,15 +590,6 @@ export function generateSubmissionPdf(submission: SubmissionForPdf): Promise<Buf
     formatSheets.forEach((sheet, index) => {
       const sheetData =
         (submission.sheets.find((s) => s.sheetId === sheet.id)?.data as Record<string, unknown>) ?? {};
-      const landscape =
-        needsLandscape(sheet.fields) ||
-        submission.format.code === 'DECOMISOS' ||
-        submission.format.code === 'INSPECCION_VEHICULOS';
-      doc.addPage({
-        size: 'A4',
-        layout: landscape ? 'landscape' : 'portrait',
-        margin: MARGIN,
-      });
       renderSheetPage(doc, submission, sheet, sheetData, index, formatSheets.length);
     });
 
@@ -452,3 +605,6 @@ export function buildPdfFilename(submission: SubmissionForPdf): string {
   const code = submission.format.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 40);
   return `${code}_${date}.pdf`;
 }
+
+// Re-export for tests
+export { formatWorkDate };
