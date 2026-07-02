@@ -9,6 +9,7 @@ export const FOOTER_H = 36;
 
 const CALIDAD_CODES = new Set([
   'SAI-CAL-F015',
+  'SAI-CAL-F010',
   'AC-FR-017',
   'AC-FR-006',
   'AC-FR-007',
@@ -23,6 +24,8 @@ const VERSION_BY_CODE: Record<string, string> = {
   'AC-FR-009': '03',
   'AC-FR-010': '02',
   'AC-FR-018': '02',
+  'SAI-CAL-F010': '01',
+  'AC-FR-00': '01',
 };
 
 export function pageWidth(doc: PdfDoc) {

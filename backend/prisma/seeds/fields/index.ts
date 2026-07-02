@@ -11,6 +11,10 @@ import { getFormat9Fields } from './format9-ph';
 import { getFormat10Fields } from './format10-habitos';
 import { getFormat11Fields } from './format11-devoluciones';
 import { getFormat12Fields } from './format12-decomisos';
+import { getFormat13Fields } from './format13-linea-operativo';
+import { getFormat14Fields } from './format14-pc-comestible-operativo';
+import { getFormat15Fields } from './format15-poes-operativo';
+import { getFormat16Fields } from './format16-pc-comestibles-inocuidad';
 
 type FieldResolver = (slug: string) => FieldDef[];
 
@@ -27,6 +31,10 @@ const RESOLVERS: Record<string, FieldResolver> = {
   HABITOS_HIGIENICOS: getFormat10Fields,
   DEVOLUCIONES: getFormat11Fields,
   DECOMISOS: getFormat12Fields,
+  LINEA_OPERATIVO: getFormat13Fields,
+  PC_COMESTIBLE_OPERATIVO: getFormat14Fields,
+  POES_OPERATIVO: getFormat15Fields,
+  PC_COMESTIBLES_INOCUIDAD: getFormat16Fields,
 };
 
 export function getFieldsForSheet(formatCode: string, sheetSlug: string): FieldDef[] {

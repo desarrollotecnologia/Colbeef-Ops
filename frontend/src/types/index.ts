@@ -81,8 +81,8 @@ export interface FieldConfig {
 }
 
 export interface FieldOptions {
-  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater';
-  tableType?: 'cloro' | 'esterilizadores' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios';
+  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater';
+  tableType?: 'cloro' | 'esterilizadores' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios' | 'monitoreo';
   pediluviosLayout?: 'operativo' | 'simple';
   schedule?: Record<string, string[]>;
   mode?: 'cnc' | 'cnc_na';
@@ -109,6 +109,10 @@ export interface FieldOptions {
   matrixRowLabel?: string;
   multiple?: boolean;
   maxPhotos?: number;
+  valorLabel?: string;
+  allowAddEquipos?: boolean;
+  equiposIzq?: { key: string; label: string }[];
+  equiposDer?: { key: string; label: string }[];
 }
 
 export interface RepeaterColumn {
@@ -123,6 +127,9 @@ export interface RepeaterColumn {
 /** Fila de tablas de medición (formato 2 hoja 1) */
 export interface MeasureRowData {
   hora?: string;
+  turno?: string;
+  valor?: string;
+  minutos?: string;
   punto_toma?: string;
   cloro_residual?: string;
   temperatura?: string;

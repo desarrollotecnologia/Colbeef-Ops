@@ -325,7 +325,7 @@ export function hourlyMatrixField(
   };
 }
 
-export type MeasureTableType = 'cloro' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios';
+export type MeasureTableType = 'cloro' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios' | 'monitoreo';
 
 /** Tabla formal de medición (formato 2 hoja 1) */
 export function formalMeasureTableField(
@@ -335,9 +335,13 @@ export function formalMeasureTableField(
   rows: { key: string; label: string; naTemp?: boolean; naPresion?: boolean }[],
   sortOrder: number,
   groupName: string,
-  opts?: Partial<FieldDef> & { pediluviosLayout?: 'operativo' | 'simple'; measureCncMode?: 'cnc' | 'cnc_na' }
+  opts?: Partial<FieldDef> & {
+    pediluviosLayout?: 'operativo' | 'simple';
+    measureCncMode?: 'cnc' | 'cnc_na';
+    valorLabel?: string;
+  }
 ): FieldDef {
-  const { pediluviosLayout, measureCncMode, ...fieldOpts } = opts ?? {};
+  const { pediluviosLayout, measureCncMode, valorLabel, ...fieldOpts } = opts ?? {};
   return {
     fieldKey,
     label,
@@ -353,6 +357,7 @@ export function formalMeasureTableField(
       items: rows,
       ...(pediluviosLayout ? { pediluviosLayout } : {}),
       ...(measureCncMode ? { mode: measureCncMode } : {}),
+      ...(valorLabel ? { valorLabel } : {}),
     },
   };
 }

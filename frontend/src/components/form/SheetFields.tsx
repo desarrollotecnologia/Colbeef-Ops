@@ -22,6 +22,7 @@ import Format9PhSheet from './Format9PhSheet';
 import Format10HabitosSheet from './Format10HabitosSheet';
 import Format11DevolucionesSheet from './Format11DevolucionesSheet';
 import Format12DecomisosSheet from './Format12DecomisosSheet';
+import Format15PoesSheet from './Format15PoesSheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const LEGEND_FOOTER = (
@@ -194,6 +195,46 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
       <div className="space-y-6">
         <Format12DecomisosSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
         {LEGEND_FOOTER}
+      </div>
+    );
+  }
+
+  if (has('poes_equipos') && has('poes_hora_1')) {
+    return (
+      <div className="space-y-6">
+        <Format15PoesSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+      </div>
+    );
+  }
+
+  if (has('pc_inocuidad_registros') && has('total_animales')) {
+    return (
+      <div className="space-y-6">
+        {groupFields(visible).map((group, gi) => {
+          const groupFieldsVisible = group.fields.filter((f) => !HEADER_ONLY_KEYS.has(f.fieldKey));
+          if (groupFieldsVisible.length === 0) return null;
+          return (
+            <div key={gi}>
+              {group.name && (
+                <h3 className="text-xs font-bold uppercase text-gray-800 mb-3 pb-1 border-b border-gray-300">{group.name}</h3>
+              )}
+              <div className="space-y-4">
+                {groupFieldsVisible.map((field) => (
+                  <FormField
+                    key={field.id}
+                    field={field}
+                    value={sheetData[field.fieldKey]}
+                    onChange={(v) => onUpdate(field.fieldKey, v)}
+                    disabled={disabled}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        <div className="text-xs text-gray-500 border-t pt-3">
+          <p><strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>NA:</strong> No aplica</p>
+        </div>
       </div>
     );
   }

@@ -130,6 +130,47 @@ export const FORMAT_CATALOG = [
     noSunday: true,
     sheets: [{ sheetOrder: 1, name: 'Decomisos', slug: 'principal' }],
   },
+  {
+    code: 'LINEA_OPERATIVO',
+    name: 'Verificación Línea Operativo',
+    documentCode: 'AC-FR-00',
+    sheetCount: 1,
+    sortOrder: 13,
+    noSunday: true,
+    sheets: [{ sheetOrder: 1, name: 'Línea Operativo', slug: 'principal' }],
+  },
+  {
+    code: 'PC_COMESTIBLE_OPERATIVO',
+    name: 'Verificación PC Comestibles Operativo',
+    documentCode: 'SAI-CAL-F010',
+    sheetCount: 4,
+    sortOrder: 14,
+    noSunday: true,
+    sheets: [
+      { sheetOrder: 1, name: 'Área Cabezas', slug: 'cabezas' },
+      { sheetOrder: 2, name: 'Patas y Manos', slug: 'patas-manos' },
+      { sheetOrder: 3, name: 'Vísceras Blancas', slug: 'visceras-blancas' },
+      { sheetOrder: 4, name: 'Vísceras Rojas', slug: 'visceras-rojas' },
+    ],
+  },
+  {
+    code: 'POES_OPERATIVO',
+    name: 'Verificación POES Operativo',
+    documentCode: 'AC-FR-00',
+    sheetCount: 1,
+    sortOrder: 15,
+    noSunday: true,
+    sheets: [{ sheetOrder: 1, name: 'POES Operativo', slug: 'principal' }],
+  },
+  {
+    code: 'PC_COMESTIBLES_INOCUIDAD',
+    name: 'Verificación de Productos Cárnicos Comestibles',
+    documentCode: 'AC-FR-00',
+    sheetCount: 1,
+    sortOrder: 16,
+    noSunday: true,
+    sheets: [{ sheetOrder: 1, name: 'Verificación PC', slug: 'principal' }],
+  },
 ] as const;
 
 export type FormatCode = (typeof FORMAT_CATALOG)[number]['code'];

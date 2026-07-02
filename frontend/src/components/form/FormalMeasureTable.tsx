@@ -312,6 +312,57 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
     );
   }
 
+  if (tableType === 'monitoreo') {
+    const valorLabel = options.valorLabel ?? 'Valor';
+    const cncCols = cncChoices(options.mode);
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[680px]">
+          <thead>
+            <tr className="bg-white border-b-2 border-gray-800">
+              <th className={`${thClass} text-left`}>Aspecto a verificar</th>
+              <th className={thClass}>Turno monitoreo</th>
+              <th className={thClass}>{valorLabel}</th>
+              {cncCols.map((sub) => (
+                <th key={sub} className={`${thClass} w-12`}>{sub}</th>
+              ))}
+              <th className={`${thClass} text-left min-w-[100px]`}>Observaciones</th>
+              <th className={`${thClass} text-left min-w-[90px]`}>Acción correctiva</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, idx) => {
+              const row = value[item.key] ?? {};
+              const cnc = row.cnc ?? '';
+              return (
+                <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>{item.label}</td>
+                  <td className={tdClass}>
+                    <input type="text" value={row.turno ?? ''} onChange={(e) => updateRow(item.key, { turno: e.target.value })} disabled={disabled} className={`${INPUT_CLASS} text-xs py-1.5`} />
+                  </td>
+                  <td className={tdClass}>
+                    <input type="text" value={String(row.valor ?? row.minutos ?? row.temperatura ?? '')} onChange={(e) => updateRow(item.key, { valor: e.target.value })} disabled={disabled} className={`${INPUT_CLASS} text-xs py-1.5`} />
+                  </td>
+                  {cncCols.map((sub) => (
+                    <td key={sub} className={`${tdClass} text-center w-12 px-1`}>
+                      <CncToggle choice={sub} value={cnc} disabled={disabled} onChange={(v) => updateRow(item.key, { cnc: v })} />
+                    </td>
+                  ))}
+                  <td className={tdClass}>
+                    <input type="text" value={row.observation ?? ''} onChange={(e) => updateRow(item.key, { observation: e.target.value })} disabled={disabled} className={`${INPUT_CLASS} text-xs py-1.5`} />
+                  </td>
+                  <td className="px-2 py-1 border-b border-gray-400">
+                    <input type="text" value={row.corrective ?? ''} onChange={(e) => updateRow(item.key, { corrective: e.target.value })} disabled={disabled} className={`${INPUT_CLASS} text-xs py-1.5`} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   if (tableType === 'pediluvios') {
     const operativo = options.pediluviosLayout === 'operativo';
 

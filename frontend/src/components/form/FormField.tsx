@@ -11,6 +11,7 @@ import LacticoTitrationRepeater from './LacticoTitrationRepeater';
 import CardRepeater from './CardRepeater';
 import AutoValue from './AutoValue';
 import PhotoInput from './PhotoInput';
+import PcInocuidadRepeater from './PcInocuidadRepeater';
 
 interface Props {
   field: FormatField;
@@ -185,6 +186,13 @@ export default function FormField({ field, value, onChange, disabled, compact }:
           <CardRepeater
             options={repeaterOpts}
             value={repeaterValue}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        ) : opts.layout === 'pc_inocuidad_repeater' ? (
+          <PcInocuidadRepeater
+            options={repeaterOpts}
+            value={repeaterValue as import('./PcInocuidadRepeater').PcInocuidadRow[]}
             onChange={onChange}
             disabled={disabled}
           />

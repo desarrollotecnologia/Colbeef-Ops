@@ -32,6 +32,8 @@ type FieldOptions = {
   schedule?: Record<string, string[]>;
   areaLabel?: string;
   pediluviosLayout?: string;
+  valorLabel?: string;
+  allowAddEquipos?: boolean;
 };
 
 type ChecklistItemData = {
@@ -142,6 +144,12 @@ function normalizeCnc(value: unknown): string {
     .trim()
     .toUpperCase();
   return s === 'C' || s === 'NC' || s === 'NA' ? s : '';
+}
+
+function markCnc(value: unknown, choice?: string): string {
+  const cnc = normalizeCnc(value);
+  if (choice) return cnc === choice ? 'X' : '—';
+  return cnc ? cnc : '—';
 }
 
 function readItemCnc(data: ChecklistItemData | undefined): string {
@@ -432,6 +440,182 @@ function renderPlatformsTable(
   return y + 6;
 }
 
+function renderPoesOperativoTable(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  value: Record<string, Record<string, unknown>>,
+  startY: number
+): number {
+  const opts = (field.options ?? {}) as FieldOptions;
+  const items = opts.items ?? [];
+  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
+  const w = pageWidth(doc) - MARGIN * 2;
+  const labelW = 90;
+  const cellW = (w - labelW) / 12;
+
+  y = ensurePageSpace(doc, ctx, y, 12);
+  drawTableRowBorder(doc, y, 11, '#f3f4f6');
+  doc.fontSize(5).font('Helvetica-Bold');
+  doc.text('Equipo', MARGIN, y + 2, { width: labelW });
+  doc.text('Toma 1: Temp · C/NC est · C/NC lav · Obs', MARGIN + labelW, y + 2, { width: cellW * 6 });
+  doc.text('Toma 2: Temp · C/NC est · C/NC lav · Obs', MARGIN + labelW + cellW * 6, y + 2, { width: cellW * 6 });
+  y += 11;
+
+  const renderToma = (toma: Record<string, unknown> | undefined, x0: number) => {
+    let x = x0;
+    doc.fontSize(5).font('Helvetica').fillColor('#111');
+    doc.text(str(toma?.temp ?? '—'), x, y + 1, { width: cellW, align: 'center' });
+    x += cellW;
+    doc.text(markCnc(toma?.cnc_est, 'C'), x, y + 1, { width: cellW, align: 'center' });
+    x += cellW;
+    doc.text(markCnc(toma?.cnc_est, 'NC'), x, y + 1, { width: cellW, align: 'center' });
+    x += cellW;
+    doc.text(markCnc(toma?.cnc_lav, 'C'), x, y + 1, { width: cellW, align: 'center' });
+    x += cellW;
+    doc.text(markCnc(toma?.cnc_lav, 'NC'), x, y + 1, { width: cellW, align: 'center' });
+    x += cellW;
+    doc.text(str(toma?.obs ?? '—'), x, y + 1, { width: cellW });
+  };
+
+  items.forEach((item) => {
+    const row = (value[item.key] ?? {}) as { toma1?: Record<string, unknown>; toma2?: Record<string, unknown> };
+    y = ensurePageSpace(doc, ctx, y, 10);
+    drawTableRowBorder(doc, y, 10);
+    doc.fontSize(5).font('Helvetica-Bold').text(item.label, MARGIN, y + 1, { width: labelW });
+    renderToma(row.toma1, MARGIN + labelW);
+    renderToma(row.toma2, MARGIN + labelW + cellW * 6);
+    y += 10;
+  });
+
+  const extrasRaw = value._extras;
+  const extras = Array.isArray(extrasRaw) ? (extrasRaw as { id: string; label: string }[]) : [];
+  extras.forEach((ex) => {
+    const row = (value[ex.id] ?? {}) as { label?: string; toma1?: Record<string, unknown>; toma2?: Record<string, unknown> };
+    y = ensurePageSpace(doc, ctx, y, 10);
+    drawTableRowBorder(doc, y, 10);
+    doc.fontSize(5).font('Helvetica-Bold').text(row.label || ex.label || 'Equipo', MARGIN, y + 1, { width: labelW });
+    renderToma(row.toma1, MARGIN + labelW);
+    renderToma(row.toma2, MARGIN + labelW + cellW * 6);
+    y += 10;
+  });
+
+  return y + 6;
+}
+
+function renderPoesBpmTable(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  value: Record<string, Record<string, string>>,
+  startY: number
+): number {
+  const opts = (field.options ?? {}) as FieldOptions;
+  const items = opts.items ?? [];
+  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
+  const w = pageWidth(doc) - MARGIN * 2;
+  const cols = [
+    { l: 'Procedimiento', w: 100 },
+    { l: 'Lav C', w: 18 },
+    { l: 'Lav NC', w: 18 },
+    { l: 'Tap C', w: 18 },
+    { l: 'Tap NC', w: 18 },
+  ];
+  const tail = w - cols.reduce((a, c) => a + c.w, 0);
+  const obsW = tail * 0.4;
+  const acW = tail * 0.35;
+  const respW = tail - obsW - acW;
+
+  y = ensurePageSpace(doc, ctx, y, 12);
+  drawTableRowBorder(doc, y, 11, '#f3f4f6');
+  doc.fontSize(5).font('Helvetica-Bold');
+  let x = MARGIN;
+  cols.forEach((c) => {
+    doc.text(c.l, x, y + 2, { width: c.w, align: c.l === 'Procedimiento' ? 'left' : 'center' });
+    x += c.w;
+  });
+  doc.text('Obs.', x, y + 2, { width: obsW });
+  doc.text('AC', x + obsW, y + 2, { width: acW });
+  doc.text('Resp.', x + obsW + acW, y + 2, { width: respW });
+  y += 11;
+
+  items.forEach((item) => {
+    const row = value[item.key] ?? {};
+    y = ensurePageSpace(doc, ctx, y, 10);
+    drawTableRowBorder(doc, y, 10);
+    doc.fontSize(5).font('Helvetica').fillColor('#111');
+    x = MARGIN;
+    doc.text(item.label, x, y + 1, { width: cols[0].w });
+    x += cols[0].w;
+    doc.text(markCnc(row.lavado_manos, 'C'), x, y + 1, { width: cols[1].w, align: 'center' });
+    x += cols[1].w;
+    doc.text(markCnc(row.lavado_manos, 'NC'), x, y + 1, { width: cols[2].w, align: 'center' });
+    x += cols[2].w;
+    doc.text(markCnc(row.tapabocas, 'C'), x, y + 1, { width: cols[3].w, align: 'center' });
+    x += cols[3].w;
+    doc.text(markCnc(row.tapabocas, 'NC'), x, y + 1, { width: cols[4].w, align: 'center' });
+    x += cols[4].w;
+    doc.text(row.observation ?? '—', x, y + 1, { width: obsW });
+    doc.text(row.corrective ?? '—', x + obsW, y + 1, { width: acW });
+    doc.text(row.responsible ?? '—', x + obsW + acW, y + 1, { width: respW });
+    y += 10;
+  });
+  return y + 6;
+}
+
+function renderPcInocuidadRepeater(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  rows: Record<string, unknown>[],
+  startY: number
+): number {
+  const hallazgoCols = ['vr_cr', 'vb_cr', 'vb_mf', 'cb_cr', 'pm_coc', 'pm_pelo', 'lg_cr'];
+  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
+  const w = pageWidth(doc) - MARGIN * 2;
+  const codW = 36;
+  const hallW = 22;
+  const tail = w - 14 - codW - hallW * hallazgoCols.length;
+  const obsW = tail * 0.55;
+  const acW = tail - obsW;
+
+  y = ensurePageSpace(doc, ctx, y, 12);
+  drawTableRowBorder(doc, y, 11, '#f3f4f6');
+  doc.fontSize(5).font('Helvetica-Bold');
+  let x = MARGIN;
+  doc.text('#', x, y + 2, { width: 14, align: 'center' });
+  x += 14;
+  doc.text('Código', x, y + 2, { width: codW });
+  x += codW;
+  hallazgoCols.forEach((k) => {
+    doc.text(k.replace('_', ' ').toUpperCase(), x, y + 2, { width: hallW, align: 'center' });
+    x += hallW;
+  });
+  doc.text('Obs.', x, y + 2, { width: obsW });
+  doc.text('AC', x + obsW, y + 2, { width: acW });
+  y += 11;
+
+  rows.forEach((row, i) => {
+    const hallazgos = (row.hallazgos ?? {}) as Record<string, string>;
+    y = ensurePageSpace(doc, ctx, y, 10);
+    drawTableRowBorder(doc, y, 10);
+    doc.fontSize(5).font('Helvetica').fillColor('#111');
+    x = MARGIN;
+    doc.text(String(i + 1), x, y + 1, { width: 14, align: 'center' });
+    x += 14;
+    doc.text(str(row.codigo), x, y + 1, { width: codW });
+    x += codW;
+    hallazgoCols.forEach((k) => {
+      doc.text(markCnc(hallazgos[k] ?? ''), x, y + 1, { width: hallW, align: 'center' });
+      x += hallW;
+    });
+    doc.text(str(row.observation), x, y + 1, { width: obsW });
+    doc.text(str(row.corrective), x + obsW, y + 1, { width: acW });
+    y += 10;
+  });
+  return y + 6;
+}
+
 function renderRepeaterTable(
   doc: PdfDoc,
   ctx: SheetPageContext,
@@ -440,6 +624,9 @@ function renderRepeaterTable(
   startY: number
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
+  if (opts.layout === 'pc_inocuidad_repeater') {
+    return renderPcInocuidadRepeater(doc, ctx, field, rows, startY);
+  }
   const rawCols = opts.columns;
   let cols: { key: string; label: string }[] = opts.columns_def ?? [];
   if (Array.isArray(rawCols) && rawCols[0] && typeof rawCols[0] === 'object' && 'key' in (rawCols[0] as object)) {
@@ -704,6 +891,56 @@ function renderFormalMeasureTable(
     return y + 6;
   }
 
+  if (tableType === 'monitoreo') {
+    const valorLabel = opts.valorLabel ?? 'Valor';
+    const cW = 12;
+    const cCols = showNa ? 3 : 2;
+    const cols = [
+      { l: 'Aspecto', w: 110 },
+      { l: 'Turno', w: 36 },
+      { l: valorLabel, w: 40 },
+    ];
+    const tailW = w - cols.reduce((a, c) => a + c.w, 0) - cW * cCols;
+    const obsW = tailW * 0.55;
+    const acW = tailW - obsW;
+
+    y = ensurePageSpace(doc, ctx, y, 12);
+    drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    doc.fontSize(5.5).font('Helvetica-Bold');
+    let x = MARGIN;
+    cols.forEach((c) => {
+      doc.text(c.l, x, y + 2, { width: c.w });
+      x += c.w;
+    });
+    doc.text('C', x, y + 2, { width: cW, align: 'center' });
+    doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+    if (showNa) doc.text('NA', x + cW * 2, y + 2, { width: cW, align: 'center' });
+    doc.text('Obs.', x + cW * cCols, y + 2, { width: obsW });
+    doc.text('AC', x + cW * cCols + obsW, y + 2, { width: acW });
+    y += 11;
+
+    items.forEach((item) => {
+      const row = value[item.key] ?? {};
+      const cnc = normalizeCnc(row.cnc);
+      const valor = row.valor ?? row.minutos ?? row.temperatura ?? '—';
+      y = ensurePageSpace(doc, ctx, y, 10);
+      drawTableRowBorder(doc, y, 10);
+      doc.fontSize(5.5).font('Helvetica').fillColor('#111');
+      x = MARGIN;
+      doc.text(item.label, x, y + 1, { width: cols[0].w });
+      x += cols[0].w;
+      doc.text(row.turno ?? '—', x, y + 1, { width: cols[1].w });
+      x += cols[1].w;
+      doc.text(valor, x, y + 1, { width: cols[2].w, align: 'center' });
+      x += cols[2].w;
+      x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
+      doc.text(row.observation ?? '—', x, y + 1, { width: obsW });
+      doc.text(row.corrective ?? '—', x + obsW, y + 1, { width: acW });
+      y += 10;
+    });
+    return y + 6;
+  }
+
   // Fallback: list rows as text
   items.forEach((item) => {
     const row = value[item.key] ?? {};
@@ -741,6 +978,14 @@ function renderField(
 
   if (isFormalMeasure) {
     return renderFormalMeasureTable(doc, ctx, field, (value as Record<string, MeasureRow>) ?? {}, y);
+  }
+
+  if (field.fieldType === 'CHECKLIST' && opts.layout === 'poes_operativo_table') {
+    return renderPoesOperativoTable(doc, ctx, field, (value as Record<string, Record<string, unknown>>) ?? {}, y);
+  }
+
+  if (field.fieldType === 'CHECKLIST' && opts.layout === 'poes_bpm_table') {
+    return renderPoesBpmTable(doc, ctx, field, (value as Record<string, Record<string, string>>) ?? {}, y);
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.items?.length) {
