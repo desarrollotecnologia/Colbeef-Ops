@@ -10,7 +10,7 @@ const mockSubmission = {
   id: 'test-id',
   formatId: 'fmt-1',
   operatorId: 'op-1',
-  workDate: new Date('2026-06-10'),
+  workDate: new Date('2026-07-02'),
   status: 'APPROVED',
   submittedAt: new Date(),
   reviewedAt: new Date(),
@@ -25,44 +25,17 @@ const mockSubmission = {
     documentCode: 'SAI-CAL-F015',
     sheets: [
       {
-        id: 'sheet-1',
+        id: 'sheet-3',
         formatId: 'fmt-1',
-        sheetOrder: 1,
-        name: 'Zona Sangría',
-        slug: 'zona-sangria',
+        sheetOrder: 3,
+        name: 'Zona Limpia',
+        slug: 'zona-limpia',
         fields: [
           {
-            id: 'f-cloro',
-            sheetId: 'sheet-1',
-            fieldKey: 'cloro_registros',
-            label: 'Control cloro residual',
-            fieldType: 'CHECKLIST',
-            required: false,
-            manualOnly: true,
-            autoFillRule: null,
-            options: {
-              layout: 'day_schedule_table',
-              tableType: 'cloro',
-              schedule: {
-                wednesday: ['Patas y manos', 'Víscera roja', 'Marcación canales'],
-              },
-            },
-            config: {
-              schedule: {
-                wednesday: ['Patas y manos', 'Víscera roja', 'Marcación canales'],
-              },
-            },
-            placeholder: null,
-            defaultValue: null,
-            sortOrder: 2,
-            groupName: 'Control cloro',
-            helpText: null,
-          },
-          {
-            id: 'f-zs',
-            sheetId: 'sheet-1',
-            fieldKey: 'zona_sangria',
-            label: 'Zona insensibilización y sangría',
+            id: 'f-zi',
+            sheetId: 'sheet-3',
+            fieldKey: 'zona_intermedia_prev',
+            label: 'Zona intermedia',
             fieldType: 'CHECKLIST',
             required: false,
             manualOnly: true,
@@ -70,16 +43,62 @@ const mockSubmission = {
             options: {
               mode: 'cnc',
               items: [
-                { key: 'zs_0', label: 'Cajón de noqueo' },
-                { key: 'zs_1', label: 'Plataformas fijas' },
+                { key: 'i_0', label: 'Llave azul para agua' },
+                { key: 'i_1', label: 'Mangueras' },
               ],
               columns: ['cnc', 'observation', 'corrective'],
             },
             config: null,
             placeholder: null,
             defaultValue: null,
-            sortOrder: 21,
-            groupName: 'Zona sangría',
+            sortOrder: 1,
+            groupName: null,
+            helpText: null,
+          },
+          {
+            id: 'f-zl',
+            sheetId: 'sheet-3',
+            fieldKey: 'zona_limpia',
+            label: 'Zona limpia',
+            fieldType: 'CHECKLIST',
+            required: false,
+            manualOnly: true,
+            autoFillRule: null,
+            options: {
+              mode: 'cnc',
+              items: [
+                { key: 'l_0', label: 'Sierra canal' },
+                { key: 'l_1', label: 'Hidrolavadora' },
+              ],
+              columns: ['cnc', 'observation', 'corrective'],
+            },
+            config: null,
+            placeholder: null,
+            defaultValue: null,
+            sortOrder: 2,
+            groupName: null,
+            helpText: null,
+          },
+          {
+            id: 'f-plat',
+            sheetId: 'sheet-3',
+            fieldKey: 'plataformas_limpia',
+            label: 'Plataformas (PLAT 1-5)',
+            fieldType: 'CHECKLIST',
+            required: false,
+            manualOnly: true,
+            autoFillRule: null,
+            options: {
+              mode: 'cnc',
+              items: [{ key: 'p_0', label: 'Base superior elevador' }],
+              columns: ['platforms', 'observation', 'corrective'],
+              platformCount: 5,
+            },
+            config: null,
+            placeholder: null,
+            defaultValue: null,
+            sortOrder: 3,
+            groupName: 'Plataformas (PLAT 1-5)',
             helpText: null,
           },
         ],
@@ -90,15 +109,21 @@ const mockSubmission = {
   reviewedBy: { fullName: 'Jefe de Área' },
   sheets: [
     {
-      sheetId: 'sheet-1',
+      sheetId: 'sheet-3',
       data: {
-        cloro_registros: {
-          patas_y_manos: { cloro_residual: '0.8', cnc: 'C', observaciones: 'OK' },
-          vscera_roja: { cloro_residual: '1.1', cnc: 'NC', observaciones: 'Revisar' },
+        zona_intermedia_prev: {
+          i_0: { cnc: 'C', observation: 'OK' },
+          i_1: { cnc: 'NC', observation: 'Revisar', corrective: 'Limpiar' },
         },
-        zona_sangria: {
-          zs_0: { cnc: 'C', observation: 'OK' },
-          zs_1: { cnc: 'NC', observation: 'Revisar', corrective: 'Limpiar' },
+        zona_limpia: {
+          l_0: { cnc: 'C' },
+          l_1: { cnc: 'NC', observation: 'Fuga' },
+        },
+        plataformas_limpia: {
+          p_0: {
+            platforms: { '1': 'C', '2': 'NC', '3': 'C' },
+            observation: 'Plat 2 sucia',
+          },
         },
       },
     },
@@ -106,7 +131,7 @@ const mockSubmission = {
 } as Parameters<typeof generateSubmissionPdf>[0];
 
 async function main() {
-  const buffer = await generateSubmissionPdf(mockSubmission);
+  const buffer = await generateSubmissionPdf(mockSubmission, { sheetId: 'sheet-3' });
   const outPath = path.join(__dirname, '..', 'test-output.pdf');
   fs.writeFileSync(outPath, buffer);
 

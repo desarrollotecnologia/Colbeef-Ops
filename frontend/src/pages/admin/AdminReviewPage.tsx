@@ -154,9 +154,7 @@ export default function AdminReviewPage() {
 
     submission.reviewedBy?.fullName ?? submission.signature?.admin?.fullName ?? null;
 
-  const canDownloadPdf =
-
-    submission.status === 'APPROVED' || submission.status === 'PENDING_REVIEW';
+  const canDownloadPdf = true;
 
   const currentSheet = sheets[currentSheetIndex];
 

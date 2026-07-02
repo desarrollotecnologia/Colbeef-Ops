@@ -124,12 +124,60 @@ function subColsFor(mode?: string): ('C' | 'NC' | 'NA')[] {
 
 function drawTableRowBorder(doc: PdfDoc, y: number, h: number, fill?: string) {
   const w = pageWidth(doc) - MARGIN * 2;
-  if (fill) doc.rect(MARGIN, y, w, h).fill(fill);
-  doc.rect(MARGIN, y, w, h).strokeColor('#ccc').lineWidth(0.4).stroke();
+  if (fill) {
+    doc.fillColor(fill).rect(MARGIN, y, w, h).fill();
+  }
+  doc.strokeColor('#ccc').lineWidth(0.4).rect(MARGIN, y, w, h).stroke();
+  doc.fillColor('#111');
 }
 
-function markCnc(cnc: string, choice: string): string {
-  return cnc === choice ? 'X' : '';
+function normalizeCnc(value: unknown): string {
+  const s = String(value ?? '')
+    .trim()
+    .toUpperCase();
+  return s === 'C' || s === 'NC' || s === 'NA' ? s : '';
+}
+
+function readItemCnc(data: ChecklistItemData | undefined): string {
+  if (!data) return '';
+  return normalizeCnc(data.cnc ?? data.rev_cnc ?? data.final_cnc);
+}
+
+function readPlatformCnc(platforms: Record<string, string> | undefined, plat: number): string {
+  if (!platforms) return '';
+  const key = String(plat);
+  return normalizeCnc(platforms[key] ?? (platforms as Record<number, string>)[plat]);
+}
+
+function drawCncMark(
+  doc: PdfDoc,
+  x: number,
+  y: number,
+  cnc: string,
+  choice: string,
+  width: number
+): void {
+  if (cnc !== choice) return;
+  doc.fontSize(7).font('Helvetica-Bold').fillColor('#000000').text('X', x, y, { width, align: 'center' });
+}
+
+function drawCncCells(
+  doc: PdfDoc,
+  x: number,
+  y: number,
+  cnc: string,
+  cW: number,
+  showNa: boolean
+): number {
+  drawCncMark(doc, x, y, cnc, 'C', cW);
+  drawCncMark(doc, x + cW, y, cnc, 'NC', cW);
+  if (showNa) drawCncMark(doc, x + cW * 2, y, cnc, 'NA', cW);
+  return x + cW * (showNa ? 3 : 2);
+}
+
+function coerceChecklistRecord(value: unknown): Record<string, ChecklistItemData> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, ChecklistItemData>;
 }
 
 function checklistColumnFlags(opts: FieldOptions) {
@@ -168,11 +216,12 @@ function renderSimpleChecklist(
 
   y = drawSectionBanner(doc, y, field.label, field.helpText ?? 'C / NC — marque con X', true);
 
-  const cW = 14;
+  const cW = 16;
   const cCols = showNa ? 3 : 2;
-  const labelW = Math.min(150, tableW - (showCnc ? cW * cCols : 0) - (showObs ? 90 : 0) - (showCorr ? 80 : 0) - 8);
-  const obsW = showObs ? 90 : 0;
-  const corrW = showCorr ? 80 : 0;
+  const obsW = showObs ? 88 : 0;
+  const corrW = showCorr ? 76 : 0;
+  const cncBlockW = showCnc ? cW * cCols : 0;
+  const labelW = Math.max(100, tableW - cncBlockW - obsW - corrW - 6);
 
   y = ensurePageSpace(doc, ctx, y, 14);
   doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
@@ -202,17 +251,14 @@ function renderSimpleChecklist(
     }
 
     const data = value[item.key] ?? {};
-    const cnc = data.cnc ?? '';
+    const cnc = readItemCnc(data);
     const rowH = 11;
     y = ensurePageSpace(doc, ctx, y, rowH);
     drawTableRowBorder(doc, y, rowH);
     doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(item.label, MARGIN + 3, y + 2, { width: labelW - 4 });
     x = MARGIN + labelW;
     if (showCnc) {
-      doc.text(markCnc(cnc, 'C'), x, y + 2, { width: cW, align: 'center' });
-      doc.text(markCnc(cnc, 'NC'), x + cW, y + 2, { width: cW, align: 'center' });
-      if (showNa) doc.text(markCnc(cnc, 'NA'), x + cW * 2, y + 2, { width: cW, align: 'center' });
-      x += cW * cCols;
+      x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
     }
     if (showObs) {
       doc.text(readScopedText(data, undefined, 'observation'), x, y + 2, { width: obsW - 2 });
@@ -289,9 +335,9 @@ function renderCavaMatrix(
       doc.fontSize(5).font('Helvetica').fillColor('#111').text(item.label, MARGIN + 2, y + 1, { width: labelW - 4 });
       x = MARGIN + labelW;
       for (const col of chunk) {
-        const mark = data.cavas?.[col.key] ?? '';
+        const mark = normalizeCnc(data.cavas?.[col.key]);
         for (const sub of subColsFor(col.mode)) {
-          doc.text(mark === sub ? 'X' : '', x, y + 1, { width: subW, align: 'center' });
+          drawCncMark(doc, x, y + 1, mark, sub, subW);
           x += subW;
         }
       }
@@ -319,9 +365,14 @@ function renderPlatformsTable(
   const opts = (field.options ?? {}) as FieldOptions;
   const items = opts.items ?? [];
   const count = opts.platformCount ?? 5;
+  const { showObs, showCorr } = checklistColumnFlags(opts);
   const tableW = pageWidth(doc) - MARGIN * 2;
-  const labelW = 95;
-  const platSubW = 11;
+  const platSubW = 12;
+  const platBlockW = platSubW * 2;
+  const platTotalW = count * platBlockW;
+  const obsW = showObs ? 72 : 0;
+  const corrW = showCorr ? 68 : 0;
+  const labelW = Math.max(80, tableW - platTotalW - obsW - corrW - 4);
   let y = startY;
 
   y = drawSectionBanner(doc, y, field.label, `PLAT 1 – ${count} · C / NC por plataforma`, true);
@@ -332,16 +383,18 @@ function renderPlatformsTable(
   doc.text('Equipo / superficie', MARGIN + 3, y + 2, { width: labelW });
   let x = MARGIN + labelW;
   for (let i = 1; i <= count; i++) {
-    doc.text(`P${i}`, x, y + 1, { width: platSubW * 2, align: 'center' });
-    x += platSubW * 2;
+    doc.text(`P${i}`, x, y + 1, { width: platBlockW, align: 'center' });
+    x += platBlockW;
   }
+  if (showObs) doc.text('Observaciones', x, y + 2, { width: obsW });
+  if (showCorr) doc.text('Acción correctiva', x + (showObs ? obsW : 0), y + 2, { width: corrW });
   y += 11;
   drawTableRowBorder(doc, y, 9, '#fafafa');
   x = MARGIN + labelW;
   for (let i = 0; i < count; i++) {
     doc.text('C', x, y + 1, { width: platSubW, align: 'center' });
     doc.text('NC', x + platSubW, y + 1, { width: platSubW, align: 'center' });
-    x += platSubW * 2;
+    x += platBlockW;
   }
   y += 9;
 
@@ -350,13 +403,23 @@ function renderPlatformsTable(
     const rowH = 10;
     y = ensurePageSpace(doc, ctx, y, rowH);
     drawTableRowBorder(doc, y, rowH);
-    doc.fontSize(5.5).font('Helvetica').text(item.label, MARGIN + 3, y + 1, { width: labelW - 4 });
+    doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(item.label, MARGIN + 3, y + 1, { width: labelW - 4 });
     x = MARGIN + labelW;
     for (let i = 1; i <= count; i++) {
-      const v = data.platforms?.[String(i)] ?? '';
-      doc.text(markCnc(v, 'C'), x, y + 1, { width: platSubW, align: 'center' });
-      doc.text(markCnc(v, 'NC'), x + platSubW, y + 1, { width: platSubW, align: 'center' });
-      x += platSubW * 2;
+      const v = readPlatformCnc(data.platforms, i);
+      drawCncMark(doc, x, y + 1, v, 'C', platSubW);
+      drawCncMark(doc, x + platSubW, y + 1, v, 'NC', platSubW);
+      x += platBlockW;
+    }
+    if (showObs) {
+      doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(data.observation ?? '', x, y + 1, { width: obsW - 2 });
+    }
+    if (showCorr) {
+      doc
+        .fontSize(5.5)
+        .font('Helvetica')
+        .fillColor('#111')
+        .text(data.corrective ?? '', x + (showObs ? obsW : 0), y + 1, { width: corrW - 2 });
     }
     y += rowH;
   }
@@ -471,7 +534,7 @@ function renderDaySchedule(
     for (const punto of points) {
       const key = slugifyPoint(punto);
       const row = value[key] ?? {};
-      const cnc = row.cnc ?? '';
+      const cnc = normalizeCnc(row.cnc);
       y = ensurePageSpace(doc, ctx, y, 10);
       drawTableRowBorder(doc, y, 10);
       doc.fontSize(5.5).font('Helvetica').fillColor('#111');
@@ -482,8 +545,7 @@ function renderDaySchedule(
       x += cloroW;
       doc.text('7.0', x, y + 1, { width: phW, align: 'center' });
       x += phW;
-      doc.text(markCnc(cnc, 'C'), x, y + 1, { width: cW, align: 'center' });
-      doc.text(markCnc(cnc, 'NC'), x + cW, y + 1, { width: cW, align: 'center' });
+      drawCncCells(doc, x, y + 1, cnc, cW, false);
       doc.text(row.observaciones ?? '—', x + cW * 2 + 2, y + 1, { width: obsW - 4 });
       y += 10;
     }
@@ -509,7 +571,7 @@ function renderDaySchedule(
     for (const punto of points) {
       const key = slugifyPoint(punto);
       const row = value[key] ?? {};
-      const cnc = row.cnc ?? '';
+      const cnc = normalizeCnc(row.cnc);
       y = ensurePageSpace(doc, ctx, y, 10);
       drawTableRowBorder(doc, y, 10);
       doc.fontSize(5.5).font('Helvetica').fillColor('#111');
@@ -518,8 +580,7 @@ function renderDaySchedule(
       x += puntoW;
       doc.text(row.temperatura ?? '—', x, y + 1, { width: tempW, align: 'center' });
       x += tempW;
-      doc.text(markCnc(cnc, 'C'), x, y + 1, { width: cW, align: 'center' });
-      doc.text(markCnc(cnc, 'NC'), x + cW, y + 1, { width: cW, align: 'center' });
+      drawCncCells(doc, x, y + 1, cnc, cW, false);
       doc.text(row.observaciones ?? '—', x + cW * 2 + 2, y + 1, { width: obsW - 4 });
       y += 10;
     }
@@ -542,12 +603,6 @@ function renderFormalMeasureTable(
   const showNa = opts.mode === 'cnc_na';
   let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
   const w = pageWidth(doc) - MARGIN * 2;
-
-  const drawCncCells = (x: number, rowY: number, cnc: string, cW: number) => {
-    doc.text(markCnc(cnc, 'C'), x, rowY, { width: cW, align: 'center' });
-    doc.text(markCnc(cnc, 'NC'), x + cW, rowY, { width: cW, align: 'center' });
-    if (showNa) doc.text(markCnc(cnc, 'NA'), x + cW * 2, rowY, { width: cW, align: 'center' });
-  };
 
   if (tableType === 'cloro') {
     const cols = [
@@ -577,10 +632,10 @@ function renderFormalMeasureTable(
 
     items.forEach((item, idx) => {
       const row = value[item.key] ?? {};
-      const cnc = row.cnc ?? '';
+      const cnc = normalizeCnc(row.cnc);
       y = ensurePageSpace(doc, ctx, y, 10);
       drawTableRowBorder(doc, y, 10);
-      doc.fontSize(5.5).font('Helvetica');
+      doc.fontSize(5.5).font('Helvetica').fillColor('#111');
       x = MARGIN;
       doc.text(String(idx + 1), x, y + 1, { width: cols[0].w, align: 'center' });
       x += cols[0].w;
@@ -592,8 +647,7 @@ function renderFormalMeasureTable(
       x += cols[3].w;
       doc.text(row.cloro_residual ?? '—', x, y + 1, { width: cols[4].w, align: 'center' });
       x += cols[4].w;
-      drawCncCells(x, y + 1, cnc, cW);
-      x += cW * cCols;
+      x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
       doc.text(row.corrective ?? row.observation ?? '—', x, y + 1, { width: corrW });
       y += 10;
     });
@@ -626,10 +680,10 @@ function renderFormalMeasureTable(
 
     items.forEach((item) => {
       const row = value[item.key] ?? {};
-      const cnc = row.cnc ?? '';
+      const cnc = normalizeCnc(row.cnc);
       y = ensurePageSpace(doc, ctx, y, 10);
       drawTableRowBorder(doc, y, 10);
-      doc.fontSize(5.5).font('Helvetica');
+      doc.fontSize(5.5).font('Helvetica').fillColor('#111');
       x = MARGIN;
       doc.text(item.label, x, y + 1, { width: cols[0].w });
       x += cols[0].w;
@@ -637,8 +691,7 @@ function renderFormalMeasureTable(
       x += cols[1].w;
       doc.text(row.temperatura ?? '—', x, y + 1, { width: cols[2].w, align: 'center' });
       x += cols[2].w;
-      drawCncCells(x, y + 1, cnc, cW);
-      x += cW * cCols;
+      x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
       doc.text(row.observation ?? '—', x, y + 1, { width: obsW });
       y += 10;
     });
@@ -685,13 +738,14 @@ function renderField(
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.items?.length) {
+    const checklistValue = coerceChecklistRecord(value);
     if (stringColumns(opts).includes('cavaColumns') || opts.columnDefs?.length || opts.cavaColumns?.length) {
-      return renderCavaMatrix(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
+      return renderCavaMatrix(doc, ctx, field, checklistValue, y);
     }
     if (stringColumns(opts).includes('platforms')) {
-      return renderPlatformsTable(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
+      return renderPlatformsTable(doc, ctx, field, checklistValue, y);
     }
-    return renderSimpleChecklist(doc, ctx, field, (value as Record<string, ChecklistItemData>) ?? {}, y);
+    return renderSimpleChecklist(doc, ctx, field, checklistValue, y);
   }
 
   if (field.fieldType === 'PHOTO') {

@@ -284,7 +284,7 @@ export default function FillFormPage() {
     setPdfLoading(true);
     try {
       if (canEdit) {
-        await saveCurrentSheet();
+        await saveSheet(currentSheet.id, fields);
       }
       await downloadSubmissionPdf(submission.id, { sheetId: currentSheet.id });
     } catch (err) {
