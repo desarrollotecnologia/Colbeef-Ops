@@ -146,10 +146,20 @@ function normalizeCnc(value: unknown): string {
   return s === 'C' || s === 'NC' || s === 'NA' ? s : '';
 }
 
-function markCnc(value: unknown, choice?: string): string {
-  const cnc = normalizeCnc(value);
-  if (choice) return cnc === choice ? 'X' : '—';
-  return cnc ? cnc : '—';
+function fieldBannerTitle(field: FormatField): { title: string; subtitle?: string } {
+  if (field.groupName && field.groupName !== field.label) {
+    return { title: field.groupName, subtitle: field.label };
+  }
+  return { title: field.label, subtitle: field.helpText ?? undefined };
+}
+
+function shouldSkipOuterBanner(field: FormatField, opts: FieldOptions): boolean {
+  if (field.fieldType === 'CHECKLIST' && opts.layout === 'formal_measure_table') return true;
+  if (field.fieldType === 'CHECKLIST' && Boolean(opts.items?.length)) return true;
+  if (field.fieldType === 'CHECKLIST' && opts.layout === 'poes_operativo_table') return true;
+  if (field.fieldType === 'CHECKLIST' && opts.layout === 'poes_bpm_table') return true;
+  if (field.fieldType === 'REPEATER' && opts.layout === 'pc_inocuidad_repeater') return true;
+  return false;
 }
 
 function readItemCnc(data: ChecklistItemData | undefined): string {
@@ -445,21 +455,29 @@ function renderPoesOperativoTable(
   ctx: SheetPageContext,
   field: FormatField,
   value: Record<string, Record<string, unknown>>,
-  startY: number
+  startY: number,
+  sheetData?: Record<string, unknown>
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
   const items = opts.items ?? [];
-  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
+  const { title, subtitle } = fieldBannerTitle(field);
+  const hora1 = str(sheetData?.poes_hora_1);
+  const hora2 = str(sheetData?.poes_hora_2);
+  let y = drawSectionBanner(doc, startY, title, subtitle ?? field.helpText ?? undefined, true);
   const w = pageWidth(doc) - MARGIN * 2;
-  const labelW = 90;
-  const cellW = (w - labelW) / 12;
+  const labelW = 88;
+  const tomaCols = 7;
+  const cellW = (w - labelW) / (tomaCols * 2);
 
   y = ensurePageSpace(doc, ctx, y, 12);
   drawTableRowBorder(doc, y, 11, '#f3f4f6');
   doc.fontSize(5).font('Helvetica-Bold');
   doc.text('Equipo', MARGIN, y + 2, { width: labelW });
-  doc.text('Toma 1: Temp · C/NC est · C/NC lav · Obs', MARGIN + labelW, y + 2, { width: cellW * 6 });
-  doc.text('Toma 2: Temp · C/NC est · C/NC lav · Obs', MARGIN + labelW + cellW * 6, y + 2, { width: cellW * 6 });
+  doc.text(hora1 ? `Toma 1 (${hora1})` : 'Toma 1', MARGIN + labelW, y + 2, { width: cellW * tomaCols, align: 'center' });
+  doc.text(hora2 ? `Toma 2 (${hora2})` : 'Toma 2', MARGIN + labelW + cellW * tomaCols, y + 2, {
+    width: cellW * tomaCols,
+    align: 'center',
+  });
   y += 11;
 
   const renderToma = (toma: Record<string, unknown> | undefined, x0: number) => {
@@ -467,36 +485,42 @@ function renderPoesOperativoTable(
     doc.fontSize(5).font('Helvetica').fillColor('#111');
     doc.text(str(toma?.temp ?? '—'), x, y + 1, { width: cellW, align: 'center' });
     x += cellW;
-    doc.text(markCnc(toma?.cnc_est, 'C'), x, y + 1, { width: cellW, align: 'center' });
+    const est = normalizeCnc(toma?.cnc_est);
+    drawCncMark(doc, x, y + 1, est, 'C', cellW);
     x += cellW;
-    doc.text(markCnc(toma?.cnc_est, 'NC'), x, y + 1, { width: cellW, align: 'center' });
+    drawCncMark(doc, x, y + 1, est, 'NC', cellW);
     x += cellW;
-    doc.text(markCnc(toma?.cnc_lav, 'C'), x, y + 1, { width: cellW, align: 'center' });
+    drawCncMark(doc, x, y + 1, est, 'NA', cellW);
     x += cellW;
-    doc.text(markCnc(toma?.cnc_lav, 'NC'), x, y + 1, { width: cellW, align: 'center' });
+    const lav = normalizeCnc(toma?.cnc_lav);
+    drawCncMark(doc, x, y + 1, lav, 'C', cellW);
+    x += cellW;
+    drawCncMark(doc, x, y + 1, lav, 'NC', cellW);
     x += cellW;
     doc.text(str(toma?.obs ?? '—'), x, y + 1, { width: cellW });
   };
 
-  items.forEach((item) => {
+  items.forEach((item, idx) => {
     const row = (value[item.key] ?? {}) as { toma1?: Record<string, unknown>; toma2?: Record<string, unknown> };
     y = ensurePageSpace(doc, ctx, y, 10);
-    drawTableRowBorder(doc, y, 10);
+    if (idx % 2 === 1) drawTableRowBorder(doc, y, 10, '#f9fafb');
+    else drawTableRowBorder(doc, y, 10);
     doc.fontSize(5).font('Helvetica-Bold').text(item.label, MARGIN, y + 1, { width: labelW });
     renderToma(row.toma1, MARGIN + labelW);
-    renderToma(row.toma2, MARGIN + labelW + cellW * 6);
+    renderToma(row.toma2, MARGIN + labelW + cellW * tomaCols);
     y += 10;
   });
 
   const extrasRaw = value._extras;
   const extras = Array.isArray(extrasRaw) ? (extrasRaw as { id: string; label: string }[]) : [];
-  extras.forEach((ex) => {
+  extras.forEach((ex, idx) => {
     const row = (value[ex.id] ?? {}) as { label?: string; toma1?: Record<string, unknown>; toma2?: Record<string, unknown> };
     y = ensurePageSpace(doc, ctx, y, 10);
-    drawTableRowBorder(doc, y, 10);
+    if ((items.length + idx) % 2 === 1) drawTableRowBorder(doc, y, 10, '#f9fafb');
+    else drawTableRowBorder(doc, y, 10);
     doc.fontSize(5).font('Helvetica-Bold').text(row.label || ex.label || 'Equipo', MARGIN, y + 1, { width: labelW });
     renderToma(row.toma1, MARGIN + labelW);
-    renderToma(row.toma2, MARGIN + labelW + cellW * 6);
+    renderToma(row.toma2, MARGIN + labelW + cellW * tomaCols);
     y += 10;
   });
 
@@ -512,7 +536,8 @@ function renderPoesBpmTable(
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
   const items = opts.items ?? [];
-  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
+  const { title, subtitle } = fieldBannerTitle(field);
+  let y = drawSectionBanner(doc, startY, title, subtitle ?? field.helpText ?? undefined, true);
   const w = pageWidth(doc) - MARGIN * 2;
   const cols = [
     { l: 'Procedimiento', w: 100 },
@@ -539,21 +564,24 @@ function renderPoesBpmTable(
   doc.text('Resp.', x + obsW + acW, y + 2, { width: respW });
   y += 11;
 
-  items.forEach((item) => {
+  items.forEach((item, idx) => {
     const row = value[item.key] ?? {};
     y = ensurePageSpace(doc, ctx, y, 10);
-    drawTableRowBorder(doc, y, 10);
+    if (idx % 2 === 1) drawTableRowBorder(doc, y, 10, '#f9fafb');
+    else drawTableRowBorder(doc, y, 10);
     doc.fontSize(5).font('Helvetica').fillColor('#111');
     x = MARGIN;
     doc.text(item.label, x, y + 1, { width: cols[0].w });
     x += cols[0].w;
-    doc.text(markCnc(row.lavado_manos, 'C'), x, y + 1, { width: cols[1].w, align: 'center' });
+    const lav = normalizeCnc(row.lavado_manos);
+    drawCncMark(doc, x, y + 1, lav, 'C', cols[1].w);
     x += cols[1].w;
-    doc.text(markCnc(row.lavado_manos, 'NC'), x, y + 1, { width: cols[2].w, align: 'center' });
+    drawCncMark(doc, x, y + 1, lav, 'NC', cols[2].w);
     x += cols[2].w;
-    doc.text(markCnc(row.tapabocas, 'C'), x, y + 1, { width: cols[3].w, align: 'center' });
+    const tap = normalizeCnc(row.tapabocas);
+    drawCncMark(doc, x, y + 1, tap, 'C', cols[3].w);
     x += cols[3].w;
-    doc.text(markCnc(row.tapabocas, 'NC'), x, y + 1, { width: cols[4].w, align: 'center' });
+    drawCncMark(doc, x, y + 1, tap, 'NC', cols[4].w);
     x += cols[4].w;
     doc.text(row.observation ?? '—', x, y + 1, { width: obsW });
     doc.text(row.corrective ?? '—', x + obsW, y + 1, { width: acW });
@@ -570,12 +598,23 @@ function renderPcInocuidadRepeater(
   rows: Record<string, unknown>[],
   startY: number
 ): number {
-  const hallazgoCols = ['vr_cr', 'vb_cr', 'vb_mf', 'cb_cr', 'pm_coc', 'pm_pelo', 'lg_cr'];
-  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
+  const hallazgoCols = [
+    { key: 'vr_cr', label: 'CR', group: 'V.R.' },
+    { key: 'vb_cr', label: 'CR', group: 'V.B.' },
+    { key: 'vb_mf', label: 'MF', group: 'V.B.' },
+    { key: 'cb_cr', label: 'CR', group: 'C.B.' },
+    { key: 'pm_coc', label: 'COC', group: 'P.M.' },
+    { key: 'pm_pelo', label: 'PELO', group: 'P.M.' },
+    { key: 'lg_cr', label: 'CR', group: 'L.G.' },
+  ];
+  const { title, subtitle } = fieldBannerTitle(field);
+  let y = drawSectionBanner(doc, startY, title, subtitle ?? field.helpText ?? undefined, true);
   const w = pageWidth(doc) - MARGIN * 2;
-  const codW = 36;
-  const hallW = 22;
-  const tail = w - 14 - codW - hallW * hallazgoCols.length;
+  const idxW = 14;
+  const codW = 34;
+  const subW = 7;
+  const hallBlockW = subW * 3;
+  const tail = w - idxW - codW - hallBlockW * hallazgoCols.length;
   const obsW = tail * 0.55;
   const acW = tail - obsW;
 
@@ -583,31 +622,47 @@ function renderPcInocuidadRepeater(
   drawTableRowBorder(doc, y, 11, '#f3f4f6');
   doc.fontSize(5).font('Helvetica-Bold');
   let x = MARGIN;
-  doc.text('#', x, y + 2, { width: 14, align: 'center' });
-  x += 14;
+  doc.text('#', x, y + 2, { width: idxW, align: 'center' });
+  x += idxW;
   doc.text('Código', x, y + 2, { width: codW });
   x += codW;
-  hallazgoCols.forEach((k) => {
-    doc.text(k.replace('_', ' ').toUpperCase(), x, y + 2, { width: hallW, align: 'center' });
-    x += hallW;
+  const groups = ['V.R.', 'V.B.', 'C.B.', 'P.M.', 'L.G.'];
+  const groupSpans = [1, 2, 1, 2, 1];
+  groups.forEach((g, gi) => {
+    doc.text(g, x, y + 2, { width: hallBlockW * groupSpans[gi], align: 'center' });
+    x += hallBlockW * groupSpans[gi];
   });
   doc.text('Obs.', x, y + 2, { width: obsW });
   doc.text('AC', x + obsW, y + 2, { width: acW });
   y += 11;
 
+  y = ensurePageSpace(doc, ctx, y, 10);
+  drawTableRowBorder(doc, y, 10, '#fafafa');
+  x = MARGIN + idxW + codW;
+  doc.fontSize(4.5).font('Helvetica-Bold');
+  hallazgoCols.forEach((c) => {
+    doc.text(c.label, x, y + 1, { width: hallBlockW, align: 'center' });
+    x += hallBlockW;
+  });
+  y += 10;
+
   rows.forEach((row, i) => {
     const hallazgos = (row.hallazgos ?? {}) as Record<string, string>;
     y = ensurePageSpace(doc, ctx, y, 10);
-    drawTableRowBorder(doc, y, 10);
+    if (i % 2 === 1) drawTableRowBorder(doc, y, 10, '#f9fafb');
+    else drawTableRowBorder(doc, y, 10);
     doc.fontSize(5).font('Helvetica').fillColor('#111');
     x = MARGIN;
-    doc.text(String(i + 1), x, y + 1, { width: 14, align: 'center' });
-    x += 14;
+    doc.text(String(i + 1), x, y + 1, { width: idxW, align: 'center' });
+    x += idxW;
     doc.text(str(row.codigo), x, y + 1, { width: codW });
     x += codW;
-    hallazgoCols.forEach((k) => {
-      doc.text(markCnc(hallazgos[k] ?? ''), x, y + 1, { width: hallW, align: 'center' });
-      x += hallW;
+    hallazgoCols.forEach((col) => {
+      const cnc = normalizeCnc(hallazgos[col.key]);
+      drawCncMark(doc, x, y + 1, cnc, 'C', subW);
+      drawCncMark(doc, x + subW, y + 1, cnc, 'NC', subW);
+      drawCncMark(doc, x + subW * 2, y + 1, cnc, 'NA', subW);
+      x += hallBlockW;
     });
     doc.text(str(row.observation), x, y + 1, { width: obsW });
     doc.text(str(row.corrective), x + obsW, y + 1, { width: acW });
@@ -648,14 +703,24 @@ function renderRepeaterTable(
   }
 
   const tableW = pageWidth(doc) - MARGIN * 2;
-  const colW = tableW / cols.length;
+  type PdfCol = { key: string; label: string; cncChoice?: 'C' | 'NC' };
+  const expanded: PdfCol[] = [{ key: '_idx', label: '#' }];
+  for (const col of cols) {
+    if (col.key === 'cnc') {
+      expanded.push({ key: 'cnc', label: 'C', cncChoice: 'C' });
+      expanded.push({ key: 'cnc', label: 'NC', cncChoice: 'NC' });
+    } else {
+      expanded.push({ key: col.key, label: col.label });
+    }
+  }
+  const colW = tableW / expanded.length;
   let y = startY;
   const headerH = 11;
 
   y = ensurePageSpace(doc, ctx, y, headerH);
   drawTableRowBorder(doc, y, headerH, '#f3f4f6');
   doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
-  cols.forEach((col, i) => doc.text(col.label, MARGIN + i * colW + 2, y + 2, { width: colW - 4 }));
+  expanded.forEach((col, i) => doc.text(col.label, MARGIN + i * colW + 2, y + 2, { width: colW - 4, align: col.key === '_idx' || col.cncChoice ? 'center' : 'left' }));
   y += headerH;
 
   if (rows.length === 0) {
@@ -668,11 +733,20 @@ function renderRepeaterTable(
     y = ensurePageSpace(doc, ctx, y, rowH);
     if (ri % 2 === 1) drawTableRowBorder(doc, y, rowH, '#f9fafb');
     else drawTableRowBorder(doc, y, rowH);
-    cols.forEach((col, i) => {
+    expanded.forEach((col, i) => {
+      const x = MARGIN + i * colW + 2;
+      if (col.key === '_idx') {
+        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#666').text(String(ri + 1), x, y + 1, { width: colW - 4, align: 'center' });
+        return;
+      }
+      if (col.cncChoice) {
+        drawCncMark(doc, x, y + 1, normalizeCnc(row[col.key]), col.cncChoice, colW - 4);
+        return;
+      }
       let cell = str(row[col.key]);
       if (col.key === 'decomiso_parcial') cell = String(row[col.key] ?? '') === 'Parcial' ? 'X' : '—';
       if (col.key === 'decomiso_total') cell = String(row[col.key] ?? '') === 'Total' ? 'X' : '—';
-      doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(cell, MARGIN + i * colW + 2, y + 1, {
+      doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(cell, x, y + 1, {
         width: colW - 4,
         align: col.key.startsWith('decomiso_') ? 'center' : 'left',
       });
@@ -742,16 +816,21 @@ function renderDaySchedule(
       doc.text(row.observaciones ?? '—', x + cW * 2 + 2, y + 1, { width: obsW - 4 });
       y += 10;
     }
-  } else {
-    const puntoW = Math.min(120, w * 0.32);
-    const tempW = 48;
+  } else if (tableType === 'esterilizadores') {
+    const noteW = 52;
+    const puntoW = Math.min(100, w * 0.26);
+    const tempW = 44;
     const cW = 12;
-    const obsW = w - puntoW - tempW - cW * 2;
+    const obsW = w - noteW - puntoW - tempW - cW * 2;
+    const estNote =
+      'Funcionamiento, temperatura (82,5°C) o solución desinfectante aprobada para utilización en industria de alimentos';
 
     y = ensurePageSpace(doc, ctx, y, 12);
     drawTableRowBorder(doc, y, 11, '#f3f4f6');
     doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
     let x = MARGIN;
+    doc.text('', x, y + 2, { width: noteW });
+    x += noteW;
     doc.text('Puntos de inspección', x + 2, y + 2, { width: puntoW });
     x += puntoW;
     doc.text('Temp °C', x, y + 2, { width: tempW, align: 'center' });
@@ -761,22 +840,32 @@ function renderDaySchedule(
     doc.text('Observación', x + cW * 2 + 2, y + 2, { width: obsW - 4 });
     y += 11;
 
-    for (const punto of points) {
+    for (let pi = 0; pi < points.length; pi++) {
+      const punto = points[pi];
       const key = slugifyPoint(punto);
       const row = value[key] ?? {};
       const cnc = normalizeCnc(row.cnc);
       y = ensurePageSpace(doc, ctx, y, 10);
-      drawTableRowBorder(doc, y, 10);
+      if (pi % 2 === 1) drawTableRowBorder(doc, y, 10, '#f9fafb');
+      else drawTableRowBorder(doc, y, 10);
       doc.fontSize(5.5).font('Helvetica').fillColor('#111');
       x = MARGIN;
+      if (pi === 0) {
+        doc.fontSize(4.5).font('Helvetica-Bold').text('ESTERILIZADORES', x + 2, y + 1, { width: noteW - 4 });
+        doc.fontSize(4).font('Helvetica').text(estNote, x + 2, y + 8, { width: noteW - 4 });
+      }
+      x += noteW;
       doc.text(punto, x + 2, y + 1, { width: puntoW - 4 });
       x += puntoW;
       doc.text(row.temperatura ?? '—', x, y + 1, { width: tempW, align: 'center' });
       x += tempW;
       drawCncCells(doc, x, y + 1, cnc, cW, false);
       doc.text(row.observaciones ?? '—', x + cW * 2 + 2, y + 1, { width: obsW - 4 });
-      y += 10;
+      y += pi === 0 ? 22 : 10;
     }
+  } else {
+    doc.fontSize(6.5).font('Helvetica').fillColor('#666').text('Tipo de tabla no soportado en PDF.', MARGIN, y);
+    y += 14;
   }
   return y + 6;
 }
@@ -794,7 +883,8 @@ function renderFormalMeasureTable(
   const items = opts.items ?? [];
   const tableType = opts.tableType ?? 'cloro';
   const showNa = opts.mode === 'cnc_na';
-  let y = drawSectionBanner(doc, startY, field.label, field.helpText ?? undefined, true);
+  const { title, subtitle } = fieldBannerTitle(field);
+  let y = drawSectionBanner(doc, startY, title, subtitle ?? field.helpText ?? undefined, true);
   const w = pageWidth(doc) - MARGIN * 2;
 
   if (tableType === 'cloro') {
@@ -957,9 +1047,16 @@ function renderField(
   ctx: SheetPageContext,
   field: FormatField,
   value: unknown,
-  y: number
+  y: number,
+  sheetData?: Record<string, unknown>
 ): number {
   if (field.fieldKey === 'empresa') return y;
+  if (
+    ctx.formatCode === 'POES_OPERATIVO' &&
+    (field.fieldKey === 'poes_hora_1' || field.fieldKey === 'poes_hora_2')
+  ) {
+    return y;
+  }
   const opts = (field.options ?? {}) as FieldOptions;
   const maxW = pageWidth(doc) - MARGIN * 2;
 
@@ -967,9 +1064,11 @@ function renderField(
   const isItemChecklist = field.fieldType === 'CHECKLIST' && Boolean(opts.items?.length);
   const isDaySchedule = field.fieldType === 'CHECKLIST' && opts.layout === 'day_schedule_table';
   const isFormalMeasure = field.fieldType === 'CHECKLIST' && opts.layout === 'formal_measure_table';
+  const skipBanner = shouldSkipOuterBanner(field, opts);
 
-  if (!isItemChecklist && !isFormalMeasure) {
-    y = drawSectionBanner(doc, y, field.label, field.helpText ?? undefined, true);
+  if (!skipBanner) {
+    const { title, subtitle } = fieldBannerTitle(field);
+    y = drawSectionBanner(doc, y, title, subtitle, true);
   }
 
   if (isDaySchedule) {
@@ -981,11 +1080,17 @@ function renderField(
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.layout === 'poes_operativo_table') {
-    return renderPoesOperativoTable(doc, ctx, field, (value as Record<string, Record<string, unknown>>) ?? {}, y);
+    return renderPoesOperativoTable(doc, ctx, field, (value as Record<string, Record<string, unknown>>) ?? {}, y, sheetData);
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.layout === 'poes_bpm_table') {
     return renderPoesBpmTable(doc, ctx, field, (value as Record<string, Record<string, string>>) ?? {}, y);
+  }
+
+  if (field.fieldType === 'READONLY') {
+    const text = field.defaultValue ?? str(value);
+    doc.fontSize(7).font('Helvetica').fillColor('#111').text(text, MARGIN, y, { width: maxW });
+    return y + doc.heightOfString(text, { width: maxW }) + 8;
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.items?.length) {
@@ -1098,7 +1203,7 @@ function renderSheetPage(
     y = renderDecomisosSheet(doc, fields, sheetData, y);
   } else {
     for (const field of fields) {
-      y = renderField(doc, ctx, field, sheetData[field.fieldKey], y);
+      y = renderField(doc, ctx, field, sheetData[field.fieldKey], y, sheetData);
       y += 4;
     }
   }

@@ -7,7 +7,7 @@ import Card, { CardBody } from '@/components/Card';
 import Button from '@/components/Button';
 import { downloadSubmissionPdf } from '@/lib/downloadPdf';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { formatWorkDateShort, getWorkDateString, toWorkDateString } from '@/lib/workDate';
+import { formatWorkDateShort, formatTimeBogota, getWorkDateString, toWorkDateString } from '@/lib/workDate';
 import type { FormSubmission } from '@/types';
 
 const statusConfig = {
@@ -79,6 +79,9 @@ export default function OperatorSubmissions() {
                     <h3 className="font-semibold">{sub.format?.name}</h3>
                     <p className="text-sm text-gray-500">
                       Fecha: {formatWorkDateShort(workDateStr)}
+                      {sub.status === 'DRAFT' && sub.updatedAt && (
+                        <span> · Guardado a las {formatTimeBogota(sub.updatedAt)}</span>
+                      )}
                       {isOldDraft && (
                         <span className="ml-2 text-amber-600 font-medium">· Borrador anterior</span>
                       )}

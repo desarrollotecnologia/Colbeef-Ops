@@ -163,7 +163,7 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[640px]">
           <thead>
-            <tr className="bg-gray-100 border-b-2 border-gray-800">
+            <tr className="bg-white border-b-2 border-gray-800">
               <th className={`${thClass} w-8 text-center`}>#</th>
               {columns.map((col) => (
                 <th key={col.key} className={thClass}>

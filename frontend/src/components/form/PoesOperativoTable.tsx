@@ -29,28 +29,35 @@ function getEquipoRow(value: PoesEquiposValue, key: string): PoesEquipoRow {
   return row;
 }
 
+const CNC_ACTIVE: Record<'C' | 'NC' | 'NA', string> = {
+  C: 'bg-green-600 text-white border-green-600',
+  NC: 'bg-red-600 text-white border-red-600',
+  NA: 'bg-gray-500 text-white border-gray-500',
+};
+
 function CncBtn({
   choice,
   value,
   disabled,
   onChange,
-  na = false,
 }: {
   choice: 'C' | 'NC' | 'NA';
   value: string;
   disabled?: boolean;
   onChange: (v: Cnc) => void;
-  na?: boolean;
 }) {
-  if (na && choice === 'NA') {
-    return (
-      <button type="button" disabled={disabled} onClick={() => onChange(value === 'NA' ? '' : 'NA')} className={`w-full py-0.5 text-[10px] font-bold rounded border ${value === 'NA' ? 'bg-gray-500 text-white' : 'bg-white border-gray-300'}`}>NA</button>
-    );
-  }
   const active = value === choice;
-  const cls = choice === 'C' ? 'bg-green-600 text-white' : 'bg-red-600 text-white';
   return (
-    <button type="button" disabled={disabled} onClick={() => onChange(active ? '' : choice)} className={`w-full py-0.5 text-[10px] font-bold rounded border ${active ? cls : 'bg-white border-gray-300'}`}>{choice}</button>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onChange(active ? '' : choice)}
+      className={`w-full py-1 text-[10px] font-bold rounded border-2 ${
+        active ? CNC_ACTIVE[choice] : 'bg-white border-gray-300'
+      }`}
+    >
+      {choice}
+    </button>
   );
 }
 
@@ -67,14 +74,16 @@ function TomaCells({
 }) {
   return (
     <>
-      <td className="px-1 py-1 border-b border-gray-400">
+      <td className="px-1 py-1 border-r border-b border-gray-400">
         <input type="text" value={data.temp ?? ''} disabled={disabled} onChange={(e) => onPatch({ temp: e.target.value })} placeholder="°C" className={`${INPUT_CLASS} text-xs py-1`} />
       </td>
-      <td className="px-1 py-1 border-b border-gray-400 text-center w-10"><CncBtn choice="C" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} na={estNa} /></td>
-      <td className="px-1 py-1 border-b border-gray-400 text-center w-10"><CncBtn choice="NC" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} na={estNa} /></td>
-      {estNa && <td className="px-1 py-1 border-b border-gray-400 text-center w-10"><CncBtn choice="NA" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} na /></td>}
-      <td className="px-1 py-1 border-b border-gray-400 text-center w-10"><CncBtn choice="C" value={data.cnc_lav ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_lav: v })} /></td>
-      <td className="px-1 py-1 border-b border-gray-400 text-center w-10"><CncBtn choice="NC" value={data.cnc_lav ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_lav: v })} /></td>
+      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10 bg-green-50/60"><CncBtn choice="C" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} /></td>
+      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10 bg-red-50/60"><CncBtn choice="NC" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} /></td>
+      {estNa && (
+        <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10"><CncBtn choice="NA" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} /></td>
+      )}
+      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10 bg-green-50/60"><CncBtn choice="C" value={data.cnc_lav ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_lav: v })} /></td>
+      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10 bg-red-50/60"><CncBtn choice="NC" value={data.cnc_lav ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_lav: v })} /></td>
       <td className="px-1 py-1 border-b border-gray-400">
         <input type="text" value={data.obs ?? ''} disabled={disabled} onChange={(e) => onPatch({ obs: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} />
       </td>
@@ -87,9 +96,11 @@ interface Props {
   value: PoesEquiposValue;
   onChange: (v: PoesEquiposValue) => void;
   disabled?: boolean;
+  hora1?: string;
+  hora2?: string;
 }
 
-export default function PoesOperativoTable({ options, value, onChange, disabled }: Props) {
+export default function PoesOperativoTable({ options, value, onChange, disabled, hora1, hora2 }: Props) {
   const items = options.items ?? [];
   const extras = (value._extras as { id: string; label: string }[] | undefined) ?? [];
 
@@ -116,12 +127,12 @@ export default function PoesOperativoTable({ options, value, onChange, disabled 
     onChange({ ...next, _extras: extras.filter((e) => e.id !== id) });
   };
 
-  const renderRow = (key: string, label: string, editableLabel = false) => {
+  const renderRow = (key: string, label: string, editableLabel = false, idx = 0) => {
     const row = getEquipoRow(value, key);
     const isAcido = label.toLowerCase().includes('ácido') || label.toLowerCase().includes('acido');
     return (
-      <tr key={key} className="bg-white">
-        <td className="px-2 py-1 border-b border-gray-400 text-xs font-medium">
+      <tr key={key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+        <td className="px-2 py-1 border-r border-b border-gray-400 text-xs font-medium">
           {editableLabel ? (
             <input type="text" value={row.label ?? label} disabled={disabled} onChange={(e) => updateRow(key, { label: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} placeholder="Equipo" />
           ) : (
@@ -141,31 +152,31 @@ export default function PoesOperativoTable({ options, value, onChange, disabled 
   };
 
   const th = 'px-1 py-2 text-[10px] font-bold uppercase border-r border-gray-800 text-center';
+  const toma1Label = hora1 ? `Hora 1 (${hora1})` : 'Hora 1';
+  const toma2Label = hora2 ? `Hora 2 (${hora2})` : 'Hora 2';
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 p-3">
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[1100px]">
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
               <th className={`${th} text-left`} rowSpan={2}>Equipo / utensilio</th>
-              <th className={th} colSpan={6}>Toma 1</th>
-              <th className={th} colSpan={6}>Toma 2</th>
+              <th className={th} colSpan={7}>{toma1Label}</th>
+              <th className={th} colSpan={7}>{toma2Label}</th>
+              {extras.length > 0 && <th className={th} rowSpan={2} />}
             </tr>
             <tr className="bg-white border-b-2 border-gray-800">
-              {['Toma 1', 'Toma 2'].map((t) => (
-                <th key={t} colSpan={6} className="hidden">{t}</th>
-              ))}
               {[1, 2].map((t) => (
-                <th key={`h-${t}`} colSpan={6} className={th}>
-                  {t === 1 ? 'Hora 1' : 'Hora 2'} — Temp · C/NC est. · C/NC lav. · Obs.
+                <th key={t} colSpan={7} className={th}>
+                  Temp · C/NC est. · C/NC lav. · Obs.
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => renderRow(item.key, item.label))}
-            {extras.map((ex) => renderRow(ex.id, ex.label, true))}
+            {items.map((item, idx) => renderRow(item.key, item.label, false, idx))}
+            {extras.map((ex, idx) => renderRow(ex.id, ex.label, true, items.length + idx))}
           </tbody>
         </table>
       </div>
@@ -203,10 +214,10 @@ export function PoesBpmTable({
         <thead>
           <tr className="bg-white border-b-2 border-gray-800">
             <th className={`${th} text-left`}>Procedimiento</th>
-            <th className={th}>Lavado manos C</th>
-            <th className={th}>Lavado manos NC</th>
-            <th className={th}>Tapabocas C</th>
-            <th className={th}>Tapabocas NC</th>
+            <th className={`${th} bg-green-50`}>Lavado C</th>
+            <th className={`${th} bg-red-50`}>Lavado NC</th>
+            <th className={`${th} bg-green-50`}>Tapabocas C</th>
+            <th className={`${th} bg-red-50`}>Tapabocas NC</th>
             <th className={`${th} text-left`}>Observaciones</th>
             <th className={`${th} text-left`}>Acción correctiva</th>
             <th className={`${th} text-left`}>Responsable</th>
@@ -220,10 +231,10 @@ export function PoesBpmTable({
             return (
               <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                 <td className={`${td} font-medium text-xs`}>{item.label}</td>
-                <td className={`${td} text-center`}><CncBtn choice="C" value={lav} disabled={disabled} onChange={(v) => update(item.key, { lavado_manos: v })} /></td>
-                <td className={`${td} text-center`}><CncBtn choice="NC" value={lav} disabled={disabled} onChange={(v) => update(item.key, { lavado_manos: v })} /></td>
-                <td className={`${td} text-center`}><CncBtn choice="C" value={tap} disabled={disabled} onChange={(v) => update(item.key, { tapabocas: v })} /></td>
-                <td className={`${td} text-center`}><CncBtn choice="NC" value={tap} disabled={disabled} onChange={(v) => update(item.key, { tapabocas: v })} /></td>
+                <td className={`${td} text-center bg-green-50/60`}><CncBtn choice="C" value={lav} disabled={disabled} onChange={(v) => update(item.key, { lavado_manos: v })} /></td>
+                <td className={`${td} text-center bg-red-50/60`}><CncBtn choice="NC" value={lav} disabled={disabled} onChange={(v) => update(item.key, { lavado_manos: v })} /></td>
+                <td className={`${td} text-center bg-green-50/60`}><CncBtn choice="C" value={tap} disabled={disabled} onChange={(v) => update(item.key, { tapabocas: v })} /></td>
+                <td className={`${td} text-center bg-red-50/60`}><CncBtn choice="NC" value={tap} disabled={disabled} onChange={(v) => update(item.key, { tapabocas: v })} /></td>
                 <td className={td}><input type="text" value={row.observation ?? ''} disabled={disabled} onChange={(e) => update(item.key, { observation: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} /></td>
                 <td className={td}><input type="text" value={row.corrective ?? ''} disabled={disabled} onChange={(e) => update(item.key, { corrective: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} /></td>
                 <td className={td}><input type="text" value={row.responsible ?? ''} disabled={disabled} onChange={(e) => update(item.key, { responsible: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} /></td>

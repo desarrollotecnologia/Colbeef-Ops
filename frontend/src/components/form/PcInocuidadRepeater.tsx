@@ -22,11 +22,25 @@ export type PcInocuidadRow = {
   corrective?: string;
 };
 
-function CncBtn({ choice, value, disabled, onChange }: { choice: Cnc; value: string; disabled?: boolean; onChange: (v: Cnc) => void }) {
+const CNC_ACTIVE: Record<'C' | 'NC' | 'NA', string> = {
+  C: 'bg-green-600 text-white border-green-600',
+  NC: 'bg-red-600 text-white border-red-600',
+  NA: 'bg-gray-500 text-white border-gray-500',
+};
+
+function CncBtn({ choice, value, disabled, onChange }: { choice: 'C' | 'NC' | 'NA'; value: string; disabled?: boolean; onChange: (v: Cnc) => void }) {
   const active = value === choice;
-  const cls = choice === 'C' ? 'bg-green-600 text-white' : choice === 'NC' ? 'bg-red-600 text-white' : 'bg-gray-500 text-white';
   return (
-    <button type="button" disabled={disabled} onClick={() => onChange(active ? '' : choice)} className={`w-full py-0.5 text-[9px] font-bold rounded border ${active ? cls : 'bg-white border-gray-300'}`}>{choice}</button>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onChange(active ? '' : choice)}
+      className={`w-full py-0.5 text-[9px] font-bold rounded border-2 ${
+        active ? CNC_ACTIVE[choice] : 'bg-white border-gray-300'
+      }`}
+    >
+      {choice}
+    </button>
   );
 }
 
@@ -69,7 +83,7 @@ export default function PcInocuidadRepeater({ options, value, onChange, disabled
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
+        <table className="w-full text-sm min-w-[980px]">
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
               <th className={`${th} w-10`} rowSpan={2}>Ítem</th>
@@ -92,20 +106,26 @@ export default function PcInocuidadRepeater({ options, value, onChange, disabled
           <tbody>
             {rows.map((row, idx) => (
               <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-2 py-1 border-b border-gray-400 text-center text-xs font-medium">{idx + 1}</td>
-                <td className="px-2 py-1 border-b border-gray-400">
+                <td className="px-2 py-1 border-r border-b border-gray-400 text-center text-xs font-medium">{idx + 1}</td>
+                <td className="px-2 py-1 border-r border-b border-gray-400">
                   <input type="text" value={row.codigo ?? ''} disabled={disabled} onChange={(e) => updateRow(idx, { codigo: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} />
                 </td>
-                {HALLAZGO_COLS.map((col) => (
-                  <td key={col.key} className="px-1 py-1 border-b border-gray-400 text-center w-11">
-                    <CncBtn choice="C" value={row.hallazgos?.[col.key] ?? ''} disabled={disabled} onChange={(v) => updateHallazgo(idx, col.key, v)} />
-                    <div className="mt-0.5"><CncBtn choice="NC" value={row.hallazgos?.[col.key] ?? ''} disabled={disabled} onChange={(v) => updateHallazgo(idx, col.key, v)} /></div>
-                  </td>
-                ))}
-                <td className="px-2 py-1 border-b border-gray-400">
+                {HALLAZGO_COLS.map((col) => {
+                  const val = row.hallazgos?.[col.key] ?? '';
+                  return (
+                    <td key={col.key} className="px-0.5 py-1 border-r border-b border-gray-400 text-center w-[52px]">
+                      <div className="flex gap-0.5">
+                        <CncBtn choice="C" value={val} disabled={disabled} onChange={(v) => updateHallazgo(idx, col.key, v)} />
+                        <CncBtn choice="NC" value={val} disabled={disabled} onChange={(v) => updateHallazgo(idx, col.key, v)} />
+                        <CncBtn choice="NA" value={val} disabled={disabled} onChange={(v) => updateHallazgo(idx, col.key, v)} />
+                      </div>
+                    </td>
+                  );
+                })}
+                <td className="px-2 py-1 border-r border-b border-gray-400">
                   <input type="text" value={row.observation ?? ''} disabled={disabled} onChange={(e) => updateRow(idx, { observation: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} />
                 </td>
-                <td className="px-2 py-1 border-b border-gray-400">
+                <td className="px-2 py-1 border-r border-b border-gray-400">
                   <input type="text" value={row.corrective ?? ''} disabled={disabled} onChange={(e) => updateRow(idx, { corrective: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} />
                 </td>
                 <td className="px-1 py-1 border-b border-gray-400">

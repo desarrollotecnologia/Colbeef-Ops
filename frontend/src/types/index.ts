@@ -170,6 +170,8 @@ export interface FormSubmission {
   submittedAt?: string;
   reviewedAt?: string;
   reviewNotes?: string;
+  updatedAt?: string;
+  createdAt?: string;
   format?: Format;
   operator?: { id: string; fullName: string };
   reviewedBy?: { id: string; fullName: string };

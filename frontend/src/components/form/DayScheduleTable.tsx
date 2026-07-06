@@ -16,6 +16,7 @@ interface Props {
   onChange: (v: Record<string, DayPointRow>) => void;
   workDate: string;
   disabled?: boolean;
+  embedded?: boolean;
 }
 
 function pointKey(name: string): string {
@@ -61,7 +62,7 @@ function CncButtons({
   );
 }
 
-export default function DayScheduleTable({ options, value, onChange, workDate, disabled }: Props) {
+export default function DayScheduleTable({ options, value, onChange, workDate, disabled, embedded }: Props) {
   const schedule = (options.schedule ?? {}) as Record<string, string[]>;
   const tableType = options.tableType ?? 'cloro';
   const dayKey = getDayKey(workDate);
@@ -79,9 +80,11 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
     onChange({ ...value, [key]: { ...value[key], ...patch } });
   };
 
+  const wrapClass = embedded ? 'overflow-x-auto' : 'overflow-x-auto border border-gray-800';
+
   if (tableType === 'cloro') {
     return (
-      <div className="overflow-x-auto border border-gray-800">
+      <div className={wrapClass}>
         <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
@@ -150,7 +153,7 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
     'Funcionamiento, temperatura (82,5°C) o presencia de solución desinfectante aprobada para utilización en industria de alimentos';
 
   return (
-    <div className="overflow-x-auto border border-gray-800">
+    <div className={wrapClass}>
       <table className="w-full text-sm min-w-[640px]">
         <thead>
           <tr className="bg-white border-b-2 border-gray-800">

@@ -41,7 +41,7 @@ router.get('/', async (req: Request, res: Response) => {
 
   const submissions = await prisma.formSubmission.findMany({
     where,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { updatedAt: 'desc' },
     include: {
       format: { select: { id: true, code: true, name: true } },
       operator: { select: { id: true, fullName: true } },

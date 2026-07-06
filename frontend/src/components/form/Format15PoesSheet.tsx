@@ -11,66 +11,86 @@ interface Props {
 }
 
 export default function Format15PoesSheet({ fields, sheetData, onUpdate, disabled }: Props) {
-  const groups = groupFields(fields);
+  const hora1 = fields.find((f) => f.fieldKey === 'poes_hora_1');
+  const hora2 = fields.find((f) => f.fieldKey === 'poes_hora_2');
+  const obs = fields.find((f) => f.fieldKey === 'poes_observaciones');
+  const sectionFields = fields.filter(
+    (f) => !['poes_hora_1', 'poes_hora_2', 'poes_observaciones', 'empresa'].includes(f.fieldKey)
+  );
+  const groups = groupFields(sectionFields);
 
   return (
-    <div className="space-y-6">
-      {groups.map((group, gi) => {
-        const visible = group.fields;
-        if (visible.length === 0) return null;
+    <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
+      {(hora1 || hora2) && (
+        <div className="px-4 py-3 border-b border-gray-800 bg-[#e8edf2]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+            {hora1 && (
+              <FormField field={hora1} value={sheetData[hora1.fieldKey]} onChange={(v) => onUpdate(hora1.fieldKey, v)} disabled={disabled} />
+            )}
+            {hora2 && (
+              <FormField field={hora2} value={sheetData[hora2.fieldKey]} onChange={(v) => onUpdate(hora2.fieldKey, v)} disabled={disabled} />
+            )}
+          </div>
+        </div>
+      )}
 
-        const equipos = visible.find((f) => f.options?.layout === 'poes_operativo_table');
-        const bpm = visible.find((f) => f.options?.layout === 'poes_bpm_table');
-        const others = visible.filter((f) => f !== equipos && f !== bpm);
+      {groups.map((group, gi) => {
+        const equipos = group.fields.find((f) => f.options?.layout === 'poes_operativo_table');
+        const bpm = group.fields.find((f) => f.options?.layout === 'poes_bpm_table');
 
         return (
-          <div key={gi}>
+          <div key={gi} className="border-t border-gray-800">
             {group.name && (
-              <h3 className="text-xs font-bold uppercase text-gray-800 mb-3 pb-1 border-b border-gray-300">{group.name}</h3>
+              <div className={SECTION_HEADER_CLASS}>
+                <h3 className="text-xs font-bold uppercase text-gray-900">{group.name}</h3>
+              </div>
             )}
-            <div className="space-y-4">
-              {others.map((field) => (
-                <FormField key={field.id} field={field} value={sheetData[field.fieldKey]} onChange={(v) => onUpdate(field.fieldKey, v)} disabled={disabled} />
-              ))}
-              {equipos && (
-                <div className="border border-gray-800 rounded-sm overflow-hidden">
-                  <div className={SECTION_HEADER_CLASS}>
-                    <h3 className="text-xs font-bold uppercase text-gray-900">{equipos.label}</h3>
-                    {equipos.helpText && <p className="text-[11px] text-gray-600 mt-0.5">{equipos.helpText}</p>}
-                  </div>
-                  <div className="p-3">
-                    <PoesOperativoTable
-                      options={equipos.options ?? {}}
-                      value={(sheetData[equipos.fieldKey] as PoesEquiposValue) ?? {}}
-                      onChange={(v) => onUpdate(equipos.fieldKey, v)}
-                      disabled={disabled}
-                    />
-                  </div>
+            {equipos && (
+              <div>
+                <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-300">
+                  <p className="text-[11px] font-bold uppercase text-gray-800">{equipos.label}</p>
+                  {equipos.helpText && <p className="text-[10px] text-gray-600 mt-0.5">{equipos.helpText}</p>}
                 </div>
-              )}
-              {bpm && (
-                <div className="border border-gray-800 rounded-sm overflow-hidden">
-                  <div className={SECTION_HEADER_CLASS}>
-                    <h3 className="text-xs font-bold uppercase text-gray-900">{bpm.label}</h3>
-                    {bpm.helpText && <p className="text-[11px] text-gray-600 mt-0.5">{bpm.helpText}</p>}
-                  </div>
-                  <div className="p-0">
-                    <PoesBpmTable
-                      options={bpm.options ?? {}}
-                      value={(sheetData[bpm.fieldKey] as Record<string, { lavado_manos?: string; tapabocas?: string; observation?: string; corrective?: string; responsible?: string }>) ?? {}}
-                      onChange={(v) => onUpdate(bpm.fieldKey, v)}
-                      disabled={disabled}
-                    />
-                  </div>
+                <div className="p-0">
+                  <PoesOperativoTable
+                    options={equipos.options ?? {}}
+                    value={(sheetData[equipos.fieldKey] as PoesEquiposValue) ?? {}}
+                    onChange={(v) => onUpdate(equipos.fieldKey, v)}
+                    disabled={disabled}
+                    hora1={String(sheetData.poes_hora_1 ?? '')}
+                    hora2={String(sheetData.poes_hora_2 ?? '')}
+                  />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+            {bpm && (
+              <div className={equipos ? 'border-t border-gray-800' : ''}>
+                <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-300">
+                  <p className="text-[11px] font-bold uppercase text-gray-800">{bpm.label}</p>
+                  {bpm.helpText && <p className="text-[10px] text-gray-600 mt-0.5">{bpm.helpText}</p>}
+                </div>
+                <PoesBpmTable
+                  options={bpm.options ?? {}}
+                  value={(sheetData[bpm.fieldKey] as Record<string, { lavado_manos?: string; tapabocas?: string; observation?: string; corrective?: string; responsible?: string }>) ?? {}}
+                  onChange={(v) => onUpdate(bpm.fieldKey, v)}
+                  disabled={disabled}
+                />
+              </div>
+            )}
           </div>
         );
       })}
-      <div className="text-xs text-gray-500 border-t pt-3">
-        <p><strong>C:</strong> Cumple &nbsp; <strong>NC:</strong> No cumple &nbsp; <strong>NA:</strong> No aplica</p>
-      </div>
+
+      {obs && (
+        <div className="border-t border-gray-800">
+          <div className={SECTION_HEADER_CLASS}>
+            <h3 className="text-xs font-bold uppercase text-gray-900">{obs.groupName ?? 'Observaciones'}</h3>
+          </div>
+          <div className="p-4">
+            <FormField field={obs} value={sheetData[obs.fieldKey]} onChange={(v) => onUpdate(obs.fieldKey, v)} disabled={disabled} compact />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
