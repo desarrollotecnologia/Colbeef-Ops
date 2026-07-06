@@ -332,16 +332,18 @@ export function formalMeasureTableField(
   fieldKey: string,
   label: string,
   tableType: MeasureTableType,
-  rows: { key: string; label: string; naTemp?: boolean; naPresion?: boolean }[],
+  rows: { key: string; label: string; naTemp?: boolean; naPresion?: boolean; slotCount?: number }[],
   sortOrder: number,
   groupName: string,
   opts?: Partial<FieldDef> & {
     pediluviosLayout?: 'operativo' | 'simple';
     measureCncMode?: 'cnc' | 'cnc_na';
     valorLabel?: string;
+    aspectRows?: boolean;
+    monitoreoVariant?: 'tiempos' | 'sanitario' | 'lavado' | 'temperatura';
   }
 ): FieldDef {
-  const { pediluviosLayout, measureCncMode, valorLabel, ...fieldOpts } = opts ?? {};
+  const { pediluviosLayout, measureCncMode, valorLabel, aspectRows, monitoreoVariant, ...fieldOpts } = opts ?? {};
   return {
     fieldKey,
     label,
@@ -358,6 +360,45 @@ export function formalMeasureTableField(
       ...(pediluviosLayout ? { pediluviosLayout } : {}),
       ...(measureCncMode ? { mode: measureCncMode } : {}),
       ...(valorLabel ? { valorLabel } : {}),
+      ...(aspectRows ? { aspectRows } : {}),
+      ...(monitoreoVariant ? { monitoreoVariant } : {}),
+    },
+  };
+}
+
+export type PcOperativoVariant =
+  | 'codigo_responsable'
+  | 'codigo_operario'
+  | 'operario_cnc'
+  | 'proceso_tiempos'
+  | 'proceso_tiempos_cnc'
+  | 'esterilizadores';
+
+/** Tabla PC comestible operativo — aspectos con varias casillas (formato 14) */
+export function pcOperativoTableField(
+  fieldKey: string,
+  label: string,
+  variant: PcOperativoVariant,
+  items: { key: string; label: string; slotCount?: number }[],
+  sortOrder: number,
+  groupName: string,
+  opts?: Partial<FieldDef> & { operarioLabel?: string }
+): FieldDef {
+  const { operarioLabel, ...fieldOpts } = opts ?? {};
+  return {
+    fieldKey,
+    label,
+    fieldType: FieldType.CHECKLIST,
+    manualOnly: true,
+    required: fieldOpts.required ?? true,
+    sortOrder,
+    groupName,
+    helpText: fieldOpts.helpText,
+    options: {
+      layout: 'pc_operativo_table',
+      pcOperativoVariant: variant,
+      items,
+      ...(operarioLabel ? { operarioLabel } : {}),
     },
   };
 }

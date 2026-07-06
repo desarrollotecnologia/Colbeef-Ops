@@ -2,6 +2,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
 import Button from '@/components/Button';
+import CncToggle from './CncToggle';
+import { cncCellClass } from './repeaterColumns';
 
 type Cnc = 'C' | 'NC' | 'NA' | '';
 
@@ -16,6 +18,9 @@ export type PoesEquipoRow = {
   label?: string;
   toma1?: TomaData;
   toma2?: TomaData;
+  observation?: string;
+  corrective?: string;
+  responsible?: string;
 };
 
 export interface PoesEquiposValue {
@@ -29,35 +34,54 @@ function getEquipoRow(value: PoesEquiposValue, key: string): PoesEquipoRow {
   return row;
 }
 
-const CNC_ACTIVE: Record<'C' | 'NC' | 'NA', string> = {
-  C: 'bg-green-600 text-white border-green-600',
-  NC: 'bg-red-600 text-white border-red-600',
-  NA: 'bg-gray-500 text-white border-gray-500',
+const TOMA_COL_COUNT = 3;
+
+const DEFAULT_OBS: Record<string, string> = {
+  cuchilla_patas: 'Ácido láctico',
+  cuchillo_neumatico: 'Ácido láctico',
 };
 
-function CncBtn({
-  choice,
+function EstCncCell({
   value,
   disabled,
   onChange,
 }: {
-  choice: 'C' | 'NC' | 'NA';
-  value: string;
+  value: Cnc;
   disabled?: boolean;
   onChange: (v: Cnc) => void;
 }) {
-  const active = value === choice;
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => onChange(active ? '' : choice)}
-      className={`w-full py-1 text-[10px] font-bold rounded border-2 ${
-        active ? CNC_ACTIVE[choice] : 'bg-white border-gray-300'
-      }`}
-    >
-      {choice}
-    </button>
+    <td className={`px-0.5 py-1 border-r border-b border-gray-400 text-center align-middle`}>
+      <div className="flex flex-col gap-0.5 items-center">
+        {(['C', 'NC', 'NA'] as const).map((choice) => (
+          <div key={choice} className={`w-full max-w-[32px] ${cncCellClass(choice)}`}>
+            <CncToggle choice={choice} value={value} disabled={disabled} onChange={(v) => onChange(v as Cnc)} compact />
+          </div>
+        ))}
+      </div>
+    </td>
+  );
+}
+
+function LavCncCell({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: Cnc;
+  disabled?: boolean;
+  onChange: (v: Cnc) => void;
+}) {
+  return (
+    <td className={`px-0.5 py-1 border-r border-b border-gray-400 text-center align-middle`}>
+      <div className="flex flex-col gap-0.5 items-center">
+        {(['C', 'NC'] as const).map((choice) => (
+          <div key={choice} className={`w-full max-w-[32px] ${cncCellClass(choice)}`}>
+            <CncToggle choice={choice} value={value} disabled={disabled} onChange={(v) => onChange(v as Cnc)} compact />
+          </div>
+        ))}
+      </div>
+    </td>
   );
 }
 
@@ -65,28 +89,20 @@ function TomaCells({
   data,
   disabled,
   onPatch,
-  estNa,
 }: {
   data: TomaData;
   disabled?: boolean;
   onPatch: (p: Partial<TomaData>) => void;
-  estNa?: boolean;
 }) {
+  const est = (data.cnc_est ?? '') as Cnc;
+  const lav = (data.cnc_lav ?? '') as Cnc;
   return (
     <>
       <td className="px-1 py-1 border-r border-b border-gray-400">
-        <input type="text" value={data.temp ?? ''} disabled={disabled} onChange={(e) => onPatch({ temp: e.target.value })} placeholder="°C" className={`${INPUT_CLASS} text-xs py-1`} />
+        <input type="text" value={data.temp ?? ''} disabled={disabled} onChange={(e) => onPatch({ temp: e.target.value })} placeholder="°C" className={`${INPUT_CLASS} text-xs py-1 text-center`} />
       </td>
-      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10 bg-green-50/60"><CncBtn choice="C" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} /></td>
-      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10 bg-red-50/60"><CncBtn choice="NC" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} /></td>
-      {estNa && (
-        <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10"><CncBtn choice="NA" value={data.cnc_est ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} /></td>
-      )}
-      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10 bg-green-50/60"><CncBtn choice="C" value={data.cnc_lav ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_lav: v })} /></td>
-      <td className="px-1 py-1 border-r border-b border-gray-400 text-center w-10 bg-red-50/60"><CncBtn choice="NC" value={data.cnc_lav ?? ''} disabled={disabled} onChange={(v) => onPatch({ cnc_lav: v })} /></td>
-      <td className="px-1 py-1 border-b border-gray-400">
-        <input type="text" value={data.obs ?? ''} disabled={disabled} onChange={(e) => onPatch({ obs: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} />
-      </td>
+      <EstCncCell value={est} disabled={disabled} onChange={(v) => onPatch({ cnc_est: v })} />
+      <LavCncCell value={lav} disabled={disabled} onChange={(v) => onPatch({ cnc_lav: v })} />
     </>
   );
 }
@@ -127,23 +143,32 @@ export default function PoesOperativoTable({ options, value, onChange, disabled,
     onChange({ ...next, _extras: extras.filter((e) => e.id !== id) });
   };
 
-  const renderRow = (key: string, label: string, editableLabel = false, idx = 0) => {
+  const renderRow = (key: string, label: string, editableLabel = false, idx = 0, defaultObs?: string) => {
     const row = getEquipoRow(value, key);
-    const isAcido = label.toLowerCase().includes('ácido') || label.toLowerCase().includes('acido');
+    const legacyObs = row.toma1?.obs ?? row.toma2?.obs ?? '';
+    const observation = row.observation ?? (legacyObs || defaultObs || DEFAULT_OBS[key] || '');
     return (
       <tr key={key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-        <td className="px-2 py-1 border-r border-b border-gray-400 text-xs font-medium">
+        <td className="px-2 py-1 border-r border-b border-gray-400 text-xs font-medium align-top">
           {editableLabel ? (
             <input type="text" value={row.label ?? label} disabled={disabled} onChange={(e) => updateRow(key, { label: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} placeholder="Equipo" />
           ) : (
             label
           )}
-          {isAcido && <p className="text-[10px] text-gray-500 mt-0.5">Obs. ácido láctico en observaciones</p>}
         </td>
-        <TomaCells data={row.toma1 ?? {}} disabled={disabled} onPatch={(p) => updateToma(key, 'toma1', p)} estNa />
-        <TomaCells data={row.toma2 ?? {}} disabled={disabled} onPatch={(p) => updateToma(key, 'toma2', p)} estNa />
+        <TomaCells data={row.toma1 ?? {}} disabled={disabled} onPatch={(p) => updateToma(key, 'toma1', p)} />
+        <TomaCells data={row.toma2 ?? {}} disabled={disabled} onPatch={(p) => updateToma(key, 'toma2', p)} />
+        <td className="px-2 py-1 border-r border-b border-gray-400 align-top">
+          <input type="text" value={observation} disabled={disabled} onChange={(e) => updateRow(key, { observation: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} placeholder="—" />
+        </td>
+        <td className="px-2 py-1 border-r border-b border-gray-400 align-top">
+          <input type="text" value={row.corrective ?? ''} disabled={disabled} onChange={(e) => updateRow(key, { corrective: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} placeholder="—" />
+        </td>
+        <td className="px-2 py-1 border-r border-b border-gray-400 align-top">
+          <input type="text" value={row.responsible ?? ''} disabled={disabled} onChange={(e) => updateRow(key, { responsible: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} placeholder="—" />
+        </td>
         {editableLabel && (
-          <td className="px-1 border-b border-gray-400">
+          <td className="px-1 border-b border-gray-400 align-top">
             <button type="button" disabled={disabled} onClick={() => removeExtra(key)} className="p-1 text-red-600"><Trash2 size={14} /></button>
           </td>
         )}
@@ -151,41 +176,95 @@ export default function PoesOperativoTable({ options, value, onChange, disabled,
     );
   };
 
-  const th = 'px-1 py-2 text-[10px] font-bold uppercase border-r border-gray-800 text-center';
-  const toma1Label = hora1 ? `Hora 1 (${hora1})` : 'Hora 1';
-  const toma2Label = hora2 ? `Hora 2 (${hora2})` : 'Hora 2';
+  const th = 'px-1 py-1.5 text-[10px] font-bold uppercase border-r border-gray-800 text-center bg-[#d9ead3]';
+  const thSub = 'px-1 py-1 text-[10px] font-bold uppercase border-r border-gray-800 text-center bg-[#e8f4e8]';
+  const toma1Label = hora1 ? `Hora: ${hora1}` : 'Hora';
+  const toma2Label = hora2 ? `Hora: ${hora2}` : 'Hora';
 
   return (
-    <div className="space-y-3 p-3">
+    <div className="space-y-2 p-0">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[1100px]">
+        <table className="w-full text-sm min-w-[1000px] border-collapse">
           <thead>
-            <tr className="bg-white border-b-2 border-gray-800">
-              <th className={`${th} text-left`} rowSpan={2}>Equipo / utensilio</th>
-              <th className={th} colSpan={7}>{toma1Label}</th>
-              <th className={th} colSpan={7}>{toma2Label}</th>
+            <tr className="border-b border-gray-800">
+              <th className={`${th} text-left align-bottom`} rowSpan={2}>Equipo / utensilio / superficie</th>
+              <th className={th} colSpan={TOMA_COL_COUNT}>{toma1Label}</th>
+              <th className={th} colSpan={TOMA_COL_COUNT}>{toma2Label}</th>
+              <th className={`${th} text-left align-bottom`} rowSpan={2}>Observaciones</th>
+              <th className={`${th} text-left align-bottom`} rowSpan={2}>Acción correctiva</th>
+              <th className={`${th} text-left align-bottom`} rowSpan={2}>Responsable proceso</th>
               {extras.length > 0 && <th className={th} rowSpan={2} />}
             </tr>
-            <tr className="bg-white border-b-2 border-gray-800">
-              {[1, 2].map((t) => (
-                <th key={t} colSpan={7} className={th}>
-                  Temp · C/NC est. · C/NC lav. · Obs.
-                </th>
-              ))}
+            <tr className="border-b-2 border-gray-800">
+              <th className={thSub}>Temp. esterilización (°C)</th>
+              <th className={thSub}>C / NC</th>
+              <th className={thSub}>Lavado C / NC</th>
+              <th className={thSub}>Temp. esterilización (°C)</th>
+              <th className={thSub}>C / NC</th>
+              <th className={thSub}>Lavado C / NC</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item, idx) => renderRow(item.key, item.label, false, idx))}
+            {items.map((item, idx) =>
+              renderRow(
+                item.key,
+                item.label,
+                false,
+                idx,
+                (item as { defaultObservation?: string }).defaultObservation
+              )
+            )}
             {extras.map((ex, idx) => renderRow(ex.id, ex.label, true, items.length + idx))}
           </tbody>
         </table>
       </div>
       {options.allowAddEquipos && (
-        <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={addExtra}>
-          <Plus size={16} /> Agregar equipo
-        </Button>
+        <div className="px-3 pb-3">
+          <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={addExtra}>
+            <Plus size={16} /> Agregar equipo
+          </Button>
+        </div>
       )}
     </div>
+  );
+}
+
+export type PoesBpmRow = {
+  toma1?: { lavado_manos?: string; tapabocas?: string };
+  toma2?: { lavado_manos?: string; tapabocas?: string };
+  lavado_manos?: string;
+  tapabocas?: string;
+  observation?: string;
+  corrective?: string;
+  responsible?: string;
+};
+
+function BpmTomaCells({
+  data,
+  disabled,
+  onPatch,
+}: {
+  data: { lavado_manos?: string; tapabocas?: string };
+  disabled?: boolean;
+  onPatch: (p: Partial<{ lavado_manos?: string; tapabocas?: string }>) => void;
+}) {
+  const lav = data.lavado_manos ?? '';
+  const tap = data.tapabocas ?? '';
+  return (
+    <>
+      <td className={`px-1 py-1 border-r border-b border-gray-400 text-center w-10 ${cncCellClass('C')}`}>
+        <CncToggle choice="C" value={lav} disabled={disabled} onChange={(v) => onPatch({ lavado_manos: v })} compact />
+      </td>
+      <td className={`px-1 py-1 border-r border-b border-gray-400 text-center w-10 ${cncCellClass('NC')}`}>
+        <CncToggle choice="NC" value={lav} disabled={disabled} onChange={(v) => onPatch({ lavado_manos: v })} compact />
+      </td>
+      <td className={`px-1 py-1 border-r border-b border-gray-400 text-center w-10 ${cncCellClass('C')}`}>
+        <CncToggle choice="C" value={tap} disabled={disabled} onChange={(v) => onPatch({ tapabocas: v })} compact />
+      </td>
+      <td className={`px-1 py-1 border-r border-b border-gray-400 text-center w-10 ${cncCellClass('NC')}`}>
+        <CncToggle choice="NC" value={tap} disabled={disabled} onChange={(v) => onPatch({ tapabocas: v })} compact />
+      </td>
+    </>
   );
 }
 
@@ -194,50 +273,73 @@ export function PoesBpmTable({
   value,
   onChange,
   disabled,
+  hora1,
+  hora2,
 }: {
   options: FieldOptions;
-  value: Record<string, { lavado_manos?: string; tapabocas?: string; observation?: string; corrective?: string; responsible?: string }>;
+  value: Record<string, PoesBpmRow>;
   onChange: (v: Record<string, unknown>) => void;
   disabled?: boolean;
+  hora1?: string;
+  hora2?: string;
 }) {
   const items = options.items ?? [];
-  const th = 'px-2 py-2 text-[11px] font-bold uppercase border-r border-gray-800';
-  const td = 'px-2 py-1 border-r border-b border-gray-400';
+  const th = 'px-1 py-1.5 text-[10px] font-bold uppercase border-r border-gray-800 text-center bg-[#d9ead3]';
+  const thSub = 'px-1 py-1 text-[10px] font-bold uppercase border-r border-gray-800 text-center bg-[#e8f4e8]';
+  const td = 'px-2 py-1 border-r border-b border-gray-400 align-top';
+  const toma1Label = hora1 ? `Hora: ${hora1}` : 'Hora';
+  const toma2Label = hora2 ? `Hora: ${hora2}` : 'Hora';
 
-  const update = (key: string, patch: Record<string, string>) => {
-    onChange({ ...value, [key]: { ...value[key], ...patch } });
+  const update = (key: string, patch: Partial<PoesBpmRow>) => {
+    onChange({ ...value, [key]: { ...(value[key] ?? {}), ...patch } });
+  };
+
+  const updateToma = (key: string, toma: 'toma1' | 'toma2', patch: Partial<{ lavado_manos?: string; tapabocas?: string }>) => {
+    const row = value[key] ?? {};
+    onChange({
+      ...value,
+      [key]: { ...row, [toma]: { ...(row[toma] ?? {}), ...patch } },
+    });
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm min-w-[720px]">
+    <div className="overflow-x-auto p-0">
+      <table className="w-full text-sm min-w-[1000px] border-collapse">
         <thead>
-          <tr className="bg-white border-b-2 border-gray-800">
-            <th className={`${th} text-left`}>Procedimiento</th>
-            <th className={`${th} bg-green-50`}>Lavado C</th>
-            <th className={`${th} bg-red-50`}>Lavado NC</th>
-            <th className={`${th} bg-green-50`}>Tapabocas C</th>
-            <th className={`${th} bg-red-50`}>Tapabocas NC</th>
-            <th className={`${th} text-left`}>Observaciones</th>
-            <th className={`${th} text-left`}>Acción correctiva</th>
-            <th className={`${th} text-left`}>Responsable</th>
+          <tr className="border-b border-gray-800">
+            <th className={`${th} text-left align-bottom`} rowSpan={2}>Buenas prácticas higiénicas</th>
+            <th className={th} colSpan={4}>{toma1Label}</th>
+            <th className={th} colSpan={4}>{toma2Label}</th>
+            <th className={`${th} text-left align-bottom`} rowSpan={2}>Observaciones</th>
+            <th className={`${th} text-left align-bottom`} rowSpan={2}>Acción correctiva</th>
+            <th className={`${th} text-left align-bottom`} rowSpan={2}>Responsable proceso</th>
+          </tr>
+          <tr className="border-b-2 border-gray-800">
+            <th className={thSub} colSpan={2}>Lavado de manos C/NC</th>
+            <th className={thSub} colSpan={2}>Uso de tapabocas C/NC</th>
+            <th className={thSub} colSpan={2}>Lavado de manos C/NC</th>
+            <th className={thSub} colSpan={2}>Uso de tapabocas C/NC</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item, idx) => {
             const row = value[item.key] ?? {};
-            const lav = row.lavado_manos ?? '';
-            const tap = row.tapabocas ?? '';
+            const toma1 = row.toma1 ?? (row.lavado_manos || row.tapabocas ? { lavado_manos: row.lavado_manos, tapabocas: row.tapabocas } : {});
+            const toma2 = row.toma2 ?? {};
             return (
               <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                 <td className={`${td} font-medium text-xs`}>{item.label}</td>
-                <td className={`${td} text-center bg-green-50/60`}><CncBtn choice="C" value={lav} disabled={disabled} onChange={(v) => update(item.key, { lavado_manos: v })} /></td>
-                <td className={`${td} text-center bg-red-50/60`}><CncBtn choice="NC" value={lav} disabled={disabled} onChange={(v) => update(item.key, { lavado_manos: v })} /></td>
-                <td className={`${td} text-center bg-green-50/60`}><CncBtn choice="C" value={tap} disabled={disabled} onChange={(v) => update(item.key, { tapabocas: v })} /></td>
-                <td className={`${td} text-center bg-red-50/60`}><CncBtn choice="NC" value={tap} disabled={disabled} onChange={(v) => update(item.key, { tapabocas: v })} /></td>
-                <td className={td}><input type="text" value={row.observation ?? ''} disabled={disabled} onChange={(e) => update(item.key, { observation: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} /></td>
-                <td className={td}><input type="text" value={row.corrective ?? ''} disabled={disabled} onChange={(e) => update(item.key, { corrective: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} /></td>
-                <td className={td}><input type="text" value={row.responsible ?? ''} disabled={disabled} onChange={(e) => update(item.key, { responsible: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} /></td>
+                <BpmTomaCells data={toma1} disabled={disabled} onPatch={(p) => updateToma(item.key, 'toma1', p)} />
+                <BpmTomaCells data={toma2} disabled={disabled} onPatch={(p) => updateToma(item.key, 'toma2', p)} />
+                <td className={td}>
+                  <input type="text" value={row.observation ?? ''} disabled={disabled} onChange={(e) => update(item.key, { observation: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} placeholder="—" />
+                </td>
+                <td className={td}>
+                  <input type="text" value={row.corrective ?? ''} disabled={disabled} onChange={(e) => update(item.key, { corrective: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} placeholder="—" />
+                </td>
+                <td className={td}>
+                  <input type="text" value={row.responsible ?? ''} disabled={disabled} onChange={(e) => update(item.key, { responsible: e.target.value })} className={`${INPUT_CLASS} text-xs py-1`} placeholder="—" />
+                </td>
               </tr>
             );
           })}

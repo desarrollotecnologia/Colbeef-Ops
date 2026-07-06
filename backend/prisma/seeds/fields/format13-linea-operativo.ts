@@ -61,13 +61,30 @@ export function getFormat13Fields(_slug: string) {
       'Tiempos de proceso',
       'monitoreo',
       [
-        { key: 'izado', label: 'Tiempo de izado (< 1:30 min)' },
-        { key: 'sangria', label: 'Tiempo de sangría (> 2 min)' },
-        { key: 'evisceracion', label: 'Tiempo de evisceración (< 30 min)' },
+        {
+          key: 'izado',
+          label: 'TIEMPO DE IZADO\nParámetro establecido (< 1:30 minutos)',
+          slotCount: 5,
+        },
+        {
+          key: 'sangria',
+          label: 'TIEMPO DE SANGRIA\nParámetro establecido (> a 2 minutos)',
+          slotCount: 5,
+        },
+        {
+          key: 'evisceracion',
+          label: 'TIEMPO DE EVISCERACION\nParámetro establecido (< a 30 minutos)',
+          slotCount: 5,
+        },
       ],
       10,
       'Condiciones del proceso',
-      { valorLabel: 'Minutos', helpText: 'Parámetros establecidos según procedimiento' }
+      {
+        valorLabel: 'Valores minutos',
+        aspectRows: true,
+        monitoreoVariant: 'tiempos',
+        helpText: 'Turno monitoreo y minutos — puede agregar más casillas por aspecto',
+      }
     ),
     repeaterField('linea_tiempos_adicionales', 'Tiempos adicionales', MONITOREO_VALOR_COLS, 11, {
       groupName: 'Condiciones del proceso',
@@ -80,14 +97,18 @@ export function getFormat13Fields(_slug: string) {
       'Condiciones sanitarias del proceso',
       'monitoreo',
       [
-        { key: 'animales_limpios', label: 'Ingreso de animales limpios y escurridos' },
-        { key: 'anudado_esofago', label: 'Anudado de esófago' },
-        { key: 'anudado_recto', label: 'Anudado y embolsado de recto' },
-        { key: 'evisceracion', label: 'Procedimiento de evisceración' },
+        { key: 'animales_limpios', label: 'INGRESO DE ANIMALES LIMPIOS Y ESCURRIDOS', slotCount: 4 },
+        { key: 'anudado_esofago', label: 'ANUDADO DE ESOFAGO', slotCount: 4 },
+        { key: 'anudado_recto', label: 'ANUDADO Y EMBOLSADO DE RECTO', slotCount: 4 },
+        { key: 'evisceracion', label: 'PROCEDIMIENTO DE EVISCERACION', slotCount: 4 },
       ],
       20,
       'Condiciones del proceso',
-      { valorLabel: 'Turno / nota' }
+      {
+        aspectRows: true,
+        monitoreoVariant: 'sanitario',
+        helpText: 'Check list: C cumple · NC no cumple',
+      }
     ),
     repeaterField('linea_sanitarias_adicionales', 'Aspectos sanitarios adicionales', MONITOREO_EXTRA_COLS, 21, {
       groupName: 'Condiciones del proceso',
@@ -99,13 +120,16 @@ export function getFormat13Fields(_slug: string) {
       'Lavado y manipulación',
       'monitoreo',
       [
-        { key: 'lavado', label: 'Condiciones de lavado de canales' },
-        { key: 'desinfeccion', label: 'Condiciones de desinfección de las canales' },
-        { key: 'manipulacion', label: 'Condiciones de manipulación del producto' },
+        { key: 'lavado', label: 'CONDICIONES DE LAVADO DE CANALES', slotCount: 3 },
+        { key: 'desinfeccion', label: 'CONDICIONES DE DESINFECCION DE LAS CANALES', slotCount: 2 },
+        { key: 'manipulacion', label: 'CONDICIONES DE MANIPULACION DEL PRODUCTO', slotCount: 2 },
       ],
       30,
       'Condiciones de lavado',
-      { valorLabel: 'Turno / nota' }
+      {
+        aspectRows: true,
+        monitoreoVariant: 'lavado',
+      }
     ),
     repeaterField('linea_lavado_adicionales', 'Aspectos de lavado adicionales', MONITOREO_EXTRA_COLS, 31, {
       groupName: 'Condiciones de lavado',
@@ -116,10 +140,20 @@ export function getFormat13Fields(_slug: string) {
       'linea_temperatura_canal',
       'Temperatura canal al ingreso a cuarto frío',
       'monitoreo',
-      [{ key: 'temp_cava', label: 'Temperatura canal al ingreso a cuarto frío' }],
+      [
+        {
+          key: 'temp_cava',
+          label: 'TEMPERATURA CANAL AL INGRESO A CUARTO FRIO',
+          slotCount: 3,
+        },
+      ],
       40,
       'Temperaturas',
-      { valorLabel: '°C' }
+      {
+        valorLabel: 'Valores encontrados',
+        aspectRows: true,
+        monitoreoVariant: 'temperatura',
+      }
     ),
     repeaterField('linea_temperatura_adicionales', 'Temperaturas adicionales', MONITOREO_VALOR_COLS, 41, {
       groupName: 'Temperaturas',

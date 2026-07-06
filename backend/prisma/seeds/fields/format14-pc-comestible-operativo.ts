@@ -1,150 +1,169 @@
-import { FieldDef, formalMeasureTableField, repeaterField } from '../field-helpers';
-
-const CODIGO_CNC_COLS: FieldDef[] = [
-  { fieldKey: 'aspecto', label: 'Aspecto a verificar', fieldType: 'TEXT' as const, sortOrder: 0, manualOnly: true, required: true },
-  { fieldKey: 'codigo', label: 'Código', fieldType: 'TEXT' as const, sortOrder: 1, manualOnly: true },
-  {
-    fieldKey: 'cnc',
-    label: 'C/NC',
-    fieldType: 'CHECKLIST' as const,
-    sortOrder: 2,
-    manualOnly: true,
-    options: { mode: 'cnc', choices: ['C', 'NC'] },
-  },
-  { fieldKey: 'observation', label: 'Observaciones', fieldType: 'TEXT' as const, sortOrder: 3, manualOnly: true },
-  { fieldKey: 'corrective', label: 'Acción correctiva', fieldType: 'TEXT' as const, sortOrder: 4, manualOnly: true },
-  { fieldKey: 'responsable', label: 'Operario responsable', fieldType: 'TEXT' as const, sortOrder: 5, manualOnly: true },
-];
-
-const BPM_PERSONAL_COLS: FieldDef[] = [
-  { fieldKey: 'aspecto', label: 'Aspecto', fieldType: 'TEXT' as const, sortOrder: 0, manualOnly: true, required: true },
-  { fieldKey: 'operario', label: 'Nombre del operario', fieldType: 'TEXT' as const, sortOrder: 1, manualOnly: true },
-  {
-    fieldKey: 'cnc',
-    label: 'C/NC',
-    fieldType: 'CHECKLIST' as const,
-    sortOrder: 2,
-    manualOnly: true,
-    options: { mode: 'cnc', choices: ['C', 'NC'] },
-  },
-  { fieldKey: 'observation', label: 'Observaciones', fieldType: 'TEXT' as const, sortOrder: 3, manualOnly: true },
-  { fieldKey: 'corrective', label: 'Acción correctiva', fieldType: 'TEXT' as const, sortOrder: 4, manualOnly: true },
-];
-
-const PROCESO_PARAM_COLS: FieldDef[] = [
-  { fieldKey: 'aspecto', label: 'Aspecto a verificar', fieldType: 'TEXT' as const, sortOrder: 0, manualOnly: true, required: true },
-  { fieldKey: 'cantidad', label: 'Cantidad de producto', fieldType: 'TEXT' as const, sortOrder: 1, manualOnly: true },
-  { fieldKey: 'tiempo', label: 'Tiempo (min)', fieldType: 'TEXT' as const, sortOrder: 2, manualOnly: true },
-  { fieldKey: 'temperatura', label: 'Temperatura (°C)', fieldType: 'TEXT' as const, sortOrder: 3, manualOnly: true },
-  {
-    fieldKey: 'cnc',
-    label: 'C/NC',
-    fieldType: 'CHECKLIST' as const,
-    sortOrder: 4,
-    manualOnly: true,
-    options: { mode: 'cnc', choices: ['C', 'NC'] },
-  },
-  { fieldKey: 'operario', label: 'Operario', fieldType: 'TEXT' as const, sortOrder: 5, manualOnly: true },
-  { fieldKey: 'observation', label: 'Observaciones', fieldType: 'TEXT' as const, sortOrder: 6, manualOnly: true },
-  { fieldKey: 'corrective', label: 'Acción correctiva', fieldType: 'TEXT' as const, sortOrder: 7, manualOnly: true },
-];
+import { pcOperativoTableField } from '../field-helpers';
 
 function cabezasFields() {
   return [
-    repeaterField('pc_op_proceso', 'Proceso — área cabezas', CODIGO_CNC_COLS, 1, {
-      groupName: 'Área de cabezas',
-      minRows: 2,
-      maxRows: 30,
-      helpText: 'Lavado cabezas, limpieza de lenguas, etc.',
-    }),
-    formalMeasureTableField(
-      'pc_op_bpm_esterilizadores',
-      'Buenas prácticas — T° esterilizadores',
-      'monitoreo',
-      [{ key: 'esterilizadores', label: 'T° esterilizadores' }],
-      10,
-      'Buenas prácticas de manufactura',
-      { valorLabel: '°C' }
+    pcOperativoTableField(
+      'pc_op_proceso',
+      'Proceso — área cabezas',
+      'codigo_responsable',
+      [
+        { key: 'lavado_cabezas', label: 'Lavado cabezas', slotCount: 3 },
+        { key: 'limpieza_lenguas', label: 'Limpieza de lenguas', slotCount: 3 },
+      ],
+      1,
+      'Área de cabezas'
     ),
-    repeaterField('pc_op_bpm_personal', 'Buenas prácticas — personal', BPM_PERSONAL_COLS, 11, {
-      groupName: 'Buenas prácticas de manufactura',
-      minRows: 2,
-      maxRows: 20,
-      helpText: 'Uso de tapabocas, manejo de utensilios',
-    }),
-    repeaterField('pc_op_poes', 'POES', BPM_PERSONAL_COLS, 20, {
-      groupName: 'POES',
-      minRows: 3,
-      maxRows: 20,
-      helpText: 'Limpieza guillotina, lavado guantes, carro perchero',
-    }),
+    pcOperativoTableField(
+      'pc_op_bpm_esterilizadores',
+      'T° esterilizadores',
+      'esterilizadores',
+      [{ key: 'esterilizadores', label: 'T° esterilizadores', slotCount: 2 }],
+      10,
+      'Buenas prácticas de manufactura'
+    ),
+    pcOperativoTableField(
+      'pc_op_bpm_personal',
+      'Buenas prácticas — personal',
+      'operario_cnc',
+      [
+        { key: 'tapabocas', label: 'Uso de tapabocas', slotCount: 2 },
+        { key: 'utensilios', label: 'Manejo de utensilios', slotCount: 2 },
+      ],
+      11,
+      'Buenas prácticas de manufactura'
+    ),
+    pcOperativoTableField(
+      'pc_op_poes',
+      'POES',
+      'operario_cnc',
+      [
+        { key: 'guillotina', label: 'Limpieza de guillotina', slotCount: 2 },
+        { key: 'guantes', label: 'Lavado guantes de acero', slotCount: 2 },
+        { key: 'perchero', label: 'Lavado de carro perchero', slotCount: 2 },
+      ],
+      20,
+      'POES'
+    ),
   ];
 }
 
 function patasManosFields() {
   return [
-    repeaterField('pc_op_proceso', 'Proceso — patas y manos', PROCESO_PARAM_COLS, 1, {
-      groupName: 'Área de patas y manos',
-      minRows: 2,
-      maxRows: 20,
-      helpText: 'Pelado (11–14 min a 60–70°C), cocción (5–8 min a 80–90°C)',
-    }),
-    repeaterField('pc_op_poes', 'POES', BPM_PERSONAL_COLS, 10, {
-      groupName: 'POES',
-      minRows: 1,
-      maxRows: 20,
-    }),
-    repeaterField('pc_op_bpm_personal', 'Buenas prácticas — personal', BPM_PERSONAL_COLS, 20, {
-      groupName: 'Buenas prácticas de manufactura',
-      minRows: 2,
-      maxRows: 20,
-    }),
+    pcOperativoTableField(
+      'pc_op_proceso',
+      'Proceso — patas y manos',
+      'proceso_tiempos',
+      [
+        {
+          key: 'pelado',
+          label: 'Tiempo y temperatura de pelado (11 a 14 Min a 60-70°C)',
+          slotCount: 2,
+        },
+        {
+          key: 'coccion',
+          label: 'Tiempo y temperatura de cocción (5 a 8 Min 80-90°C)',
+          slotCount: 2,
+        },
+      ],
+      1,
+      'Área de patas y manos'
+    ),
+    pcOperativoTableField(
+      'pc_op_poes',
+      'POES',
+      'operario_cnc',
+      [{ key: 'meson', label: 'Mesón de acero inoxidable', slotCount: 2 }],
+      10,
+      'POES'
+    ),
+    pcOperativoTableField(
+      'pc_op_bpm_personal',
+      'Buenas prácticas — personal',
+      'operario_cnc',
+      [
+        { key: 'tapabocas', label: 'Uso de tapabocas', slotCount: 2 },
+        { key: 'utensilios', label: 'Manejo de utensilios', slotCount: 2 },
+      ],
+      20,
+      'Buenas prácticas de manufactura'
+    ),
   ];
 }
 
 function viscerasBlancasFields() {
   return [
-    repeaterField('pc_op_proceso', 'Proceso — vísceras blancas', PROCESO_PARAM_COLS, 1, {
-      groupName: 'Área de vísceras blancas',
-      minRows: 7,
-      maxRows: 30,
-      helpText: 'Tiempos y temperaturas de limpieza y cocción de panzas, librillos, cuajos, chunchullas, canutas',
-    }),
-    repeaterField('pc_op_bpm_personal', 'Buenas prácticas', BPM_PERSONAL_COLS, 10, {
-      groupName: 'Buenas prácticas de manufactura',
-      minRows: 2,
-      maxRows: 20,
-    }),
+    pcOperativoTableField(
+      'pc_op_proceso',
+      'Proceso — vísceras blancas',
+      'proceso_tiempos_cnc',
+      [
+        { key: 'panzas_limpieza', label: 'Tiempo de limpieza de panzas (5 - 8 Min a 60°C)', slotCount: 2 },
+        { key: 'panzas_coccion', label: 'Tiempo y temperatura de cocción de panzas (3 - 5 Min a 120°C)', slotCount: 2 },
+        { key: 'librillos_limpieza', label: 'Tiempo de limpieza de librillos (6 - 9 Min a 60°C)', slotCount: 2 },
+        { key: 'librillos_coccion', label: 'Tiempo de cocción y temperatura de librillos (2 - 5 Min A 100°C)', slotCount: 2 },
+        { key: 'cuajos_limpieza', label: 'Tiempo de limpieza de cuajos (1 - 3 Min)', slotCount: 2 },
+        { key: 'cuajos_coccion', label: 'Tiempo y temperatura de cocción de cuajos (10 a 15 Min > 85°C)', slotCount: 2 },
+        { key: 'chunchullas', label: 'Tiempo y temperatura de cocción de chunchullas (10 - 20 Min > 85°C)', slotCount: 2 },
+        { key: 'canutas', label: 'Tiempo y temperatura de cocción de canutas (10 a 20 Min > de 80°C)', slotCount: 2 },
+      ],
+      1,
+      'Área de vísceras blancas'
+    ),
+    pcOperativoTableField(
+      'pc_op_bpm_personal',
+      'Buenas prácticas de manufactura',
+      'operario_cnc',
+      [
+        { key: 'tapabocas', label: 'Uso de tapabocas', slotCount: 5 },
+        { key: 'utensilios', label: 'Manejo de utensilios', slotCount: 2 },
+      ],
+      10,
+      'Buenas prácticas de manufactura',
+      { operarioLabel: 'Responsable' }
+    ),
   ];
 }
 
 function viscerasRojasFields() {
   return [
-    repeaterField('pc_op_proceso', 'Proceso — vísceras rojas', CODIGO_CNC_COLS, 1, {
-      groupName: 'Área de vísceras rojas',
-      minRows: 2,
-      maxRows: 20,
-      helpText: 'Limpieza e inspección del paquete de vísceras',
-    }),
-    repeaterField('pc_op_poes', 'POES', BPM_PERSONAL_COLS, 10, {
-      groupName: 'POES',
-      minRows: 1,
-      maxRows: 20,
-    }),
-    formalMeasureTableField(
-      'pc_op_bpm_esterilizadores',
-      'Buenas prácticas — T° esterilizadores',
-      'monitoreo',
-      [{ key: 'esterilizadores', label: 'T° esterilizadores' }],
-      20,
-      'Buenas prácticas de manufactura',
-      { valorLabel: '°C' }
+    pcOperativoTableField(
+      'pc_op_proceso',
+      'Proceso — vísceras rojas',
+      'codigo_operario',
+      [
+        { key: 'limpieza_paquete', label: 'Limpieza del paquete de vísceras', slotCount: 2 },
+        { key: 'inspeccion_paquete', label: 'Inspección del paquete de vísceras', slotCount: 2 },
+      ],
+      1,
+      'Área de vísceras rojas'
     ),
-    repeaterField('pc_op_bpm_personal', 'Buenas prácticas — personal', BPM_PERSONAL_COLS, 21, {
-      groupName: 'Buenas prácticas de manufactura',
-      minRows: 2,
-      maxRows: 20,
-    }),
+    pcOperativoTableField(
+      'pc_op_poes',
+      'POES',
+      'operario_cnc',
+      [{ key: 'ganchos', label: 'Lavado de ganchos para víscera roja', slotCount: 2 }],
+      10,
+      'POES'
+    ),
+    pcOperativoTableField(
+      'pc_op_bpm_esterilizadores',
+      'T° esterilizadores',
+      'esterilizadores',
+      [{ key: 'esterilizadores', label: 'T° esterilizadores', slotCount: 2 }],
+      20,
+      'Buenas prácticas de manufactura'
+    ),
+    pcOperativoTableField(
+      'pc_op_bpm_personal',
+      'Buenas prácticas — personal',
+      'operario_cnc',
+      [
+        { key: 'tapabocas', label: 'Uso de tapabocas', slotCount: 2 },
+        { key: 'utensilios', label: 'Manejo de utensilios', slotCount: 2 },
+      ],
+      21,
+      'Buenas prácticas de manufactura'
+    ),
   ];
 }
 

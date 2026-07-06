@@ -1,11 +1,12 @@
 import type { FieldOptions } from '@/types';
 import type { MeasureRowData } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
+import MonitoreoAspectTable from './MonitoreoAspectTable';
 
 interface Props {
   options: FieldOptions;
-  value: Record<string, MeasureRowData>;
-  onChange: (v: Record<string, MeasureRowData>) => void;
+  value: Record<string, MeasureRowData | MeasureRowData[]>;
+  onChange: (v: Record<string, MeasureRowData | MeasureRowData[]>) => void;
   disabled?: boolean;
 }
 
@@ -75,6 +76,11 @@ function PowerToggle({
   );
 }
 
+function singleRow(val: MeasureRowData | MeasureRowData[] | undefined): MeasureRowData {
+  if (Array.isArray(val)) return val[0] ?? {};
+  return val ?? {};
+}
+
 export default function FormalMeasureTable({ options, value, onChange, disabled }: Props) {
   const items = options.items ?? [];
   const tableType = options.tableType ?? 'cloro';
@@ -82,7 +88,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
   const tdClass = 'px-2 py-1 border-r border-b border-gray-400';
 
   const updateRow = (key: string, patch: Partial<MeasureRowData>) => {
-    const next = { ...value[key], ...patch };
+    const next = { ...singleRow(value[key]), ...patch };
     if (tableType === 'titulacion' && patch.volumen_naoh) {
       next.concentracion = LACTICO_MAP[patch.volumen_naoh] ?? '';
     }
@@ -107,7 +113,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
           </thead>
           <tbody>
             {items.map((item, idx) => {
-              const row = value[item.key] ?? {};
+              const row = singleRow(value[item.key]);
               const cnc = row.cnc ?? '';
               return (
                 <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -157,7 +163,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
           </thead>
           <tbody>
             {items.map((item, idx) => {
-              const row = value[item.key] ?? {};
+              const row = singleRow(value[item.key]);
               const cnc = row.cnc ?? '';
               return (
                 <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -207,7 +213,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
           </thead>
           <tbody>
             {items.map((item, idx) => {
-              const row = value[item.key] ?? {};
+              const row = singleRow(value[item.key]);
               const cnc = row.cnc ?? '';
               const conc = row.concentracion ?? LACTICO_MAP[row.volumen_naoh ?? ''] ?? '';
               return (
@@ -261,7 +267,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
           </thead>
           <tbody>
             {items.map((item, idx) => {
-              const row = value[item.key] ?? {};
+              const row = singleRow(value[item.key]);
               const meta = item as { naTemp?: boolean; naPresion?: boolean };
               return (
                 <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -313,6 +319,16 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
   }
 
   if (tableType === 'monitoreo') {
+    if (options.aspectRows) {
+      return (
+        <MonitoreoAspectTable
+          options={options}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+    }
     const valorLabel = options.valorLabel ?? 'Valor';
     const cncCols = cncChoices(options.mode);
     return (
@@ -332,7 +348,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
           </thead>
           <tbody>
             {items.map((item, idx) => {
-              const row = value[item.key] ?? {};
+              const row = singleRow(value[item.key]);
               const cnc = row.cnc ?? '';
               return (
                 <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -383,7 +399,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
             </thead>
             <tbody>
               {items.map((item, idx) => {
-                const row = value[item.key] ?? {};
+                const row = singleRow(value[item.key]);
                 const cnc = row.cnc ?? '';
                 return (
                   <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -429,7 +445,7 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
           </thead>
           <tbody>
             {items.map((item, idx) => {
-              const row = value[item.key] ?? {};
+              const row = singleRow(value[item.key]);
               const cnc = row.cnc ?? '';
               return (
                 <tr key={item.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>

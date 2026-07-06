@@ -81,14 +81,14 @@ export interface FieldConfig {
 }
 
 export interface FieldOptions {
-  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater';
+  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater' | 'pc_operativo_table';
   tableType?: 'cloro' | 'esterilizadores' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios' | 'monitoreo';
   pediluviosLayout?: 'operativo' | 'simple';
   schedule?: Record<string, string[]>;
   mode?: 'cnc' | 'cnc_na';
   choices?: string[];
   multi?: boolean;
-  items?: { key: string; label: string; fr?: string; section?: string }[];
+  items?: { key: string; label: string; fr?: string; section?: string; slotCount?: number; naTemp?: boolean; naPresion?: boolean }[];
   columns?:
     | ('cnc' | 'observation' | 'corrective' | 'platforms' | 'cavaColumns' | 'fr' | 'rev_cnc' | 'final_cnc' | 'responsible')[]
     | RepeaterColumn[];
@@ -110,6 +110,10 @@ export interface FieldOptions {
   multiple?: boolean;
   maxPhotos?: number;
   valorLabel?: string;
+  aspectRows?: boolean;
+  monitoreoVariant?: 'tiempos' | 'sanitario' | 'lavado' | 'temperatura';
+  pcOperativoVariant?: 'codigo_responsable' | 'codigo_operario' | 'operario_cnc' | 'proceso_tiempos' | 'proceso_tiempos_cnc' | 'esterilizadores';
+  operarioLabel?: string;
   allowAddEquipos?: boolean;
   equiposIzq?: { key: string; label: string }[];
   equiposDer?: { key: string; label: string }[];
@@ -129,6 +133,11 @@ export interface MeasureRowData {
   hora?: string;
   turno?: string;
   valor?: string;
+  codigo?: string;
+  cantidad?: string;
+  tiempo?: string;
+  operario?: string;
+  responsable?: string;
   minutos?: string;
   punto_toma?: string;
   cloro_residual?: string;

@@ -1,8 +1,9 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions, RepeaterColumn } from '@/types';
-import ChoiceButtons from './ChoiceButtons';
 import { INPUT_CLASS, isTemperatureInput, showRequiredIndicator } from '@/lib/formUtils';
 import Button from '@/components/Button';
+import CncToggle from './CncToggle';
+import { cncCellClass, cncHeaderClass, expandRepeaterColumns } from './repeaterColumns';
 
 interface Props {
   options: FieldOptions;
@@ -23,19 +24,6 @@ function RepeaterCell({
   disabled?: boolean;
 }) {
   const type = col.type as string;
-
-  if (type === 'CHECKLIST') {
-    const choices = col.options?.choices ?? ['C', 'NC'];
-    return (
-      <ChoiceButtons
-        choices={choices}
-        value={String(value ?? '')}
-        onChange={onChange}
-        disabled={disabled}
-        size="sm"
-      />
-    );
-  }
 
   if (type === 'SELECT') {
     const choices = col.options?.choices ?? [];
@@ -137,6 +125,7 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
   const columns = (options.columns_def ?? options.columns ?? []).filter(
     (c): c is RepeaterColumn => typeof c === 'object' && c !== null && 'key' in c
   );
+  const expandedCols = expandRepeaterColumns(columns);
   const minRows = options.minRows ?? 1;
   const maxRows = options.maxRows ?? 50;
   const rows = value.length >= minRows ? value : Array.from({ length: minRows }, (): Record<string, unknown> => ({}));
@@ -165,10 +154,15 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
           <thead>
             <tr className="bg-white border-b-2 border-gray-800">
               <th className={`${thClass} w-8 text-center`}>#</th>
-              {columns.map((col) => (
-                <th key={col.key} className={thClass}>
-                  {col.label}
-                  {showRequiredIndicator(col.required) && <span className="text-red-500 ml-0.5">*</span>}
+              {expandedCols.map((ec, i) => (
+                <th
+                  key={`${ec.kind === 'cnc' ? ec.col.key + ec.choice : ec.col.key}-${i}`}
+                  className={`${thClass} text-center w-12 ${ec.kind === 'cnc' ? cncHeaderClass(ec.choice) : ''}`}
+                >
+                  {ec.kind === 'cnc' ? ec.choice : ec.col.label}
+                  {ec.kind === 'field' && showRequiredIndicator(ec.col.required) && (
+                    <span className="text-red-500 ml-0.5">*</span>
+                  )}
                 </th>
               ))}
               {!disabled && rows.length > minRows && <th className="w-8" />}
@@ -178,14 +172,26 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
             {rows.map((row, idx) => (
               <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                 <td className={`${tdClass} text-center text-xs font-semibold text-gray-500`}>{idx + 1}</td>
-                {columns.map((col) => (
-                  <td key={col.key} className={`${tdClass} min-w-[80px]`}>
-                    <RepeaterCell
-                      col={col}
-                      value={row[col.key]}
-                      onChange={(v) => updateRow(idx, col.key, v)}
-                      disabled={disabled}
-                    />
+                {expandedCols.map((ec, i) => (
+                  <td
+                    key={`${ec.kind === 'cnc' ? ec.col.key + ec.choice : ec.col.key}-${i}`}
+                    className={`${tdClass} ${ec.kind === 'cnc' ? `text-center w-12 px-1 ${cncCellClass(ec.choice)}` : 'min-w-[80px]'}`}
+                  >
+                    {ec.kind === 'cnc' ? (
+                      <CncToggle
+                        choice={ec.choice}
+                        value={String(row[ec.col.key] ?? '')}
+                        disabled={disabled}
+                        onChange={(v) => updateRow(idx, ec.col.key, v)}
+                      />
+                    ) : (
+                      <RepeaterCell
+                        col={ec.col}
+                        value={row[ec.col.key]}
+                        onChange={(v) => updateRow(idx, ec.col.key, v)}
+                        disabled={disabled}
+                      />
+                    )}
                   </td>
                 ))}
                 {!disabled && rows.length > minRows && (

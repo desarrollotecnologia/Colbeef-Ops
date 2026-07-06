@@ -24,6 +24,7 @@ import Format11DevolucionesSheet from './Format11DevolucionesSheet';
 import Format12DecomisosSheet from './Format12DecomisosSheet';
 import Format15PoesSheet from './Format15PoesSheet';
 import GroupedFormalSheet from './GroupedFormalSheet';
+import Format14PcOperativoSheet from './Format14PcOperativoSheet';
 import Format16InocuidadSheet from './Format16InocuidadSheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
@@ -204,7 +205,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
   if (has('poes_equipos') && has('poes_hora_1')) {
     return (
       <div className="space-y-6">
-        <Format15PoesSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        <Format15PoesSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} workDate={workDate} disabled={disabled} />
         {LEGEND_FOOTER}
       </div>
     );
@@ -229,7 +230,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
   if (has('pc_op_proceso')) {
     return (
       <div className="space-y-6">
-        <GroupedFormalSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} workDate={workDate} disabled={disabled} />
+        <Format14PcOperativoSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
         {LEGEND_FOOTER}
       </div>
     );
@@ -238,7 +239,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
   if (has('pc_inocuidad_registros') && has('total_animales')) {
     return (
       <div className="space-y-6">
-        <Format16InocuidadSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+        <Format16InocuidadSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} workDate={workDate} disabled={disabled} />
         {LEGEND_FOOTER}
       </div>
     );

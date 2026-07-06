@@ -1,12 +1,12 @@
 import { FieldDef, numberField, readonlyField, textareaField } from '../field-helpers';
 
 const LEYENDA_HALLAZGOS =
-  'CR: Contenido ruminal · MF: Materia fecal · VR: Vísceras rojas · VB: Vísceras blancas · CB: Cabezas · PM: Patas y manos · LG: Lenguas · COC: Cocción · PELO: Pelo';
+  'C.R: Contenido Ruminal, M.F: Materia Fecal, V.R: Vísceras rojas, V.B: Vísceras blancas, CB: Cabezas, PM: Patas y Manos, LG: Lenguas, COC: Cocción, PELO: Pelo';
 
 export function getFormat16Fields(_slug: string): FieldDef[] {
   return [
-    numberField('total_animales', 'Total animales', 1, { groupName: 'Encabezado', required: true, min: 1 }),
-    readonlyField('leyenda_hallazgos', 'Leyenda', LEYENDA_HALLAZGOS, 2, 'Encabezado'),
+    readonlyField('leyenda_hallazgos', 'Leyenda', LEYENDA_HALLAZGOS, 1, 'Encabezado'),
+    numberField('total_animales', 'Total animales', 2, { groupName: 'Encabezado', required: true, min: 1 }),
     {
       fieldKey: 'pc_inocuidad_registros',
       label: 'Registro de verificación por ítem',
