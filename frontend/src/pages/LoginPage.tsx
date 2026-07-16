@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Home } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
@@ -107,6 +107,17 @@ export default function LoginPage() {
             Iniciar sesión
           </button>
         </form>
+
+        <div className="mt-6 flex justify-center">
+          <a
+            href="http://192.168.20.205:8000/site.html"
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-gray-200 text-gray-500 hover:text-[#1a5f2a] hover:border-[#1a5f2a] hover:bg-green-50 transition-colors"
+            title="Ir al sitio principal"
+            aria-label="Ir al sitio principal"
+          >
+            <Home size={20} />
+          </a>
+        </div>
       </div>
     </div>
   );
