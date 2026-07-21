@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import type { FieldOptions, MeasureRowData } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
 import Button from '@/components/Button';
-import CncToggle from './CncToggle';
+import CncToggle, { CncColumnHeader, type CncChoice } from './CncToggle';
 import { cncCellClass, cncHeaderClass } from './repeaterColumns';
 
 export type PcOperativoVariant =
@@ -108,6 +108,15 @@ export default function PcOperativoAspectTable({ options, value, onChange, disab
   const addRow = (aspectKey: string, minSlots: number) => {
     const entries = normalizeEntries(data[aspectKey], minSlots);
     onChange({ ...data, [aspectKey]: [...entries, {}] });
+  };
+
+  const fillAllCnc = (choice: CncChoice) => {
+    const next: PcOperativoValue = { ...data };
+    for (const item of items) {
+      const minSlots = item.slotCount ?? 2;
+      next[item.key] = normalizeEntries(data[item.key], minSlots).map((row) => ({ ...row, cnc: choice }));
+    }
+    onChange(next);
   };
 
   const renderCnc = (aspectKey: string, minSlots: number, idx: number, row: MeasureRowData) =>
@@ -240,8 +249,8 @@ export default function PcOperativoAspectTable({ options, value, onChange, disab
           <tr className="border-b-2 border-gray-800">
             <th className={`${TH} text-left w-[140px]`}>Aspectos a verificar</th>
             <th className={TH}>Código</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('C')}`}>Cumple</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('NC')}`}>No cumple</th>
+            <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('C')}`} />
+            <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('NC')}`} />
             <th className={`${TH} text-left min-w-[100px]`}>Observaciones</th>
             <th className={`${TH} text-left min-w-[100px]`}>Acción correctiva</th>
             <th className={`${TH} text-left`}>Operario responsable</th>
@@ -252,8 +261,8 @@ export default function PcOperativoAspectTable({ options, value, onChange, disab
           <tr className="border-b-2 border-gray-800">
             <th className={`${TH} text-left w-[140px]`}>Aspectos a verificar</th>
             <th className={TH}>Código</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('C')}`}>Cumple</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('NC')}`}>No cumple</th>
+            <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('C')}`} />
+            <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('NC')}`} />
             <th className={`${TH} text-left`}>Nombre operario</th>
             <th className={`${TH} text-left min-w-[100px]`}>Observaciones</th>
             <th className={`${TH} text-left min-w-[100px]`}>Acción correctiva</th>
@@ -264,8 +273,8 @@ export default function PcOperativoAspectTable({ options, value, onChange, disab
           <tr className="border-b-2 border-gray-800">
             <th className={`${TH} text-left w-[140px]`}>Aspectos a verificar</th>
             <th className={`${TH} text-left`}>{operarioLabel}</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('C')}`}>Cumple</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('NC')}`}>No cumple</th>
+            <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('C')}`} />
+            <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('NC')}`} />
             <th className={`${TH} text-left min-w-[100px]`}>Observaciones</th>
             <th className={`${TH} text-left min-w-[100px]`}>Acción correctiva</th>
           </tr>
@@ -288,8 +297,8 @@ export default function PcOperativoAspectTable({ options, value, onChange, disab
             <th className={TH}>Cantidad de producto</th>
             <th className={TH}>Tiempo</th>
             <th className={TH}>Temperatura (°C)</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('C')}`}>C</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('NC')}`}>NC</th>
+            <CncColumnHeader choice="C" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('C')}`} />
+            <CncColumnHeader choice="NC" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('NC')}`} />
             <th className={TH}>Operario</th>
             <th className={`${TH} text-left min-w-[90px]`}>Observaciones</th>
             <th className={`${TH} text-left min-w-[90px]`}>Acción correctiva</th>
@@ -301,8 +310,8 @@ export default function PcOperativoAspectTable({ options, value, onChange, disab
             <th className={`${TH} text-left w-[140px]`}>Aspectos a verificar</th>
             <th className={TH}>Temperatura (°C)</th>
             <th className={TH}>Hora</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('C')}`}>Cumple</th>
-            <th className={`${TH} w-11 ${cncHeaderClass('NC')}`}>No cumple</th>
+            <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('C')}`} />
+            <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${TH} w-11 ${cncHeaderClass('NC')}`} />
             <th className={`${TH} text-left min-w-[100px]`}>Observaciones</th>
             <th className={`${TH} text-left min-w-[100px]`}>Acción correctiva</th>
           </tr>

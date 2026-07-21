@@ -6,6 +6,12 @@ const CNC_ACTIVE_CLASS: Record<CncChoice, string> = {
   NA: 'bg-gray-500 text-white border-gray-500',
 };
 
+const CNC_LABEL: Record<CncChoice, string> = {
+  C: 'Cumple',
+  NC: 'No cumple',
+  NA: 'No aplica',
+};
+
 interface Props {
   choice: CncChoice;
   value: string;
@@ -30,8 +36,41 @@ export default function CncToggle({ choice, value, disabled, onChange, compact }
   );
 }
 
+/** Encabezado de columna: al hacer clic marca todas las filas con esa opción. */
+export function CncColumnHeader({
+  choice,
+  disabled,
+  onFillAll,
+  className = '',
+  label,
+}: {
+  choice: CncChoice;
+  disabled?: boolean;
+  onFillAll: (choice: CncChoice) => void;
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <th className={className}>
+      <button
+        type="button"
+        disabled={disabled}
+        title={`Marcar todos como ${CNC_LABEL[choice]} (${choice}). Luego puede cambiar cada fila.`}
+        onClick={() => onFillAll(choice)}
+        className={`w-full py-0.5 rounded font-bold uppercase text-[11px] border border-transparent hover:border-gray-400 hover:bg-white/80 disabled:opacity-50 disabled:cursor-not-allowed ${
+          choice === 'C' ? 'text-green-800' : choice === 'NC' ? 'text-red-800' : 'text-gray-700'
+        }`}
+      >
+        {label ?? choice}
+      </button>
+    </th>
+  );
+}
+
 export function cncChoicesFromOptions(choices?: string[]): CncChoice[] {
   const all: CncChoice[] = ['C', 'NC', 'NA'];
   if (!choices?.length) return ['C', 'NC'];
   return all.filter((c) => choices.includes(c));
 }
+
+export type { CncChoice };

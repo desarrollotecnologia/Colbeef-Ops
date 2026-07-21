@@ -1,8 +1,7 @@
 import { Fragment } from 'react';
 import type { ChecklistItemData, FieldOptions } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
-
-type CncChoice = 'C' | 'NC' | 'NA';
+import { CncColumnHeader, type CncChoice } from './CncToggle';
 
 /** Fondos alternados por grupo de cava (C#10, C#9, …) para no confundir columnas */
 const GROUP_HEADER_BG = ['bg-sky-100', 'bg-teal-100'] as const;
@@ -125,6 +124,18 @@ export default function CavaMatrixTable({
     onChange({ ...value, [itemKey]: { ...value[itemKey], ...patch } });
   };
 
+  const fillAllCava = (cavaKey: string, choice: CncChoice) => {
+    const next = { ...value };
+    for (const item of items) {
+      const row = next[item.key] ?? {};
+      next[item.key] = {
+        ...row,
+        cavas: { ...row.cavas, [cavaKey]: choice },
+      };
+    }
+    onChange(next);
+  };
+
   const readObservation = (data: ChecklistItemData): string => {
     if (!obsScopeKey) return data.observation ?? '';
     if (data.observations?.[obsScopeKey] !== undefined) return data.observations[obsScopeKey] ?? '';
@@ -156,6 +167,7 @@ export default function CavaMatrixTable({
       {showScrollHint && (
         <p className="text-[11px] text-amber-800 bg-amber-50 border-b border-amber-200 px-3 py-1.5">
           Cada grupo de color (azul / verde claro) es una cava o máquina — marque C / NC / NA en cada cruce.
+          Puede hacer clic en el encabezado C, NC o NA para marcar toda la columna y luego ajustar fila por fila.
         </p>
       )}
       <div className="overflow-x-auto">
@@ -190,14 +202,15 @@ export default function CavaMatrixTable({
             <tr className="bg-white border-b-2 border-gray-800">
               {columnDefs.map((col, colIdx) =>
                 subColsFor(col.mode).map((sub, subIdx) => (
-                  <th
+                  <CncColumnHeader
                     key={`${col.key}-${sub}`}
+                    choice={sub}
+                    disabled={disabled}
+                    onFillAll={(c) => fillAllCava(col.key, c)}
                     className={`${thClass} w-9 min-w-[2.25rem] ${groupHeaderBg(colIdx)} ${
                       subIdx === 0 ? 'border-l-2 border-l-gray-400' : ''
                     }`}
-                  >
-                    {sub}
-                  </th>
+                  />
                 ))
               )}
             </tr>

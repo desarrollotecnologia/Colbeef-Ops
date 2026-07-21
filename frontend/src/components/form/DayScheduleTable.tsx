@@ -2,6 +2,7 @@ import type { FieldOptions } from '@/types';
 import { getDayKey } from '@/lib/autoFill';
 import { getPointsForDay } from '@/lib/daySchedules';
 import { INPUT_CLASS } from '@/lib/formUtils';
+import { CncColumnHeader, type CncChoice } from './CncToggle';
 
 export interface DayPointRow {
   cloro_residual?: string;
@@ -80,7 +81,17 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
     onChange({ ...value, [key]: { ...value[key], ...patch } });
   };
 
+  const fillAllCnc = (choice: CncChoice) => {
+    const next = { ...value };
+    for (const punto of points) {
+      const key = pointKey(punto);
+      next[key] = { ...next[key], cnc: choice };
+    }
+    onChange(next);
+  };
+
   const wrapClass = embedded ? 'overflow-x-auto' : 'overflow-x-auto border border-gray-800';
+  const thCnc = 'px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12';
 
   if (tableType === 'cloro') {
     return (
@@ -95,8 +106,8 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
                 Cloro residual libre<br /><span className="font-normal">(0.3 – 2 ppm)</span>
               </th>
               <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-16">pH</th>
-              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">C</th>
-              <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">NC</th>
+              <CncColumnHeader choice="C" disabled={disabled} onFillAll={fillAllCnc} className={thCnc} />
+              <CncColumnHeader choice="NC" disabled={disabled} onFillAll={fillAllCnc} className={thCnc} />
               <th className="px-2 py-2 text-left text-[11px] font-bold uppercase">Observaciones</th>
             </tr>
           </thead>
@@ -164,8 +175,8 @@ export default function DayScheduleTable({ options, value, onChange, workDate, d
             <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800">
               Valores encontrados (°C)
             </th>
-            <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">C</th>
-            <th className="px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800 w-12">NC</th>
+            <CncColumnHeader choice="C" disabled={disabled} onFillAll={fillAllCnc} className={thCnc} />
+            <CncColumnHeader choice="NC" disabled={disabled} onFillAll={fillAllCnc} className={thCnc} />
             <th className="px-2 py-2 text-left text-[11px] font-bold uppercase">Observación</th>
           </tr>
         </thead>

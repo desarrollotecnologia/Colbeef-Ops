@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import type { ChecklistItemData, FieldOptions } from '@/types';
 import ChoiceButtons from './ChoiceButtons';
 import CavaMatrixTable from './CavaMatrixTable';
+import { CncColumnHeader, type CncChoice } from './CncToggle';
 import { INPUT_CLASS, SECTION_HEADER_ROW_CLASS } from '@/lib/formUtils';
 
 interface Props {
@@ -11,8 +12,6 @@ interface Props {
   disabled?: boolean;
   tableMode?: boolean;
 }
-
-type CncChoice = 'C' | 'NC' | 'NA';
 
 function CncToggle({
   choice,
@@ -108,6 +107,26 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
     onChange({ ...value, [itemKey]: { ...value[itemKey], ...patch } });
   };
 
+  const fillAllCnc = (field: 'cnc' | 'rev_cnc' | 'final_cnc', choice: CncChoice) => {
+    const next = { ...value };
+    for (const item of items) {
+      next[item.key] = { ...next[item.key], [field]: choice };
+    }
+    onChange(next);
+  };
+
+  const fillAllPlatform = (plat: string, choice: CncChoice) => {
+    const next = { ...value };
+    for (const item of items) {
+      const row = next[item.key] ?? {};
+      next[item.key] = {
+        ...row,
+        platforms: { ...row.platforms, [plat]: choice },
+      };
+    }
+    onChange(next);
+  };
+
   const thClass = 'px-2 py-2 text-center text-[11px] font-bold uppercase border-r border-gray-800';
   const tdClass = 'px-2 py-1 border-r border-b border-gray-400';
 
@@ -132,12 +151,25 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
               </th>
             </tr>
             <tr className="bg-white border-b-2 border-gray-800">
-              {Array.from({ length: platformCount }, (_, i) => (
-                <Fragment key={i}>
-                  <th className={`${thClass} w-10`}>C</th>
-                  <th className={`${thClass} w-10`}>NC</th>
-                </Fragment>
-              ))}
+              {Array.from({ length: platformCount }, (_, i) => {
+                const plat = String(i + 1);
+                return (
+                  <Fragment key={i}>
+                    <CncColumnHeader
+                      choice="C"
+                      disabled={disabled}
+                      onFillAll={(c) => fillAllPlatform(plat, c)}
+                      className={`${thClass} w-10`}
+                    />
+                    <CncColumnHeader
+                      choice="NC"
+                      disabled={disabled}
+                      onFillAll={(c) => fillAllPlatform(plat, c)}
+                      className={`${thClass} w-10`}
+                    />
+                  </Fragment>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -223,14 +255,22 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
             </tr>
             <tr className="bg-white border-b-2 border-gray-800">
               {revSubCols.map((sub) => (
-                <th key={`rev-h-${sub}`} className={`${thClass} w-10 ${sub === 'NA' ? 'bg-gray-100' : sub === 'C' ? 'bg-green-50' : 'bg-red-50'}`}>
-                  {sub}
-                </th>
+                <CncColumnHeader
+                  key={`rev-h-${sub}`}
+                  choice={sub}
+                  disabled={disabled}
+                  onFillAll={(c) => fillAllCnc('rev_cnc', c)}
+                  className={`${thClass} w-10 ${sub === 'NA' ? 'bg-gray-100' : sub === 'C' ? 'bg-green-50' : 'bg-red-50'}`}
+                />
               ))}
               {finalSubCols.map((sub) => (
-                <th key={`final-h-${sub}`} className={`${thClass} w-10 ${sub === 'NA' ? 'bg-gray-100' : sub === 'C' ? 'bg-green-50' : 'bg-red-50'}`}>
-                  {sub}
-                </th>
+                <CncColumnHeader
+                  key={`final-h-${sub}`}
+                  choice={sub}
+                  disabled={disabled}
+                  onFillAll={(c) => fillAllCnc('final_cnc', c)}
+                  className={`${thClass} w-10 ${sub === 'NA' ? 'bg-gray-100' : sub === 'C' ? 'bg-green-50' : 'bg-red-50'}`}
+                />
               ))}
             </tr>
           </thead>
@@ -352,7 +392,13 @@ export default function ItemChecklist({ options, value, onChange, disabled, tabl
               {hasSections && <th className={`${thClass} text-left w-28`}>Área</th>}
               <th className={`${thClass} text-left`}>Equipo o superficie</th>
               {cncSubCols.map((sub) => (
-                <th key={sub} className={`${thClass} w-12`}>{sub}</th>
+                <CncColumnHeader
+                  key={sub}
+                  choice={sub}
+                  disabled={disabled}
+                  onFillAll={(c) => fillAllCnc('cnc', c)}
+                  className={`${thClass} w-12`}
+                />
               ))}
               <th className={`${thClass} text-left`}>Observaciones</th>
               <th className="px-2 py-2 text-left text-[11px] font-bold uppercase">Acción correctiva</th>

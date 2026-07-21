@@ -2,6 +2,7 @@ import type { FieldOptions } from '@/types';
 import type { MeasureRowData } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
 import MonitoreoAspectTable from './MonitoreoAspectTable';
+import { CncColumnHeader, type CncChoice } from './CncToggle';
 
 interface Props {
   options: FieldOptions;
@@ -9,8 +10,6 @@ interface Props {
   onChange: (v: Record<string, MeasureRowData | MeasureRowData[]>) => void;
   disabled?: boolean;
 }
-
-type CncChoice = 'C' | 'NC' | 'NA';
 
 const CNC_ACTIVE_CLASS: Record<CncChoice, string> = {
   C: 'bg-green-600 text-white border-green-600',
@@ -95,6 +94,14 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
     onChange({ ...value, [key]: next });
   };
 
+  const fillAllCnc = (choice: CncChoice) => {
+    const next = { ...value };
+    for (const item of items) {
+      next[item.key] = { ...singleRow(next[item.key]), cnc: choice };
+    }
+    onChange(next);
+  };
+
   if (tableType === 'cloro') {
     return (
       <div className="overflow-x-auto">
@@ -106,8 +113,8 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={`${thClass} text-left`}>Punto de toma</th>
               <th className={thClass}>pH</th>
               <th className={thClass}>Cloro residual (0.3–2 ppm)</th>
-              <th className={thClass}>Cumple</th>
-              <th className={thClass}>No cumple</th>
+              <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={thClass} />
+              <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={thClass} />
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>
@@ -155,9 +162,11 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={`${thClass} text-left`}>Área</th>
               <th className={thClass}>Hora</th>
               <th className={thClass}>Temperatura °C</th>
-              <th className={`${thClass} bg-green-50`}>Cumple</th>
-              <th className={`${thClass} bg-red-50`}>No cumple</th>
-              {cncCols.includes('NA') && <th className={`${thClass} bg-gray-100`}>No aplica</th>}
+              <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${thClass} bg-green-50`} />
+              <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${thClass} bg-red-50`} />
+              {cncCols.includes('NA') && (
+                <CncColumnHeader choice="NA" label="No aplica" disabled={disabled} onFillAll={fillAllCnc} className={`${thClass} bg-gray-100`} />
+              )}
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>
@@ -206,8 +215,8 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={thClass}>Hora</th>
               <th className={thClass}>Volumen NaOH (ml)</th>
               <th className={thClass}>Concentración AC. láctico 2%</th>
-              <th className={thClass}>Cumple</th>
-              <th className={thClass}>No cumple</th>
+              <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={thClass} />
+              <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={thClass} />
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>
@@ -340,7 +349,13 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={thClass}>Turno monitoreo</th>
               <th className={thClass}>{valorLabel}</th>
               {cncCols.map((sub) => (
-                <th key={sub} className={`${thClass} w-12`}>{sub}</th>
+                <CncColumnHeader
+                  key={sub}
+                  choice={sub}
+                  disabled={disabled}
+                  onFillAll={fillAllCnc}
+                  className={`${thClass} w-12`}
+                />
               ))}
               <th className={`${thClass} text-left min-w-[100px]`}>Observaciones</th>
               <th className={`${thClass} text-left min-w-[90px]`}>Acción correctiva</th>
@@ -392,8 +407,8 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
                 <th className={thClass}>Hora</th>
                 <th className={`${thClass} text-left`}>Principio activo</th>
                 <th className={thClass}>Concentración (ppm)</th>
-                <th className={`${thClass} bg-green-50`}>Cumple</th>
-                <th className={`${thClass} bg-red-50`}>No cumple</th>
+                <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${thClass} bg-green-50`} />
+                <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={`${thClass} bg-red-50`} />
                 <th className={`${thClass} text-left min-w-[120px]`}>Corrección</th>
               </tr>
             </thead>
@@ -438,8 +453,8 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
               <th className={`${thClass} w-10`}>N°</th>
               <th className={`${thClass} text-left`}>Principio activo</th>
               <th className={thClass}>Concentración (250 ppm)</th>
-              <th className={thClass}>Cumple</th>
-              <th className={thClass}>No cumple</th>
+              <CncColumnHeader choice="C" label="Cumple" disabled={disabled} onFillAll={fillAllCnc} className={thClass} />
+              <CncColumnHeader choice="NC" label="No cumple" disabled={disabled} onFillAll={fillAllCnc} className={thClass} />
               <th className={`${thClass} text-left min-w-[100px]`}>Corrección</th>
             </tr>
           </thead>

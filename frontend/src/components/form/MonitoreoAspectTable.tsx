@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import type { FieldOptions, MeasureRowData } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
 import Button from '@/components/Button';
-import CncToggle from './CncToggle';
+import CncToggle, { CncColumnHeader, type CncChoice } from './CncToggle';
 import { cncCellClass, cncHeaderClass } from './repeaterColumns';
 
 type MonitoreoVariant = 'tiempos' | 'sanitario' | 'lavado' | 'temperatura';
@@ -56,6 +56,16 @@ export default function MonitoreoAspectTable({ options, value, onChange, disable
   const addRow = (aspectKey: string, minSlots: number) => {
     const entries = normalizeEntries(value[aspectKey], minSlots);
     onChange({ ...value, [aspectKey]: [...entries, {}] });
+  };
+
+  const fillAllCnc = (choice: CncChoice) => {
+    const next: Record<string, MeasureRowData | MeasureRowData[]> = { ...value };
+    for (const item of items) {
+      const minSlots = item.slotCount ?? 4;
+      const entries = normalizeEntries(value[item.key], minSlots).map((row) => ({ ...row, cnc: choice }));
+      next[item.key] = entries;
+    }
+    onChange(next);
   };
 
   const renderCncCells = (aspectKey: string, minSlots: number, idx: number, row: MeasureRowData) => {
@@ -139,10 +149,26 @@ export default function MonitoreoAspectTable({ options, value, onChange, disable
                     {procesoGroupLabel}
                   </th>
                   <th className={`${HEADER} w-11`} rowSpan={2}>
-                    C
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      title="Marcar todos como Cumple (C). Luego puede cambiar cada fila."
+                      onClick={() => fillAllCnc('C')}
+                      className="w-full font-bold uppercase hover:underline disabled:opacity-50"
+                    >
+                      C
+                    </button>
                   </th>
                   <th className={`${HEADER} w-11`} rowSpan={2}>
-                    NC
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      title="Marcar todos como No cumple (NC). Luego puede cambiar cada fila."
+                      onClick={() => fillAllCnc('NC')}
+                      className="w-full font-bold uppercase hover:underline disabled:opacity-50"
+                    >
+                      NC
+                    </button>
                   </th>
                   <th className={`${HEADER} text-left min-w-[120px]`} rowSpan={2}>
                     Observaciones
@@ -157,8 +183,18 @@ export default function MonitoreoAspectTable({ options, value, onChange, disable
               <tr className="border-b-2 border-gray-800">
                 <th className={`${HEADER} text-left w-[140px]`}>Aspecto a verificar</th>
                 <th className={SUB_HEADER}>Turno monitoreo</th>
-                <th className={`${HEADER} w-11 ${cncHeaderClass('C')}`}>C</th>
-                <th className={`${HEADER} w-11 ${cncHeaderClass('NC')}`}>NC</th>
+                <CncColumnHeader
+                  choice="C"
+                  disabled={disabled}
+                  onFillAll={fillAllCnc}
+                  className={`${HEADER} w-11 ${cncHeaderClass('C')}`}
+                />
+                <CncColumnHeader
+                  choice="NC"
+                  disabled={disabled}
+                  onFillAll={fillAllCnc}
+                  className={`${HEADER} w-11 ${cncHeaderClass('NC')}`}
+                />
                 <th className={`${HEADER} text-left min-w-[120px]`}>Observaciones</th>
               </tr>
             )}
