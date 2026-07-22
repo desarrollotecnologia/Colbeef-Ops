@@ -123,28 +123,64 @@ function RepeaterCell({
   );
 }
 
-type HeaderGroup =
-  | { kind: 'field'; col: RepeaterColumn; span: 1 }
-  | { kind: 'cncGroup'; col: RepeaterColumn; choices: ('C' | 'NC' | 'NA')[] };
+type CncLeaf = { kind: 'cnc'; col: RepeaterColumn; choices: CncChoice[] };
+type FieldLeaf = { kind: 'field'; col: RepeaterColumn };
+type Leaf = CncLeaf | FieldLeaf;
 
-/** Agrupa columnas C/NC/NA bajo el título del aspecto (Guantes, Cuchillo, …). */
-function buildHeaderGroups(columns: RepeaterColumn[]): HeaderGroup[] {
-  const groups: HeaderGroup[] = [];
-  for (const col of columns) {
-    if (col.type === 'CHECKLIST') {
-      const choices = (col.options?.choices ?? ['C', 'NC']).filter(
-        (c): c is 'C' | 'NC' | 'NA' => c === 'C' || c === 'NC' || c === 'NA'
-      );
-      groups.push({ kind: 'cncGroup', col, choices: choices.length ? choices : ['C', 'NC'] });
-    } else {
-      groups.push({ kind: 'field', col, span: 1 });
-    }
-  }
-  return groups;
+type TopCell =
+  | { kind: 'plain'; leaf: Leaf }
+  | { kind: 'band'; label: string; leaves: Leaf[] };
+
+function cncChoices(col: RepeaterColumn): CncChoice[] {
+  const choices = (col.options?.choices ?? ['C', 'NC']).filter(
+    (c): c is CncChoice => c === 'C' || c === 'NC' || c === 'NA'
+  );
+  return choices.length ? choices : ['C', 'NC'];
 }
 
-function hasCncGroups(groups: HeaderGroup[]) {
-  return groups.some((g) => g.kind === 'cncGroup');
+function toLeaf(col: RepeaterColumn): Leaf {
+  if (col.type === 'CHECKLIST') return { kind: 'cnc', col, choices: cncChoices(col) };
+  return { kind: 'field', col };
+}
+
+function leafColSpan(leaf: Leaf): number {
+  return leaf.kind === 'cnc' ? leaf.choices.length : 1;
+}
+
+/** Agrupa columnas consecutivas con el mismo headerGroup (Empaque, Temperatura, …). */
+function buildTopCells(columns: RepeaterColumn[]): TopCell[] {
+  const result: TopCell[] = [];
+  let i = 0;
+  while (i < columns.length) {
+    const col = columns[i];
+    const band = col.headerGroup?.trim();
+    if (!band) {
+      result.push({ kind: 'plain', leaf: toLeaf(col) });
+      i += 1;
+      continue;
+    }
+    const leaves: Leaf[] = [];
+    while (i < columns.length && columns[i].headerGroup?.trim() === band) {
+      leaves.push(toLeaf(columns[i]));
+      i += 1;
+    }
+    result.push({ kind: 'band', label: band, leaves });
+  }
+  return result;
+}
+
+function topHasCnc(cells: TopCell[]): boolean {
+  return cells.some((c) =>
+    c.kind === 'plain' ? c.leaf.kind === 'cnc' : c.leaves.some((l) => l.kind === 'cnc')
+  );
+}
+
+function topHasBands(cells: TopCell[]): boolean {
+  return cells.some((c) => c.kind === 'band');
+}
+
+function bandColSpan(leaves: Leaf[]): number {
+  return leaves.reduce((n, l) => n + leafColSpan(l), 0);
 }
 
 export default function FormalRepeaterTable({ options, value, onChange, disabled }: Props) {
@@ -152,8 +188,11 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
     (c): c is RepeaterColumn => typeof c === 'object' && c !== null && 'key' in c
   );
   const expandedCols = expandRepeaterColumns(columns);
-  const headerGroups = buildHeaderGroups(columns);
-  const twoRowHeader = hasCncGroups(headerGroups);
+  const topCells = buildTopCells(columns);
+  const hasCnc = topHasCnc(topCells);
+  const hasBands = topHasBands(topCells);
+  /** 3 filas: banda → subetiqueta → C/NC/NA (Despacho). 2 filas: aspecto → C/NC/NA (Desposte). */
+  const headerDepth = hasBands && hasCnc ? 3 : hasCnc ? 2 : 1;
   const minRows = options.minRows ?? 1;
   const maxRows = options.maxRows ?? 50;
   const rows =
@@ -180,8 +219,23 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
   const thClass = 'px-2 py-2 text-left text-[10px] font-bold uppercase border-r border-gray-800 whitespace-nowrap';
   const thCenter = `${thClass} text-center`;
   const thGroup =
-    'px-1 py-1.5 text-center text-[9px] font-bold uppercase border-r border-l border-gray-800 leading-tight max-w-[7.5rem]';
+    'px-1 py-1.5 text-center text-[9px] font-bold uppercase border-r border-l border-gray-800 leading-tight';
   const tdClass = 'px-2 py-1.5 border-r border-b border-gray-400 align-top';
+  const showActions = !disabled && rows.length > minRows;
+
+  const labelSuffix = (col: RepeaterColumn) =>
+    showRequiredIndicator(col.required) ? <span className="text-red-500 ml-0.5">*</span> : null;
+
+  const renderCncHeaders = (leaf: CncLeaf) =>
+    leaf.choices.map((choice) => (
+      <CncColumnHeader
+        key={`${leaf.col.key}-${choice}`}
+        choice={choice}
+        disabled={disabled}
+        onFillAll={(c) => fillAllCnc(leaf.col.key, c)}
+        className={`${thCenter} w-11 ${cncHeaderClass(choice)} border-l first:border-l-0 border-gray-400`}
+      />
+    ));
 
   const renderCell = (ec: ExpandedRepeaterCol, row: Record<string, unknown>, idx: number, i: number) => (
     <td
@@ -213,52 +267,7 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[720px] border-collapse">
           <thead>
-            {twoRowHeader ? (
-              <>
-                <tr className="bg-[#d9ead3] border-b border-gray-800">
-                  <th className={`${thCenter} w-8 bg-[#d9ead3]`} rowSpan={2}>
-                    #
-                  </th>
-                  {headerGroups.map((g) =>
-                    g.kind === 'field' ? (
-                      <th key={g.col.key} className={`${thClass} bg-[#d9ead3]`} rowSpan={2}>
-                        {g.col.label}
-                        {showRequiredIndicator(g.col.required) && (
-                          <span className="text-red-500 ml-0.5">*</span>
-                        )}
-                      </th>
-                    ) : (
-                      <th
-                        key={g.col.key}
-                        colSpan={g.choices.length}
-                        className={`${thGroup} bg-[#d9ead3]`}
-                      >
-                        {g.col.label}
-                        {showRequiredIndicator(g.col.required) && (
-                          <span className="text-red-500 ml-0.5">*</span>
-                        )}
-                      </th>
-                    )
-                  )}
-                  {!disabled && rows.length > minRows && <th className="w-8 bg-[#d9ead3]" rowSpan={2} />}
-                </tr>
-                <tr className="bg-white border-b-2 border-gray-800">
-                  {headerGroups.map((g) =>
-                    g.kind === 'cncGroup'
-                      ? g.choices.map((choice) => (
-                          <CncColumnHeader
-                            key={`${g.col.key}-${choice}`}
-                            choice={choice}
-                            disabled={disabled}
-                            onFillAll={(c) => fillAllCnc(g.col.key, c)}
-                            className={`${thCenter} w-11 ${cncHeaderClass(choice)} border-l first:border-l-0 border-gray-400`}
-                          />
-                        ))
-                      : null
-                  )}
-                </tr>
-              </>
-            ) : (
+            {headerDepth === 1 ? (
               <tr className="bg-white border-b-2 border-gray-800">
                 <th className={`${thCenter} w-8`}>#</th>
                 {expandedCols.map((ec, i) => (
@@ -267,13 +276,129 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
                     className={`${thCenter} w-12 ${ec.kind === 'cnc' ? cncHeaderClass(ec.choice) : ''}`}
                   >
                     {ec.kind === 'cnc' ? ec.choice : ec.col.label}
-                    {ec.kind === 'field' && showRequiredIndicator(ec.col.required) && (
-                      <span className="text-red-500 ml-0.5">*</span>
-                    )}
+                    {ec.kind === 'field' && labelSuffix(ec.col)}
                   </th>
                 ))}
-                {!disabled && rows.length > minRows && <th className="w-8" />}
+                {showActions && <th className="w-8" />}
               </tr>
+            ) : headerDepth === 2 ? (
+              <>
+                <tr className="bg-[#d9ead3] border-b border-gray-800">
+                  <th className={`${thCenter} w-8 bg-[#d9ead3]`} rowSpan={2}>
+                    #
+                  </th>
+                  {topCells.map((cell) => {
+                    if (cell.kind === 'band') {
+                      return (
+                        <th
+                          key={`band-${cell.label}`}
+                          colSpan={bandColSpan(cell.leaves)}
+                          className={`${thGroup} bg-[#d9ead3]`}
+                        >
+                          {cell.label}
+                        </th>
+                      );
+                    }
+                    if (cell.leaf.kind === 'field') {
+                      return (
+                        <th key={cell.leaf.col.key} className={`${thClass} bg-[#d9ead3]`} rowSpan={2}>
+                          {cell.leaf.col.label}
+                          {labelSuffix(cell.leaf.col)}
+                        </th>
+                      );
+                    }
+                    return (
+                      <th
+                        key={cell.leaf.col.key}
+                        colSpan={cell.leaf.choices.length}
+                        className={`${thGroup} bg-[#d9ead3]`}
+                      >
+                        {cell.leaf.col.label}
+                        {labelSuffix(cell.leaf.col)}
+                      </th>
+                    );
+                  })}
+                  {showActions && <th className="w-8 bg-[#d9ead3]" rowSpan={2} />}
+                </tr>
+                <tr className="bg-white border-b-2 border-gray-800">
+                  {topCells.flatMap((cell) => {
+                    if (cell.kind === 'band') {
+                      return cell.leaves.flatMap((leaf) =>
+                        leaf.kind === 'cnc' ? renderCncHeaders(leaf) : (
+                          <th key={leaf.col.key} className={`${thCenter} bg-white`}>
+                            {leaf.col.label}
+                            {labelSuffix(leaf.col)}
+                          </th>
+                        )
+                      );
+                    }
+                    return cell.leaf.kind === 'cnc' ? renderCncHeaders(cell.leaf) : [];
+                  })}
+                </tr>
+              </>
+            ) : (
+              <>
+                <tr className="bg-[#d9ead3] border-b border-gray-800">
+                  <th className={`${thCenter} w-8 bg-[#d9ead3]`} rowSpan={3}>
+                    #
+                  </th>
+                  {topCells.map((cell) => {
+                    if (cell.kind === 'band') {
+                      return (
+                        <th
+                          key={`band-${cell.label}`}
+                          colSpan={bandColSpan(cell.leaves)}
+                          className={`${thGroup} bg-[#d9ead3]`}
+                        >
+                          {cell.label}
+                        </th>
+                      );
+                    }
+                    return (
+                      <th
+                        key={cell.leaf.col.key}
+                        colSpan={leafColSpan(cell.leaf)}
+                        className={`${thClass} bg-[#d9ead3]`}
+                        rowSpan={3}
+                      >
+                        {cell.leaf.col.label}
+                        {labelSuffix(cell.leaf.col)}
+                      </th>
+                    );
+                  })}
+                  {showActions && <th className="w-8 bg-[#d9ead3]" rowSpan={3} />}
+                </tr>
+                <tr className="bg-[#e8f5e3] border-b border-gray-800">
+                  {topCells.flatMap((cell) => {
+                    if (cell.kind !== 'band') return [];
+                    return cell.leaves.map((leaf) =>
+                      leaf.kind === 'cnc' ? (
+                        <th
+                          key={leaf.col.key}
+                          colSpan={leaf.choices.length}
+                          className={`${thGroup} bg-[#e8f5e3]`}
+                        >
+                          {leaf.col.label}
+                          {labelSuffix(leaf.col)}
+                        </th>
+                      ) : (
+                        <th key={leaf.col.key} className={`${thCenter} bg-[#e8f5e3]`} rowSpan={2}>
+                          {leaf.col.label}
+                          {labelSuffix(leaf.col)}
+                        </th>
+                      )
+                    );
+                  })}
+                </tr>
+                <tr className="bg-white border-b-2 border-gray-800">
+                  {topCells.flatMap((cell) => {
+                    if (cell.kind !== 'band') return [];
+                    return cell.leaves.flatMap((leaf) =>
+                      leaf.kind === 'cnc' ? renderCncHeaders(leaf) : []
+                    );
+                  })}
+                </tr>
+              </>
             )}
           </thead>
           <tbody>
@@ -281,7 +406,7 @@ export default function FormalRepeaterTable({ options, value, onChange, disabled
               <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                 <td className={`${tdClass} text-center text-xs font-semibold text-gray-500`}>{idx + 1}</td>
                 {expandedCols.map((ec, i) => renderCell(ec, row, idx, i))}
-                {!disabled && rows.length > minRows && (
+                {showActions && (
                   <td className="px-1 py-1 border-b border-gray-400">
                     <button
                       type="button"

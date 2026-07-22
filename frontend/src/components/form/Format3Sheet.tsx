@@ -42,7 +42,9 @@ export default function Format3Sheet({ fields, sheetData, onUpdate, disabled }: 
         <div>
           <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">{productosField.label}</h3>
-            <p className="text-[11px] text-gray-600 mt-0.5">REFR 0–4 °C · CONG -18 °C · C = Cumple · NC = No cumple</p>
+            <p className="text-[11px] text-gray-600 mt-0.5">
+              Empaque vacío / granel · REFR 0–4 °C · CONG -18 °C · C = Cumple · NC = No cumple · NA = No aplica
+            </p>
           </div>
           <div className="p-0">
             <FormField

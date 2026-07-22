@@ -907,10 +907,22 @@ function renderRepeaterTable(
   }
 
   const tableW = pageWidth(doc) - MARGIN * 2;
-  type PdfCol = { key: string; label: string; cncChoice?: 'C' | 'NC' | 'NA'; groupLabel?: string };
-  type ColDef = { key: string; label: string; type?: string; options?: { choices?: string[] } };
+  type PdfCol = {
+    key: string;
+    label: string;
+    cncChoice?: 'C' | 'NC' | 'NA';
+    groupLabel?: string;
+    headerGroup?: string;
+  };
+  type ColDef = {
+    key: string;
+    label: string;
+    type?: string;
+    headerGroup?: string;
+    options?: { choices?: string[] };
+  };
   const expanded: PdfCol[] = [{ key: '_idx', label: '#' }];
-  const checklistGroups: { label: string; start: number; count: number }[] = [];
+  const checklistGroups: { label: string; start: number; count: number; headerGroup?: string }[] = [];
   for (const col of cols as ColDef[]) {
     const isCnc = col.key === 'cnc' || col.type === 'CHECKLIST';
     if (isCnc) {
@@ -919,23 +931,93 @@ function renderRepeaterTable(
       );
       const start = expanded.length;
       choices.forEach((c) => {
-        expanded.push({ key: col.key, label: c, cncChoice: c, groupLabel: col.label });
+        expanded.push({
+          key: col.key,
+          label: c,
+          cncChoice: c,
+          groupLabel: col.label,
+          headerGroup: col.headerGroup,
+        });
       });
-      checklistGroups.push({ label: col.label, start, count: choices.length });
+      checklistGroups.push({
+        label: col.label,
+        start,
+        count: choices.length,
+        headerGroup: col.headerGroup,
+      });
     } else {
-      expanded.push({ key: col.key, label: col.label });
+      expanded.push({ key: col.key, label: col.label, headerGroup: col.headerGroup });
     }
   }
+
+  // Bandas superiores (Empaque, Temperatura) cuando hay headerGroup
+  type Band = { label: string; start: number; count: number };
+  const bands: Band[] = [];
+  {
+    let i = 1; // saltar #
+    while (i < expanded.length) {
+      const hg = expanded[i].headerGroup?.trim();
+      if (!hg) {
+        i += 1;
+        continue;
+      }
+      const start = i;
+      while (i < expanded.length && expanded[i].headerGroup?.trim() === hg) i += 1;
+      bands.push({ label: hg, start, count: i - start });
+    }
+  }
+
   const colW = tableW / expanded.length;
   let y = startY;
   const hasGroups = checklistGroups.length > 0;
-  const headerH = hasGroups ? 18 : 11;
+  const hasBands = bands.length > 0;
+  const headerH = hasBands && hasGroups ? 26 : hasGroups ? 18 : 11;
 
   y = ensurePageSpace(doc, ctx, y, headerH);
   drawTableRowBorder(doc, y, headerH, '#d9ead3');
   doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
 
-  if (hasGroups) {
+  if (hasBands && hasGroups) {
+    // Fila 1: bandas Empaque / Temperatura + columnas sueltas
+    expanded.forEach((col, i) => {
+      if (col.key === '_idx' || col.headerGroup) return;
+      doc.text(col.label, MARGIN + i * colW + 1, y + 2, {
+        width: colW - 2,
+        align: 'left',
+      });
+    });
+    doc.text('#', MARGIN + 1, y + 2, { width: colW - 2, align: 'center' });
+    bands.forEach((b) => {
+      doc.text(b.label.toUpperCase(), MARGIN + b.start * colW + 1, y + 1, {
+        width: b.count * colW - 2,
+        align: 'center',
+      });
+    });
+    // Fila 2: Vacío / Granel / Refr / Cong
+    checklistGroups.forEach((g) => {
+      doc.text(g.label.toUpperCase(), MARGIN + g.start * colW + 1, y + 10, {
+        width: g.count * colW - 2,
+        align: 'center',
+      });
+    });
+    expanded.forEach((col, i) => {
+      if (col.cncChoice || col.key === '_idx' || !col.headerGroup) return;
+      doc.text(col.label, MARGIN + i * colW + 1, y + 10, {
+        width: colW - 2,
+        align: 'center',
+      });
+    });
+    // Fila 3: C / NC / NA
+    checklistGroups.forEach((g) => {
+      for (let j = 0; j < g.count; j++) {
+        const col = expanded[g.start + j];
+        doc.text(col.label, MARGIN + (g.start + j) * colW + 1, y + 18, {
+          width: colW - 2,
+          align: 'center',
+        });
+      }
+    });
+  } else if (hasGroups) {
     // Fila 1: títulos de aspecto encima de C/NC/NA
     expanded.forEach((col, i) => {
       if (col.key === '_idx' || !col.cncChoice) {

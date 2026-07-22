@@ -126,6 +126,8 @@ export interface RepeaterColumn {
   options?: FieldOptions;
   config?: FieldConfig;
   required?: boolean;
+  /** Agrupa columnas bajo un título superior (ej. Empaque → Vacío/Granel). */
+  headerGroup?: string;
 }
 
 /** Fila de tablas de medición (formato 2 hoja 1) */

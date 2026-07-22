@@ -242,13 +242,14 @@ export function repeaterField(
     required: opts?.required,
     options: {
       layout: opts?.formalTable !== false ? 'formal_repeater_table' : undefined,
-      columns: columns.map(({ fieldKey: k, label: l, fieldType: t, options, config, required }) => ({
+      columns: columns.map(({ fieldKey: k, label: l, fieldType: t, options, config, required, groupName }) => ({
         key: k,
         label: l,
         type: t,
         options,
         config,
         required,
+        ...(groupName ? { headerGroup: groupName } : {}),
       })),
       minRows: opts?.minRows ?? 1,
       maxRows: opts?.maxRows ?? 50,
