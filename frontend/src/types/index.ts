@@ -111,6 +111,7 @@ export interface FieldOptions {
   maxPhotos?: number;
   valorLabel?: string;
   aspectRows?: boolean;
+  formalEntryHeaders?: boolean;
   monitoreoVariant?: 'tiempos' | 'sanitario' | 'lavado' | 'temperatura';
   pcOperativoVariant?: 'codigo_responsable' | 'codigo_operario' | 'operario_cnc' | 'proceso_tiempos' | 'proceso_tiempos_cnc' | 'esterilizadores';
   operarioLabel?: string;

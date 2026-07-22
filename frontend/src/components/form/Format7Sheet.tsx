@@ -16,12 +16,13 @@ const BLOQUE_LABELS: Record<string, string> = {
   bloque_4: 'Registro de lote 4',
 };
 
-export default function Format7Sheet({ fields, sheetData, onUpdate, disabled }: Props) {
+/** Vista legada (envíos con schemaSnapshot de 4 bloques fijos). */
+function LegacyBloques({ fields, sheetData, onUpdate, disabled }: Props) {
   const obsGen = fields.find((f) => f.fieldKey === 'observaciones_generales');
   const prefixes = ['bloque_1', 'bloque_2', 'bloque_3', 'bloque_4'];
 
   return (
-    <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
+    <>
       {prefixes.map((prefix) => {
         const blockFields = fields.filter((f) => f.fieldKey.startsWith(`${prefix}_`));
         if (blockFields.length === 0) return null;
@@ -44,12 +45,49 @@ export default function Format7Sheet({ fields, sheetData, onUpdate, disabled }: 
           </div>
         );
       })}
-
       {obsGen && (
         <div className="p-4">
-          <FormField field={obsGen} value={sheetData[obsGen.fieldKey]} onChange={(v) => onUpdate(obsGen.fieldKey, v)} disabled={disabled} />
+          <FormField
+            field={obsGen}
+            value={sheetData[obsGen.fieldKey]}
+            onChange={(v) => onUpdate(obsGen.fieldKey, v)}
+            disabled={disabled}
+          />
         </div>
       )}
+    </>
+  );
+}
+
+export default function Format7Sheet({ fields, sheetData, onUpdate, disabled }: Props) {
+  const lotes = fields.find((f) => f.fieldKey === 'lotes');
+  const obsGen = fields.find((f) => f.fieldKey === 'observaciones_generales');
+  const hasLegacy = fields.some((f) => f.fieldKey.startsWith('bloque_1_'));
+
+  return (
+    <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
+      {lotes ? (
+        <>
+          <FormField
+            field={{ ...lotes, label: '' }}
+            value={sheetData[lotes.fieldKey]}
+            onChange={(v) => onUpdate(lotes.fieldKey, v)}
+            disabled={disabled}
+          />
+          {obsGen && (
+            <div className="p-4 border-t border-gray-800">
+              <FormField
+                field={obsGen}
+                value={sheetData[obsGen.fieldKey]}
+                onChange={(v) => onUpdate(obsGen.fieldKey, v)}
+                disabled={disabled}
+              />
+            </div>
+          )}
+        </>
+      ) : hasLegacy ? (
+        <LegacyBloques fields={fields} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+      ) : null}
     </div>
   );
 }

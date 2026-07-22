@@ -268,6 +268,7 @@ export function cardRepeaterField(
     maxRows?: number;
     entryLabel?: string;
     addButtonLabel?: string;
+    formalEntryHeaders?: boolean;
   }
 ): FieldDef {
   const field = repeaterField(fieldKey, label, columns, sortOrder, {
@@ -281,6 +282,7 @@ export function cardRepeaterField(
       layout: 'card_repeater',
       entryLabel: opts?.entryLabel ?? 'Registro',
       addButtonLabel: opts?.addButtonLabel ?? 'Agregar registro',
+      ...(opts?.formalEntryHeaders ? { formalEntryHeaders: true } : {}),
     },
   };
 }

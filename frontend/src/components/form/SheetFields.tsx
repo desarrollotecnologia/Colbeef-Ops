@@ -148,7 +148,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
     );
   }
 
-  if (has('bloque_1_lote')) {
+  if (has('lotes') || has('bloque_1_lote')) {
     return (
       <div className="space-y-6">
         <Format7Sheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
