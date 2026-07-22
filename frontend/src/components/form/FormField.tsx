@@ -9,6 +9,7 @@ import FormalRepeaterTable from './FormalRepeaterTable';
 import CloroResidualRepeater from './CloroResidualRepeater';
 import LacticoTitrationRepeater from './LacticoTitrationRepeater';
 import CardRepeater from './CardRepeater';
+import ProductoTerminadoLotesRepeater from './ProductoTerminadoLotesRepeater';
 import AutoValue from './AutoValue';
 import PhotoInput from './PhotoInput';
 import PcInocuidadRepeater from './PcInocuidadRepeater';
@@ -190,6 +191,13 @@ export default function FormField({ field, value, onChange, disabled, compact }:
           <CardRepeater
             options={repeaterOpts}
             value={repeaterValue}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        ) : opts.layout === 'producto_terminado_lotes' ? (
+          <ProductoTerminadoLotesRepeater
+            options={repeaterOpts}
+            value={repeaterValue as import('./ProductoTerminadoLotesRepeater').LoteBlock[]}
             onChange={onChange}
             disabled={disabled}
           />

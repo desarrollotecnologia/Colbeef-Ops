@@ -11,13 +11,13 @@ interface Props {
   disabled?: boolean;
 }
 
-function getColumns(options: FieldOptions): RepeaterColumn[] {
+export function getCardRepeaterColumns(options: FieldOptions): RepeaterColumn[] {
   return (options.columns_def ?? options.columns ?? []).filter(
     (c): c is RepeaterColumn => typeof c === 'object' && c !== null && 'key' in c
   );
 }
 
-function CardCell({
+export function CardCell({
   col,
   value,
   onChange,
@@ -156,7 +156,7 @@ function CardCell({
 }
 
 export default function CardRepeater({ options, value, onChange, disabled }: Props) {
-  const columns = getColumns(options);
+  const columns = getCardRepeaterColumns(options);
   const minRows = options.minRows ?? 1;
   const maxRows = options.maxRows ?? 12;
   const entryLabel = options.entryLabel ?? 'Registro';

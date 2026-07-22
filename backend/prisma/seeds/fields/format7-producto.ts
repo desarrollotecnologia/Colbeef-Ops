@@ -1,6 +1,6 @@
+import { FieldType } from '@prisma/client';
 import {
   FieldDef,
-  cardRepeaterField,
   cncField,
   dateField,
   multiSelectField,
@@ -29,35 +29,51 @@ const AREAS_CONG = [
   'Contenedor externo',
 ];
 
-function loteColumns(areas: string[]): FieldDef[] {
+/** Campos de cada registro dentro de un lote (el número de lote va en el bloque padre). */
+function registroColumns(areas: string[]): FieldDef[] {
   return [
-    textField('lote', 'Lote', 0, { required: true }),
-    multiSelectField('area', 'Área', areas, 1, { required: true }),
-    textField('producto', 'Producto', 2, { required: true }),
-    dateField('fecha_produccion', 'Fecha de producción', 3, { required: true }),
-    dateField('fecha_vencimiento', 'Fecha de vencimiento', 4, { required: true }),
-    numberField('temperatura', 'Temperatura', 5, { required: true }),
-    timeField('hora', 'Hora', 6, { required: true }),
-    selectField('tipo_empaque', 'Tipo de empaque', ['Vacío', 'Granel'], 7, { required: true }),
-    cncField('estado_empaque', 'Estado de empaque', 8, { required: true }),
-    cncField('etiqueta', 'Etiqueta', 9, { required: true }),
-    textareaField('observaciones', 'Observaciones', 10),
+    multiSelectField('area', 'Área', areas, 0, { required: true }),
+    textField('producto', 'Producto', 1, { required: true }),
+    dateField('fecha_produccion', 'Fecha de producción', 2, { required: true }),
+    dateField('fecha_vencimiento', 'Fecha de vencimiento', 3, { required: true }),
+    numberField('temperatura', 'Temperatura', 4, { required: true }),
+    timeField('hora', 'Hora', 5, { required: true }),
+    selectField('tipo_empaque', 'Tipo de empaque', ['Vacío', 'Granel'], 6, { required: true }),
+    cncField('estado_empaque', 'Estado de empaque', 7, { required: true }),
+    cncField('etiqueta', 'Etiqueta', 8, { required: true }),
+    textareaField('observaciones', 'Observaciones', 9),
   ];
 }
 
 export function getFormat7Fields(slug: string): FieldDef[] {
   const areas = slug === 'congelado' ? AREAS_CONG : AREAS_REFRIG;
+  const columns = registroColumns(areas);
 
   return [
-    cardRepeaterField('lotes', 'Registros de verificación', loteColumns(areas), 1, {
-      minRows: 1,
-      maxRows: 30,
-      entryLabel: 'Registro',
-      addButtonLabel: 'Agregar registro',
-      formalEntryHeaders: true,
-      copyKeysOnAdd: ['lote'],
-      helpText: 'Al agregar un registro se conserva el mismo lote del registro anterior.',
-    }),
+    {
+      fieldKey: 'lotes',
+      label: 'Lotes',
+      fieldType: FieldType.REPEATER,
+      manualOnly: true,
+      sortOrder: 1,
+      required: true,
+      helpText: 'Hay 4 lotes. Dentro de cada lote puede agregar más registros con la misma estructura.',
+      options: {
+        layout: 'producto_terminado_lotes',
+        minLotes: 4,
+        maxLotes: 4,
+        minRegistros: 1,
+        maxRegistros: 20,
+        columns: columns.map(({ fieldKey: k, label: l, fieldType: t, options, config, required }) => ({
+          key: k,
+          label: l,
+          type: t,
+          options,
+          config,
+          required,
+        })),
+      },
+    },
     textareaField('observaciones_generales', 'Observaciones generales', 100),
   ];
 }

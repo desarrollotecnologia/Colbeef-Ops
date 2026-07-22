@@ -989,6 +989,93 @@ function renderCardRepeater(
   return y + 2;
 }
 
+/** PDF: 4 lotes con registros anidados (Verificación Producto Terminado). */
+function renderProductoTerminadoLotes(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  rows: Record<string, unknown>[],
+  startY: number
+): number {
+  const opts = (field.options ?? {}) as FieldOptions;
+  const cols = getRepeaterColumns(opts);
+  const maxW = pageWidth(doc) - MARGIN * 2;
+  let y = startY;
+
+  const lotes = rows.length > 0 ? rows : [{ lote: '', registros: [{}] }];
+
+  lotes.forEach((loteRaw, loteIdx) => {
+    const lote = loteRaw as { lote?: string; registros?: Record<string, unknown>[] };
+    const regs = Array.isArray(lote.registros) && lote.registros.length > 0 ? lote.registros : [{}];
+
+    y = ensurePageSpace(doc, ctx, y, 28);
+    y = drawSectionBanner(doc, y, `Registro de lote ${loteIdx + 1}`, undefined, true);
+    doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#333').text('Lote:', MARGIN, y);
+    doc.font('Helvetica').fillColor('#111').text(str(lote.lote), MARGIN + 28, y, { width: maxW - 28 });
+    y += 12;
+
+    regs.forEach((row, regIdx) => {
+      y = ensurePageSpace(doc, ctx, y, 24);
+      y = drawSectionBanner(doc, y, `Registro ${regIdx + 1}`, undefined, true);
+
+      const half = maxW / 2;
+      let colIndex = 0;
+      let rowTop = y;
+
+      const flushRow = () => {
+        if (colIndex > 0) {
+          y = rowTop + 11;
+          colIndex = 0;
+        }
+      };
+
+      cols.forEach((col) => {
+        const isWide = col.type === 'TEXTAREA' || col.type === 'MULTI_SELECT';
+        let valueText = str(row[col.key]);
+        if (col.type === 'CHECKLIST') {
+          valueText = normalizeCnc(row[col.key]) || '—';
+        }
+
+        if (isWide) {
+          flushRow();
+          y = ensurePageSpace(doc, ctx, y, 14);
+          doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(`${col.label}:`, MARGIN, y, {
+            width: maxW,
+          });
+          y += 8;
+          const h = Math.max(10, doc.heightOfString(valueText, { width: maxW }));
+          y = ensurePageSpace(doc, ctx, y, h);
+          doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
+          y += h + 3;
+          rowTop = y;
+          return;
+        }
+
+        if (colIndex === 0) {
+          y = ensurePageSpace(doc, ctx, y, 12);
+          rowTop = y;
+        }
+        const x = MARGIN + colIndex * half;
+        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(`${col.label}:`, x, rowTop, {
+          width: half - 4,
+        });
+        doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, x + 1, rowTop + 7, {
+          width: half - 6,
+        });
+        colIndex += 1;
+        if (colIndex >= 2) {
+          y = rowTop + 18;
+          colIndex = 0;
+        }
+      });
+      flushRow();
+      y += 4;
+    });
+  });
+
+  return y + 2;
+}
+
 function renderRepeaterTable(
   doc: PdfDoc,
   ctx: SheetPageContext,
@@ -1002,6 +1089,9 @@ function renderRepeaterTable(
   }
   if (opts.layout === 'card_repeater') {
     return renderCardRepeater(doc, ctx, field, rows, startY);
+  }
+  if (opts.layout === 'producto_terminado_lotes') {
+    return renderProductoTerminadoLotes(doc, ctx, field, rows, startY);
   }
   const cols = getRepeaterColumns(opts);
   if (cols.length === 0) {

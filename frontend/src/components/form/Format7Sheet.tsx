@@ -16,7 +16,7 @@ const BLOQUE_LABELS: Record<string, string> = {
   bloque_4: 'Registro de lote 4',
 };
 
-/** Vista legada (envíos con schemaSnapshot de 4 bloques fijos). */
+/** Vista legada (envíos con schemaSnapshot de 4 bloques fijos planos). */
 function LegacyBloques({ fields, sheetData, onUpdate, disabled }: Props) {
   const obsGen = fields.find((f) => f.fieldKey === 'observaciones_generales');
   const prefixes = ['bloque_1', 'bloque_2', 'bloque_3', 'bloque_4'];

@@ -81,7 +81,7 @@ export interface FieldConfig {
 }
 
 export interface FieldOptions {
-  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater' | 'pc_operativo_table';
+  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'producto_terminado_lotes' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater' | 'pc_operativo_table';
   tableType?: 'cloro' | 'esterilizadores' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios' | 'monitoreo';
   pediluviosLayout?: 'operativo' | 'simple';
   schedule?: Record<string, string[]>;
@@ -114,6 +114,10 @@ export interface FieldOptions {
   formalEntryHeaders?: boolean;
   /** Keys a copiar del último registro al agregar uno nuevo (ej. lote). */
   copyKeysOnAdd?: string[];
+  minLotes?: number;
+  maxLotes?: number;
+  minRegistros?: number;
+  maxRegistros?: number;
   monitoreoVariant?: 'tiempos' | 'sanitario' | 'lavado' | 'temperatura';
   pcOperativoVariant?: 'codigo_responsable' | 'codigo_operario' | 'operario_cnc' | 'proceso_tiempos' | 'proceso_tiempos_cnc' | 'esterilizadores';
   operarioLabel?: string;

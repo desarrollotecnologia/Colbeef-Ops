@@ -23,6 +23,7 @@ type FieldOptions = {
   cavaColumns?: string[];
   platformCount?: number;
   minRows?: number;
+  minRegistros?: number;
   matrix?: boolean;
   columns_def?: { key: string; required?: boolean; label?: string; type?: string }[];
 };
@@ -159,6 +160,44 @@ export function isFieldComplete(
 
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
+
+    // 4 lotes fijos; dentro de cada uno, N registros
+    if (options.layout === 'producto_terminado_lotes') {
+      const cols = options.columns ?? options.columns_def ?? [];
+      const requiredCols = cols.filter(
+        (c): c is { key: string; label?: string; type?: string; required?: boolean } =>
+          typeof c === 'object' && c !== null && 'key' in c && Boolean((c as { required?: boolean }).required)
+      );
+
+      const cellOk = (cell: unknown, col: { key: string; label?: string }) => {
+        if (isTemperatureKey(col.key, col.label)) return hasTemperatureValue(cell);
+        if (Array.isArray(cell)) return cell.length > 0;
+        return cell !== undefined && cell !== null && cell !== '';
+      };
+
+      const loteHasData = (lote: Record<string, unknown>) => {
+        if (String(lote.lote ?? '').trim()) return true;
+        const regs = Array.isArray(lote.registros) ? lote.registros : [];
+        return regs.some((r) =>
+          Object.values(r as Record<string, unknown>).some((v) => {
+            if (Array.isArray(v)) return v.length > 0;
+            return v !== undefined && v !== null && v !== '';
+          })
+        );
+      };
+
+      const filled = rows.filter((r) => loteHasData(r as Record<string, unknown>));
+      if (field.required && filled.length === 0) return false;
+
+      return filled.every((loteRaw) => {
+        const lote = loteRaw as Record<string, unknown>;
+        if (!String(lote.lote ?? '').trim()) return false;
+        const regs = Array.isArray(lote.registros) ? (lote.registros as Record<string, unknown>[]) : [];
+        if (regs.length < (options.minRegistros ?? 1)) return false;
+        return regs.every((row) => requiredCols.every((col) => cellOk(row[col.key], col)));
+      });
+    }
+
     const minRows = options.minRows ?? (field.required ? 1 : 0);
     if (rows.length < minRows) return false;
     const cols = options.columns ?? options.columns_def ?? [];
@@ -171,6 +210,7 @@ export function isFieldComplete(
           if (isTemperatureKey(col.key, col.label)) {
             return hasTemperatureValue(cell);
           }
+          if (Array.isArray(cell)) return cell.length > 0;
           return cell !== undefined && cell !== null && cell !== '';
         })
     );
