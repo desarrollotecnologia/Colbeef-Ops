@@ -11,11 +11,19 @@ import {
 import { getSubmissionMissingFields } from '../utils/fieldValidation';
 import { buildPdfFilename, generateSubmissionPdf } from '../services/submissionPdf';
 import { logUsageEvent } from '../services/usageLogger';
+import {
+  applySchemaSnapshotToFormat,
+  buildFormatSchemaSnapshot,
+} from '../utils/schemaSnapshot';
 
 const router = Router();
 
 router.use(authenticate);
 router.use(denyPanel);
+
+function withFrozenSchema<T extends Parameters<typeof applySchemaSnapshotToFormat>[0]>(submission: T) {
+  return applySchemaSnapshotToFormat(submission);
+}
 
 // Listar envíos (operario ve los suyos, admin ve todos)
 router.get('/', async (req: Request, res: Response) => {
@@ -193,11 +201,15 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
         ? { sheetBoundaries: true }
         : undefined;
 
-    const pdfBuffer = await generateSubmissionPdf(submission, pdfOptions);
+    const frozenSubmission = withFrozenSchema(submission);
+    const pdfBuffer = await generateSubmissionPdf(
+      frozenSubmission as typeof submission,
+      pdfOptions
+    );
 
     let sheetName: string | undefined;
     if (sheetId) {
-      sheetName = submission.format.sheets.find((s) => s.id === sheetId)?.name;
+      sheetName = frozenSubmission.format.sheets.find((s) => s.id === sheetId)?.name;
       if (!sheetName) {
         return res.status(400).json({ error: 'Hoja no encontrada en el formato.' });
       }
@@ -268,7 +280,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     metadata: { status: submission.status },
   });
 
-  res.json(submission);
+  res.json(withFrozenSchema(submission));
 });
 
 // Guardar datos de una hoja
@@ -353,8 +365,10 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
     submission.workDate = today;
   }
 
+  const forValidation = withFrozenSchema(submission);
+
   const missingFields = getSubmissionMissingFields(
-    submission.format.sheets.map((s) => ({
+    forValidation.format.sheets.map((s) => ({
       id: s.id,
       name: s.name,
       fields: s.fields,
@@ -383,11 +397,15 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
     });
   }
 
+  // Congela el esquema usado en esta entrega (no se altera si luego cambia el formato)
+  const schemaSnapshot = buildFormatSchemaSnapshot(forValidation.format.sheets);
+
   const updated = await prisma.formSubmission.update({
     where: { id: paramId(req.params.id) },
     data: {
       status: SubmissionStatus.PENDING_REVIEW,
       submittedAt: new Date(),
+      schemaSnapshot,
     },
     include: { format: true },
   });

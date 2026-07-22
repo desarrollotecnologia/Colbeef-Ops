@@ -147,6 +147,8 @@ model FormSubmission {
   reviewedById    String?          @map("reviewed_by_id")
   reviewNotes     String?          @map("review_notes") @db.Text
   pdfPath         String?          @map("pdf_path")
+  /** Copia del esquema de campos al entregar — congela el formato para trazabilidad */
+  schemaSnapshot  Json?            @map("schema_snapshot")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 

@@ -111,7 +111,11 @@ export default function FormField({ field, value, onChange, disabled, compact }:
 
   if (field.fieldType === 'MULTI_SELECT') {
     const choices = opts.choices ?? [];
-    const selected = Array.isArray(value) ? (value as string[]) : [];
+    const selected = Array.isArray(value)
+      ? (value as string[])
+      : typeof value === 'string' && value
+        ? [value]
+        : [];
     return (
       <div>
         <FieldLabel field={field} show={showLabel} />

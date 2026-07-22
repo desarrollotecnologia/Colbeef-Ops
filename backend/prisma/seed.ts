@@ -92,12 +92,38 @@ async function seedFormats() {
       });
 
       const fields = getFieldsForSheet(formatDef.code, sheetDef.slug);
+      const existingFields = await prisma.formatField.findMany({
+        where: { sheetId: sheet.id },
+        select: { id: true, fieldKey: true },
+      });
+      const keepKeys = new Set(fields.map((f) => f.fieldKey));
+      const toDelete = existingFields.filter((f) => !keepKeys.has(f.fieldKey));
+      if (toDelete.length > 0) {
+        await prisma.formatField.deleteMany({
+          where: { id: { in: toDelete.map((f) => f.id) } },
+        });
+      }
 
-      await prisma.formatField.deleteMany({ where: { sheetId: sheet.id } });
-
-      if (fields.length > 0) {
-        await prisma.formatField.createMany({
-          data: fields.map((f) => ({
+      for (const f of fields) {
+        await prisma.formatField.upsert({
+          where: {
+            sheetId_fieldKey: { sheetId: sheet.id, fieldKey: f.fieldKey },
+          },
+          update: {
+            label: f.label,
+            fieldType: f.fieldType,
+            required: f.required ?? false,
+            manualOnly: f.manualOnly ?? true,
+            autoFillRule: f.autoFillRule ?? null,
+            options: f.options ?? undefined,
+            config: f.config ?? undefined,
+            placeholder: f.placeholder,
+            defaultValue: f.defaultValue,
+            sortOrder: f.sortOrder,
+            groupName: f.groupName,
+            helpText: f.helpText,
+          },
+          create: {
             sheetId: sheet.id,
             fieldKey: f.fieldKey,
             label: f.label,
@@ -112,9 +138,9 @@ async function seedFormats() {
             sortOrder: f.sortOrder,
             groupName: f.groupName,
             helpText: f.helpText,
-          })),
+          },
         });
-        totalFields += fields.length;
+        totalFields += 1;
       }
     }
   }

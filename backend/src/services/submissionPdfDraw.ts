@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type PDFDocument from 'pdfkit';
+import { workDateToString } from '../utils/workDate';
 
 export type PdfDoc = InstanceType<typeof PDFDocument>;
 
@@ -40,13 +41,17 @@ export function contentBottom(doc: PdfDoc) {
   return pageHeight(doc) - MARGIN - FOOTER_H;
 }
 
+/** Fecha de trabajo @db.Date: mostrar el día calendario guardado (sin restar un día por zona horaria). */
 export function formatWorkDate(date: Date): string {
-  return date.toLocaleDateString('es-CO', {
+  const ymd = workDateToString(date);
+  const [y, m, d] = ymd.split('-').map(Number);
+  const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  return noonUtc.toLocaleDateString('es-CO', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    timeZone: 'America/Bogota',
+    timeZone: 'UTC',
   });
 }
 

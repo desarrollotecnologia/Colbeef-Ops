@@ -51,7 +51,10 @@ const PRODUCTO_ETIQUETA = (
   sort: number,
   opts?: { etiquetaNa?: boolean }
 ): FieldDef[] => [
-  selectField(`${prefix}_empaque`, `${label} — Empaque`, ['Vacío', 'Granel'], sort, { groupName: label }),
+  multiSelectField(`${prefix}_empaque`, `${label} — Empaque`, ['Vacío', 'Granel'], sort, {
+    groupName: label,
+    helpText: 'Puede seleccionar Vacío, Granel o ambos',
+  }),
   opts?.etiquetaNa
     ? cncNaField(`${prefix}_etiqueta`, `${label} — Etiqueta`, sort + 1, { groupName: label, required: true })
     : cncField(`${prefix}_etiqueta`, `${label} — Etiqueta`, sort + 1, { groupName: label, required: true }),

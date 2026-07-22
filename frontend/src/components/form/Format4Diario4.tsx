@@ -19,7 +19,9 @@ export default function Format4Diario4({ fields, sheetData, onUpdate, disabled }
         <div className="border-b border-gray-800">
           <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">{manipulador.label}</h3>
-            <p className="text-[11px] text-gray-600 mt-0.5">Registro cada hora — guantes · malla · cuchillo · ganchos</p>
+            <p className="text-[11px] text-gray-600 mt-0.5">
+              Registro cada hora — guantes · guante de malla · cuchillo · gancho despostador · soporte gancho
+            </p>
           </div>
           <FormField field={{ ...manipulador, label: '' }} value={sheetData[manipulador.fieldKey]} onChange={(v) => onUpdate(manipulador.fieldKey, v)} disabled={disabled} />
         </div>

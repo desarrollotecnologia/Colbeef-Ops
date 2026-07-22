@@ -907,28 +907,69 @@ function renderRepeaterTable(
   }
 
   const tableW = pageWidth(doc) - MARGIN * 2;
-  type PdfCol = { key: string; label: string; cncChoice?: 'C' | 'NC' | 'NA' };
+  type PdfCol = { key: string; label: string; cncChoice?: 'C' | 'NC' | 'NA'; groupLabel?: string };
   type ColDef = { key: string; label: string; type?: string; options?: { choices?: string[] } };
   const expanded: PdfCol[] = [{ key: '_idx', label: '#' }];
+  const checklistGroups: { label: string; start: number; count: number }[] = [];
   for (const col of cols as ColDef[]) {
     const isCnc = col.key === 'cnc' || col.type === 'CHECKLIST';
     if (isCnc) {
-      const choices = col.options?.choices ?? ['C', 'NC'];
-      (['C', 'NC', 'NA'] as const).forEach((c) => {
-        if (choices.includes(c)) expanded.push({ key: col.key, label: c, cncChoice: c });
+      const choices = (col.options?.choices ?? ['C', 'NC']).filter(
+        (c): c is 'C' | 'NC' | 'NA' => c === 'C' || c === 'NC' || c === 'NA'
+      );
+      const start = expanded.length;
+      choices.forEach((c) => {
+        expanded.push({ key: col.key, label: c, cncChoice: c, groupLabel: col.label });
       });
+      checklistGroups.push({ label: col.label, start, count: choices.length });
     } else {
       expanded.push({ key: col.key, label: col.label });
     }
   }
   const colW = tableW / expanded.length;
   let y = startY;
-  const headerH = 11;
+  const hasGroups = checklistGroups.length > 0;
+  const headerH = hasGroups ? 18 : 11;
 
   y = ensurePageSpace(doc, ctx, y, headerH);
-  drawTableRowBorder(doc, y, headerH, '#f3f4f6');
-  doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
-  expanded.forEach((col, i) => doc.text(col.label, MARGIN + i * colW + 2, y + 2, { width: colW - 4, align: col.key === '_idx' || col.cncChoice ? 'center' : 'left' }));
+  drawTableRowBorder(doc, y, headerH, '#d9ead3');
+  doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
+
+  if (hasGroups) {
+    // Fila 1: títulos de aspecto encima de C/NC/NA
+    expanded.forEach((col, i) => {
+      if (col.key === '_idx' || !col.cncChoice) {
+        doc.text(col.label, MARGIN + i * colW + 1, y + 2, {
+          width: colW - 2,
+          align: col.key === '_idx' ? 'center' : 'left',
+        });
+      }
+    });
+    checklistGroups.forEach((g) => {
+      const x = MARGIN + g.start * colW;
+      doc.text(g.label.toUpperCase(), x + 1, y + 1, {
+        width: g.count * colW - 2,
+        align: 'center',
+      });
+    });
+    // Fila 2: C / NC / NA
+    checklistGroups.forEach((g) => {
+      for (let j = 0; j < g.count; j++) {
+        const col = expanded[g.start + j];
+        doc.text(col.label, MARGIN + (g.start + j) * colW + 1, y + 10, {
+          width: colW - 2,
+          align: 'center',
+        });
+      }
+    });
+  } else {
+    expanded.forEach((col, i) =>
+      doc.text(col.label, MARGIN + i * colW + 2, y + 2, {
+        width: colW - 4,
+        align: col.key === '_idx' || col.cncChoice ? 'center' : 'left',
+      })
+    );
+  }
   y += headerH;
 
   if (rows.length === 0) {
