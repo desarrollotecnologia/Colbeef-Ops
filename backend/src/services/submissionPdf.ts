@@ -875,6 +875,120 @@ function renderPcInocuidadRepeater(
   return y + 6;
 }
 
+function getRepeaterColumns(opts: FieldOptions): {
+  key: string;
+  label: string;
+  type?: string;
+  headerGroup?: string;
+  options?: { choices?: string[] };
+}[] {
+  const rawCols = opts.columns;
+  let cols: { key: string; label: string; type?: string; headerGroup?: string; options?: { choices?: string[] } }[] =
+    opts.columns_def ?? [];
+  if (Array.isArray(rawCols) && rawCols[0] && typeof rawCols[0] === 'object' && 'key' in (rawCols[0] as object)) {
+    cols = rawCols as typeof cols;
+  }
+  return cols;
+}
+
+/** PDF en bloques (como las tarjetas de la UI), evita tablas demasiado anchas. */
+function renderCardRepeater(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  field: FormatField,
+  rows: Record<string, unknown>[],
+  startY: number
+): number {
+  const opts = (field.options ?? {}) as FieldOptions;
+  const cols = getRepeaterColumns(opts);
+  const entryLabel = opts.entryLabel ?? 'Registro';
+  const maxW = pageWidth(doc) - MARGIN * 2;
+  let y = startY;
+
+  if (rows.length === 0) {
+    doc.fontSize(6).font('Helvetica').fillColor('#666').text('Sin registros', MARGIN, y + 2);
+    return y + 12;
+  }
+
+  rows.forEach((row, idx) => {
+    y = ensurePageSpace(doc, ctx, y, 36);
+    y = drawSectionBanner(doc, y, `${entryLabel} ${idx + 1}`, undefined, true);
+
+    if (cols.length === 0) {
+      const parts = Object.entries(row)
+        .filter(([, v]) => v !== '' && v != null)
+        .map(([k, v]) => `${k}: ${str(v)}`);
+      doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(parts.join(' · ') || '—', MARGIN, y, {
+        width: maxW,
+      });
+      y += 12;
+      return;
+    }
+
+    const half = maxW / 2;
+    let colIndex = 0;
+    let rowTop = y;
+
+    const flushRow = () => {
+      if (colIndex > 0) {
+        y = rowTop + 11;
+        colIndex = 0;
+      }
+    };
+
+    cols.forEach((col) => {
+      const isWide = col.type === 'TEXTAREA' || col.type === 'MULTI_SELECT';
+      let valueText = str(row[col.key]);
+      if (col.type === 'CHECKLIST') {
+        const cnc = normalizeCnc(row[col.key]);
+        valueText = cnc || '—';
+      }
+
+      if (isWide) {
+        flushRow();
+        y = ensurePageSpace(doc, ctx, y, 14);
+        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(`${col.label}:`, MARGIN, y, {
+          width: maxW,
+        });
+        y += 8;
+        const h = Math.max(
+          10,
+          doc.heightOfString(valueText, { width: maxW })
+        );
+        y = ensurePageSpace(doc, ctx, y, h);
+        doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
+        y += h + 3;
+        rowTop = y;
+        return;
+      }
+
+      if (colIndex === 0) {
+        y = ensurePageSpace(doc, ctx, y, 12);
+        rowTop = y;
+      }
+
+      const x = MARGIN + colIndex * half;
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(`${col.label}:`, x, rowTop, {
+        width: half - 4,
+      });
+      doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, x + 1, rowTop + 7, {
+        width: half - 6,
+      });
+
+      colIndex += 1;
+      if (colIndex >= 2) {
+        y = rowTop + 18;
+        colIndex = 0;
+      }
+    });
+
+    flushRow();
+    y += 4;
+  });
+
+  return y + 2;
+}
+
 function renderRepeaterTable(
   doc: PdfDoc,
   ctx: SheetPageContext,
@@ -886,17 +1000,16 @@ function renderRepeaterTable(
   if (opts.layout === 'pc_inocuidad_repeater') {
     return renderPcInocuidadRepeater(doc, ctx, field, rows, startY);
   }
-  const rawCols = opts.columns;
-  let cols: { key: string; label: string }[] = opts.columns_def ?? [];
-  if (Array.isArray(rawCols) && rawCols[0] && typeof rawCols[0] === 'object' && 'key' in (rawCols[0] as object)) {
-    cols = rawCols as unknown as { key: string; label: string }[];
+  if (opts.layout === 'card_repeater') {
+    return renderCardRepeater(doc, ctx, field, rows, startY);
   }
+  const cols = getRepeaterColumns(opts);
   if (cols.length === 0) {
     let y = startY;
     rows.forEach((row, i) => {
       const parts = Object.entries(row)
         .filter(([, v]) => v !== '' && v != null)
-        .map(([k, v]) => `${k}: ${v}`);
+        .map(([k, v]) => `${k}: ${str(v)}`);
       y = ensurePageSpace(doc, ctx, y, 10);
       doc.fontSize(6.5).font('Helvetica').text(`${i + 1}. ${parts.join(' · ')}`, MARGIN, y, {
         width: pageWidth(doc) - MARGIN * 2,

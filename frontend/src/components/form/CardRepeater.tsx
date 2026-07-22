@@ -171,7 +171,13 @@ export default function CardRepeater({ options, value, onChange, disabled }: Pro
   };
 
   const addRow = () => {
-    if (rows.length < maxRows) onChange([...rows, {}]);
+    if (rows.length >= maxRows) return;
+    const prev = rows[rows.length - 1] ?? {};
+    const seeded: Record<string, unknown> = {};
+    for (const key of options.copyKeysOnAdd ?? []) {
+      if (prev[key] !== undefined && prev[key] !== '') seeded[key] = prev[key];
+    }
+    onChange([...rows, seeded]);
   };
 
   const removeRow = (idx: number) => {

@@ -49,12 +49,14 @@ export function getFormat7Fields(slug: string): FieldDef[] {
   const areas = slug === 'congelado' ? AREAS_CONG : AREAS_REFRIG;
 
   return [
-    cardRepeaterField('lotes', 'Registros de lote', loteColumns(areas), 1, {
+    cardRepeaterField('lotes', 'Registros de verificación', loteColumns(areas), 1, {
       minRows: 1,
       maxRows: 30,
-      entryLabel: 'Registro de lote',
-      addButtonLabel: 'Agregar lote',
+      entryLabel: 'Registro',
+      addButtonLabel: 'Agregar registro',
       formalEntryHeaders: true,
+      copyKeysOnAdd: ['lote'],
+      helpText: 'Al agregar un registro se conserva el mismo lote del registro anterior.',
     }),
     textareaField('observaciones_generales', 'Observaciones generales', 100),
   ];

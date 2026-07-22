@@ -269,6 +269,8 @@ export function cardRepeaterField(
     entryLabel?: string;
     addButtonLabel?: string;
     formalEntryHeaders?: boolean;
+    /** Al agregar una fila, copia estos keys del último registro (ej. mismo lote). */
+    copyKeysOnAdd?: string[];
   }
 ): FieldDef {
   const field = repeaterField(fieldKey, label, columns, sortOrder, {
@@ -283,6 +285,7 @@ export function cardRepeaterField(
       entryLabel: opts?.entryLabel ?? 'Registro',
       addButtonLabel: opts?.addButtonLabel ?? 'Agregar registro',
       ...(opts?.formalEntryHeaders ? { formalEntryHeaders: true } : {}),
+      ...(opts?.copyKeysOnAdd?.length ? { copyKeysOnAdd: opts.copyKeysOnAdd } : {}),
     },
   };
 }
