@@ -3,6 +3,7 @@ import type { ChecklistItemData, FormatField } from '@/types';
 import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
 import ItemChecklist from './ItemChecklist';
+import VehiculosCargaTable from './VehiculosCargaTable';
 
 interface Props {
   fields: FormatField[];
@@ -27,6 +28,13 @@ export default function Format8VehiculosSheet({ fields, sheetData, onUpdate, dis
   const checklist = fields.find((f) => f.fieldKey === 'inspeccion_items');
   const firmaFields = fields.filter((f) => FIRMA_KEYS.has(f.fieldKey));
 
+  const cargaOpts = carga?.options ?? {};
+  const cargaHasAlimentoCol =
+    Array.isArray(cargaOpts.columns) &&
+    cargaOpts.columns.some(
+      (c) => typeof c === 'object' && c !== null && 'key' in c && (c as { key: string }).key === 'alimento'
+    );
+
   return (
     <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
       <Section title="Datos del vehículo" subtitle="T° canales &lt; 7 °C · P.C. &lt; 5 °C · Refrig. 0–4 °C · Cong. &gt; -18 °C">
@@ -39,7 +47,26 @@ export default function Format8VehiculosSheet({ fields, sheetData, onUpdate, dis
 
       {carga && (
         <Section title="Carga del vehículo" subtitle="Ácido láctico al 2% (± 0,1)">
-          <FormField field={{ ...carga, label: '' }} value={sheetData[carga.fieldKey]} onChange={(v) => onUpdate(carga.fieldKey, v)} disabled={disabled} />
+          {cargaHasAlimentoCol ? (
+            <FormField
+              field={{ ...carga, label: '' }}
+              value={sheetData[carga.fieldKey]}
+              onChange={(v) => onUpdate(carga.fieldKey, v)}
+              disabled={disabled}
+            />
+          ) : (
+            <VehiculosCargaTable
+              value={
+                Array.isArray(sheetData[carga.fieldKey])
+                  ? (sheetData[carga.fieldKey] as Record<string, unknown>[])
+                  : []
+              }
+              onChange={(v) => onUpdate(carga.fieldKey, v)}
+              disabled={disabled}
+              minRows={cargaOpts.minRows ?? 1}
+              maxRows={cargaOpts.maxRows ?? 10}
+            />
+          )}
         </Section>
       )}
 

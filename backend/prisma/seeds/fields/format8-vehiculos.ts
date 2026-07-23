@@ -37,9 +37,8 @@ const VEHICLE_ITEMS: { key: string; label: string; section: string }[] = [
 ];
 
 const CARGA_COLS: FieldDef[] = [
-  { fieldKey: 'alimento', label: 'Alimentos que transporta', fieldType: 'TEXT' as const, sortOrder: 0, manualOnly: true },
-  { fieldKey: 'cantidad', label: 'Cantidad', fieldType: 'TEXT' as const, sortOrder: 1, manualOnly: true },
-  { fieldKey: 'producto', label: 'Producto', fieldType: 'TEXT' as const, sortOrder: 2, manualOnly: true },
+  { fieldKey: 'cantidad', label: 'Cantidad', fieldType: 'TEXT' as const, sortOrder: 0, manualOnly: true },
+  { fieldKey: 'producto', label: 'Producto', fieldType: 'TEXT' as const, sortOrder: 1, manualOnly: true },
 ];
 
 export function getFormat8Fields(_slug: string): FieldDef[] {
@@ -52,7 +51,11 @@ export function getFormat8Fields(_slug: string): FieldDef[] {
     numberField('temp_vehiculo', 'Temperatura del vehículo', 6, { groupName: 'Encabezado' }),
     numberField('temp_producto', 'Temperatura del producto', 7, { groupName: 'Encabezado' }),
     cncField('desinfeccion_vehiculo', 'Desinfección de vehículo', 8, { required: true, groupName: 'Encabezado' }),
-    repeaterField('carga_productos', 'Carga del vehículo', CARGA_COLS, 10, { minRows: 1, maxRows: 10, groupName: 'Carga' }),
+    repeaterField('carga_productos', 'Carga del vehículo', CARGA_COLS, 10, {
+      minRows: 1,
+      maxRows: 10,
+      groupName: 'Carga',
+    }),
     itemChecklistField('inspeccion_items', 'Aspectos a verificar', VEHICLE_ITEMS, 20, {
       mode: 'cnc_na',
       columns: ['cnc', 'observation'],

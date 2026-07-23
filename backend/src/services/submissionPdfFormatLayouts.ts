@@ -55,6 +55,46 @@ function drawFieldGrid(
   return rowY + maxRowH + (compact ? 4 : 8);
 }
 
+function drawVehiculosCargaTable(
+  doc: PdfDoc,
+  y: number,
+  rows: Record<string, unknown>[]
+): number {
+  const w = pageWidth(doc) - MARGIN * 2;
+  const labelW = w * 0.28;
+  const cantW = w * 0.22;
+  const prodW = w * 0.5;
+  const rowH = 10;
+  const headerH = 11;
+  let cy = y;
+  const dataRows = rows.length > 0 ? rows : [{}];
+
+  doc.rect(MARGIN, cy, w, headerH).fill('#d9ead3').strokeColor('#888').lineWidth(0.4).stroke();
+  doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
+  doc.text('Alimentos que transporta', MARGIN + 2, cy + 2, { width: labelW - 4, align: 'center' });
+  doc.text('Cantidad', MARGIN + labelW + 2, cy + 2, { width: cantW - 4, align: 'center' });
+  doc.text('Producto', MARGIN + labelW + cantW + 2, cy + 2, { width: prodW - 4, align: 'center' });
+  cy += headerH;
+
+  const bodyH = Math.max(rowH, dataRows.length * rowH);
+  doc.rect(MARGIN, cy, labelW, bodyH).fill('#f3f4f6').strokeColor('#888').lineWidth(0.4).stroke();
+  doc.fontSize(6).font('Helvetica-Bold').fillColor('#333').text('Alimentos que transporta', MARGIN + 3, cy + bodyH / 2 - 8, {
+    width: labelW - 6,
+    align: 'center',
+  });
+
+  dataRows.forEach((row, ri) => {
+    const ry = cy + ri * rowH;
+    doc.rect(MARGIN + labelW, ry, cantW, rowH).strokeColor('#888').lineWidth(0.4).stroke();
+    doc.rect(MARGIN + labelW + cantW, ry, prodW, rowH).strokeColor('#888').lineWidth(0.4).stroke();
+    doc.fontSize(6).font('Helvetica').fillColor('#111');
+    doc.text(str(row.cantidad), MARGIN + labelW + 2, ry + 2, { width: cantW - 4 });
+    doc.text(str(row.producto), MARGIN + labelW + cantW + 2, ry + 2, { width: prodW - 4 });
+  });
+
+  return cy + bodyH + 6;
+}
+
 function drawRepeaterTable(
   doc: PdfDoc,
   y: number,
@@ -210,13 +250,28 @@ export function renderVehiculosSheet(
   const cargaField = fields.find((f) => f.fieldKey === 'carga_productos');
   if (cargaField) {
     y = drawSectionBanner(doc, y, 'Carga del vehículo', 'Ácido láctico al 2% (± 0,1)', true);
-    const cols = [
-      { key: 'alimento', label: 'Alimentos' },
-      { key: 'cantidad', label: 'Cantidad' },
-      { key: 'producto', label: 'Producto' },
-    ];
-    const rows = Array.isArray(sheetData.carga_productos) ? (sheetData.carga_productos as Record<string, unknown>[]) : [];
-    y = drawRepeaterTable(doc, y, cols, rows, true);
+    const rows = Array.isArray(sheetData.carga_productos)
+      ? (sheetData.carga_productos as Record<string, unknown>[])
+      : [];
+    const opts = (cargaField.options ?? {}) as { columns?: { key: string }[] };
+    const hasAlimento =
+      Array.isArray(opts.columns) && opts.columns.some((c) => typeof c === 'object' && c?.key === 'alimento');
+
+    if (hasAlimento) {
+      y = drawRepeaterTable(
+        doc,
+        y,
+        [
+          { key: 'alimento', label: 'Alimentos' },
+          { key: 'cantidad', label: 'Cantidad' },
+          { key: 'producto', label: 'Producto' },
+        ],
+        rows,
+        true
+      );
+    } else {
+      y = drawVehiculosCargaTable(doc, y, rows);
+    }
   }
 
   const checklist = fields.find((f) => f.fieldKey === 'inspeccion_items');
