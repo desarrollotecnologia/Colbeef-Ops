@@ -30,7 +30,7 @@ export default function Format12DecomisosSheet({ fields, sheetData, onUpdate, di
       </Section>
 
       {decomisos && (
-        <Section title="Registro de decomisos" subtitle="Totales automáticos por causal y peso total">
+        <Section title="Registro de decomisos" subtitle="Causal en kg · Tipo Parcial/Total · Totales automáticos">
           <DecomisosRepeater
             options={decomisos.options ?? {}}
             value={Array.isArray(sheetData[decomisos.fieldKey]) ? (sheetData[decomisos.fieldKey] as Record<string, unknown>[]) : []}
