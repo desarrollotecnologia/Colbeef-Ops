@@ -175,7 +175,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
     );
   }
 
-  if (has('area') && has('personas')) {
+  if (has('personas')) {
     return (
       <div className="space-y-6">
         <Format10HabitosSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />

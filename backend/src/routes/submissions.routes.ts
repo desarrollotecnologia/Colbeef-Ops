@@ -118,7 +118,12 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
 
   const format = await prisma.format.findUnique({
     where: { id: formatId },
-    include: { sheets: true },
+    include: {
+      sheets: {
+        orderBy: { sheetOrder: 'asc' },
+        include: { fields: { orderBy: { sortOrder: 'asc' } } },
+      },
+    },
   });
 
   if (!format) {
@@ -131,11 +136,15 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
     return res.status(400).json({ error: dateCheck.error });
   }
 
+  // Congela el esquema al crear el borrador para que cambios posteriores del formato no lo alteren
+  const schemaSnapshot = buildFormatSchemaSnapshot(format.sheets);
+
   const submission = await prisma.formSubmission.create({
     data: {
       formatId,
       operatorId: req.user!.userId,
       workDate: parsedDate,
+      schemaSnapshot,
       sheets: {
         create: format.sheets.map((sheet) => ({
           sheetId: sheet.id,
@@ -158,7 +167,7 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
     path: '/api/submissions',
   });
 
-  res.status(201).json(submission);
+  res.status(201).json(withFrozenSchema(submission));
 });
 
 // Descargar PDF: ?sheetId=uuid (solo esa hoja) | ?scope=all (todas con separadores)
@@ -267,6 +276,20 @@ router.get('/:id', async (req: Request, res: Response) => {
     });
   }
 
+  // Borradores antiguos sin snapshot: congelar el esquema actual en la primera apertura
+  // para que un seed posterior no les cambie la estructura a mitad de llenado.
+  if (
+    (submission.status === SubmissionStatus.DRAFT || submission.status === SubmissionStatus.REJECTED) &&
+    !submission.schemaSnapshot
+  ) {
+    const schemaSnapshot = buildFormatSchemaSnapshot(submission.format.sheets);
+    submission = await prisma.formSubmission.update({
+      where: { id: submission.id },
+      data: { schemaSnapshot },
+      include: submissionInclude,
+    });
+  }
+
   logUsageEvent({
     eventType: UsageEventType.SUBMISSION_OPENED,
     userId: req.user!.userId,
@@ -298,9 +321,31 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
     return res.status(400).json({ error: 'Este envío ya no se puede editar' });
   }
 
+  const draftPatch: { workDate: Date; schemaSnapshot?: ReturnType<typeof buildFormatSchemaSnapshot> } = {
+    workDate: getTodayWorkDate(),
+  };
+  if (!submission.schemaSnapshot) {
+    const full = await prisma.formSubmission.findUnique({
+      where: { id: submission.id },
+      include: {
+        format: {
+          include: {
+            sheets: {
+              orderBy: { sheetOrder: 'asc' },
+              include: { fields: { orderBy: { sortOrder: 'asc' } } },
+            },
+          },
+        },
+      },
+    });
+    if (full?.format?.sheets) {
+      draftPatch.schemaSnapshot = buildFormatSchemaSnapshot(full.format.sheets);
+    }
+  }
+
   await prisma.formSubmission.update({
     where: { id: submission.id },
-    data: { workDate: getTodayWorkDate() },
+    data: draftPatch,
   });
 
   const updated = await prisma.formSubmissionSheet.update({
@@ -397,8 +442,10 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
     });
   }
 
-  // Congela el esquema usado en esta entrega (no se altera si luego cambia el formato)
-  const schemaSnapshot = buildFormatSchemaSnapshot(forValidation.format.sheets);
+  // Conserva el snapshot del borrador (o congela el usado en la validación)
+  const schemaSnapshot =
+    (submission.schemaSnapshot as object | null) ??
+    buildFormatSchemaSnapshot(forValidation.format.sheets);
 
   const updated = await prisma.formSubmission.update({
     where: { id: paramId(req.params.id) },

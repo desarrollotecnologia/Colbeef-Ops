@@ -10,21 +10,31 @@ interface Props {
 }
 
 export default function Format10HabitosSheet({ fields, sheetData, onUpdate, disabled }: Props) {
-  const area = fields.find((f) => f.fieldKey === 'area');
+  /** Solo envíos antiguos con snapshot: área global encima de la tabla. */
+  const areaGlobal = fields.find((f) => f.fieldKey === 'area');
   const personas = fields.find((f) => f.fieldKey === 'personas');
 
   return (
     <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
-      {area && (
+      {areaGlobal && (
         <div className="px-4 py-3 border-b border-gray-800 bg-[#e8edf2]">
-          <FormField field={area} value={sheetData[area.fieldKey]} onChange={(v) => onUpdate(area.fieldKey, v)} disabled={disabled} />
+          <FormField
+            field={areaGlobal}
+            value={sheetData[areaGlobal.fieldKey]}
+            onChange={(v) => onUpdate(areaGlobal.fieldKey, v)}
+            disabled={disabled}
+          />
         </div>
       )}
       {personas && (
         <div>
           <div className={SECTION_HEADER_CLASS}>
             <h3 className="text-xs font-bold uppercase text-gray-900">Personal inspeccionado</h3>
-            <p className="text-[11px] text-gray-600 mt-0.5">C · NC · NA — Agregar filas según personal del área</p>
+            <p className="text-[11px] text-gray-600 mt-0.5">
+              {areaGlobal
+                ? 'C · NC · NA — Agregar filas según personal del área'
+                : 'Nombre · Área por persona · C / NC / NA'}
+            </p>
           </div>
           <FormField
             field={{ ...personas, label: '' }}

@@ -61,9 +61,9 @@ export function buildFormatSchemaSnapshot(sheets: SheetWithFields[]): FormatSche
 }
 
 /**
- * Para envíos ya entregados/aprobados/rechazados con foto del esquema,
- * sustituye los campos vivos del formato por los congelados al entregar.
- * Borradores sin snapshot siguen usando la definición actual.
+ * Si el envío tiene schemaSnapshot, sustituye los campos vivos por los congelados.
+ * Aplica a borradores y a entregados (pendiente / aprobado / rechazado),
+ * para que un cambio de formato no altere documentos ya iniciados o enviados.
  */
 export function applySchemaSnapshotToFormat<
   T extends {
@@ -80,8 +80,7 @@ export function applySchemaSnapshotToFormat<
     } | null;
   },
 >(submission: T): T {
-  const frozenStatuses = new Set(['PENDING_REVIEW', 'APPROVED', 'REJECTED']);
-  if (!frozenStatuses.has(submission.status) || !submission.schemaSnapshot || !submission.format?.sheets) {
+  if (!submission.schemaSnapshot || !submission.format?.sheets) {
     return submission;
   }
 
