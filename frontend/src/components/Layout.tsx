@@ -6,6 +6,7 @@ import {
   FileText,
   ClipboardCheck,
   Search,
+  Users,
   LogOut,
   Menu,
   X,
@@ -26,6 +27,7 @@ export default function Layout({ children }: LayoutProps) {
         { to: '/admin', label: 'Panel', icon: LayoutDashboard },
         { to: '/admin/pending', label: 'Pendientes', icon: ClipboardCheck },
         { to: '/admin/search', label: 'Buscar', icon: Search },
+        { to: '/admin/users', label: 'Usuarios', icon: Users },
       ]
     : [
         { to: '/', label: 'Mis Formatos', icon: FileText },
@@ -55,7 +57,8 @@ export default function Layout({ children }: LayoutProps) {
                   key={to}
                   to={to}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    location.pathname === to
+                    location.pathname === to ||
+                    (to !== '/admin' && to !== '/' && location.pathname.startsWith(to))
                       ? 'bg-primary-700 text-white'
                       : 'text-primary-100 hover:bg-primary-700/50'
                   }`}
@@ -92,7 +95,8 @@ export default function Layout({ children }: LayoutProps) {
                 to={to}
                 onClick={() => setMenuOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium ${
-                  location.pathname === to
+                  location.pathname === to ||
+                  (to !== '/admin' && to !== '/' && location.pathname.startsWith(to))
                     ? 'bg-primary-700 text-white'
                     : 'text-primary-100 hover:bg-primary-700/50'
                 }`}

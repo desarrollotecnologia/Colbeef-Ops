@@ -148,6 +148,33 @@ async function seedFormats() {
   return totalFields;
 }
 
+/** Otorga todos los formatos activos a operarios (idempotente). */
+async function seedOperatorFormatAccess() {
+  const formats = await prisma.format.findMany({
+    where: { active: true },
+    select: { id: true },
+  });
+  const operators = await prisma.user.findMany({
+    where: { role: 'OPERARIO' },
+    select: { id: true },
+  });
+
+  let created = 0;
+  for (const op of operators) {
+    for (const fmt of formats) {
+      await prisma.userFormatAccess.upsert({
+        where: {
+          userId_formatId: { userId: op.id, formatId: fmt.id },
+        },
+        update: {},
+        create: { userId: op.id, formatId: fmt.id },
+      });
+      created += 1;
+    }
+  }
+  return { operators: operators.length, formats: formats.length, links: created };
+}
+
 async function main() {
   console.log('Sembrando base de datos Colbeef-Ops...\n');
 
@@ -156,6 +183,11 @@ async function main() {
 
   const totalFields = await seedFormats();
   console.log(`✓ ${FORMAT_CATALOG.length} formatos con ${totalFields} campos`);
+
+  const access = await seedOperatorFormatAccess();
+  console.log(
+    `✓ Acceso a formatos: ${access.operators} operario(s) × ${access.formats} formato(s)`
+  );
 
   console.log('\nSeed completado.');
   console.log('Usuarios de prueba:');

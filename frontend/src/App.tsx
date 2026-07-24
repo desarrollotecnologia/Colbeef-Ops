@@ -9,6 +9,7 @@ import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminPending from '@/pages/admin/AdminPending';
 import AdminReviewPage from '@/pages/admin/AdminReviewPage';
 import AdminSearchPage from '@/pages/admin/AdminSearchPage';
+import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import UsabilityDashboard from '@/pages/panel/UsabilityDashboard';
 
 function homePath(role?: string) {
@@ -77,6 +78,7 @@ export default function App() {
         <Route path="/admin/pending" element={<ProtectedRoute adminOnly><AdminPending /></ProtectedRoute>} />
         <Route path="/admin/review/:id" element={<ProtectedRoute adminOnly><AdminReviewPage /></ProtectedRoute>} />
         <Route path="/admin/search" element={<ProtectedRoute adminOnly><AdminSearchPage /></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute adminOnly><AdminUsersPage /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to={homePath(user?.role)} replace />} />
       </Routes>

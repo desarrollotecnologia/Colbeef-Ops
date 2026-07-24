@@ -33,6 +33,7 @@ model User {
   submissionsReviewed FormSubmission[] @relation("ReviewerSubmissions")
   signatures         Signature[]
   usageEvents        UsageEvent[]
+  formatAccess       UserFormatAccess[]
 
   @@map("users")
 }
@@ -54,8 +55,24 @@ model Format {
 
   sheets      FormatSheet[]
   submissions FormSubmission[]
+  userAccess  UserFormatAccess[]
 
   @@map("formats")
+}
+
+/** Formatos que un operario puede ver y diligenciar en el tablero. */
+model UserFormatAccess {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  formatId  String   @map("format_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  format Format @relation(fields: [formatId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, formatId])
+  @@index([userId])
+  @@map("user_format_access")
 }
 
 model FormatSheet {

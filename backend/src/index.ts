@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.routes';
 import formatsRoutes from './routes/formats.routes';
 import submissionsRoutes from './routes/submissions.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import usersRoutes from './routes/users.routes';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/formats', formatsRoutes);
 app.use('/api/submissions', submissionsRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/admin/users', usersRoutes);
 
 if (config.nodeEnv === 'production') {
   const frontendDist = path.join(__dirname, '../../frontend/dist');

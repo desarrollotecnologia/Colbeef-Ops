@@ -15,6 +15,7 @@ import {
   applySchemaSnapshotToFormat,
   buildFormatSchemaSnapshot,
 } from '../utils/schemaSnapshot';
+import { assertOperatorCanAccessFormat } from '../utils/formatAccess';
 
 const router = Router();
 
@@ -128,6 +129,14 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
 
   if (!format) {
     return res.status(404).json({ error: 'Formato no encontrado' });
+  }
+  if (!format.active) {
+    return res.status(400).json({ error: 'Este formato no está activo' });
+  }
+
+  const access = await assertOperatorCanAccessFormat(req.user!.userId, req.user!.role, formatId);
+  if (!access.ok) {
+    return res.status(403).json({ error: access.error });
   }
 
   const parsedDate = getTodayWorkDate();
