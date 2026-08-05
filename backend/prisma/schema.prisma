@@ -31,9 +31,15 @@ model User {
 
   submissionsCreated FormSubmission[] @relation("OperatorSubmissions")
   submissionsReviewed FormSubmission[] @relation("ReviewerSubmissions")
+  submissionsSubmitted FormSubmission[] @relation("SubmittedBySubmissions")
   signatures         Signature[]
   usageEvents        UsageEvent[]
   formatAccess       UserFormatAccess[]
+  collaborationAdded SubmissionCollaborator[] @relation("CollaborationInvitee")
+  collaborationOwned SubmissionCollaborator[] @relation("CollaborationAddedBy")
+  fieldLocks         SubmissionFieldLock[]
+  submissionActivities SubmissionActivity[] @relation("ActivityActor")
+  activitiesTargeted SubmissionActivity[] @relation("ActivityTargetUser")
 
   @@map("users")
 }
@@ -156,7 +162,10 @@ enum SubmissionStatus {
 model FormSubmission {
   id              String           @id @default(uuid())
   formatId        String           @map("format_id")
+  /** Usuario que inició el borrador (dueño). */
   operatorId      String           @map("operator_id")
+  /** Usuario que pulsó Entregar (puede ser colaborador). */
+  submittedById   String?          @map("submitted_by_id")
   workDate        DateTime         @map("work_date") @db.Date // fecha del turno/día
   status          SubmissionStatus @default(DRAFT)
   submittedAt     DateTime?        @map("submitted_at")
@@ -169,16 +178,82 @@ model FormSubmission {
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 
-  format     Format              @relation(fields: [formatId], references: [id])
-  operator   User                @relation("OperatorSubmissions", fields: [operatorId], references: [id])
-  reviewedBy User?               @relation("ReviewerSubmissions", fields: [reviewedById], references: [id])
-  sheets     FormSubmissionSheet[]
-  signature  Signature?
+  format       Format                   @relation(fields: [formatId], references: [id])
+  operator     User                     @relation("OperatorSubmissions", fields: [operatorId], references: [id])
+  submittedBy  User?                    @relation("SubmittedBySubmissions", fields: [submittedById], references: [id])
+  reviewedBy   User?                    @relation("ReviewerSubmissions", fields: [reviewedById], references: [id])
+  sheets       FormSubmissionSheet[]
+  signature    Signature?
+  collaborators SubmissionCollaborator[]
+  fieldLocks   SubmissionFieldLock[]
+  activities   SubmissionActivity[]
 
   @@index([workDate])
   @@index([status])
   @@index([formatId, workDate])
+  @@index([submittedById])
   @@map("form_submissions")
+}
+
+model SubmissionCollaborator {
+  id           String   @id @default(uuid())
+  submissionId String   @map("submission_id")
+  userId       String   @map("user_id")
+  addedById    String   @map("added_by_id")
+  addedAt      DateTime @default(now()) @map("added_at")
+
+  submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  user       User           @relation("CollaborationInvitee", fields: [userId], references: [id], onDelete: Cascade)
+  addedBy    User           @relation("CollaborationAddedBy", fields: [addedById], references: [id])
+
+  @@unique([submissionId, userId])
+  @@index([userId])
+  @@map("submission_collaborators")
+}
+
+/** Campo (por hoja) ya llenado por un usuario; otros no pueden modificarlo. */
+model SubmissionFieldLock {
+  id           String   @id @default(uuid())
+  submissionId String   @map("submission_id")
+  sheetId      String   @map("sheet_id")
+  fieldKey     String   @map("field_key")
+  filledById   String   @map("filled_by_id")
+  filledAt     DateTime @default(now()) @map("filled_at")
+
+  submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  filledBy   User           @relation(fields: [filledById], references: [id])
+
+  @@unique([submissionId, sheetId, fieldKey])
+  @@index([submissionId])
+  @@map("submission_field_locks")
+}
+
+enum SubmissionActivityType {
+  CREATED
+  COLLABORATOR_ADDED
+  COLLABORATOR_REMOVED
+  SHEET_SAVED
+  SUBMITTED
+  REJECTED
+  APPROVED
+}
+
+model SubmissionActivity {
+  id             String                  @id @default(uuid())
+  submissionId   String                  @map("submission_id")
+  type           SubmissionActivityType
+  actorId        String?                 @map("actor_id")
+  targetUserId   String?                 @map("target_user_id")
+  notes          String?                 @db.Text
+  metadata       Json?
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  actor      User?          @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUser User?          @relation("ActivityTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([submissionId, createdAt])
+  @@map("submission_activities")
 }
 
 model FormSubmissionSheet {

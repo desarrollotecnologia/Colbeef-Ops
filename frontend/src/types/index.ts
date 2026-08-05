@@ -179,10 +179,56 @@ export interface ChecklistItemData {
 
 export type SubmissionStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
 
+export type SubmissionMyRole = 'OWNER' | 'COLLABORATOR' | 'ADMIN';
+
+export interface UserBrief {
+  id: string;
+  fullName: string;
+  username?: string;
+}
+
+export interface SubmissionCollaborator {
+  id: string;
+  userId: string;
+  addedById: string;
+  addedAt: string;
+  user: UserBrief;
+  addedBy: UserBrief;
+}
+
+export interface SubmissionFieldLock {
+  id: string;
+  sheetId: string;
+  fieldKey: string;
+  filledById: string;
+  filledAt: string;
+  filledBy: UserBrief;
+}
+
+export type SubmissionActivityType =
+  | 'CREATED'
+  | 'COLLABORATOR_ADDED'
+  | 'COLLABORATOR_REMOVED'
+  | 'SHEET_SAVED'
+  | 'SUBMITTED'
+  | 'REJECTED'
+  | 'APPROVED';
+
+export interface SubmissionActivity {
+  id: string;
+  type: SubmissionActivityType;
+  notes?: string | null;
+  createdAt: string;
+  actor?: UserBrief | null;
+  targetUser?: UserBrief | null;
+  metadata?: Record<string, unknown> | null;
+}
+
 export interface FormSubmission {
   id: string;
   formatId: string;
   operatorId: string;
+  submittedById?: string | null;
   workDate: string;
   status: SubmissionStatus;
   submittedAt?: string;
@@ -191,10 +237,17 @@ export interface FormSubmission {
   updatedAt?: string;
   createdAt?: string;
   format?: Format;
-  operator?: { id: string; fullName: string };
-  reviewedBy?: { id: string; fullName: string };
+  operator?: UserBrief;
+  submittedBy?: UserBrief | null;
+  reviewedBy?: UserBrief;
   sheets?: FormSubmissionSheet[];
   signature?: { signedAt: string; notes?: string; admin?: { fullName: string } };
+  myRole?: SubmissionMyRole | null;
+  addedBy?: UserBrief | null;
+  collaborators?: SubmissionCollaborator[];
+  fieldLocks?: SubmissionFieldLock[];
+  activities?: SubmissionActivity[];
+  _count?: { sheets?: number; collaborators?: number };
 }
 
 export interface FormSubmissionSheet {

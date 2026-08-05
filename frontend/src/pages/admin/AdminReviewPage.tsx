@@ -16,6 +16,8 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 
 import FormatSubmissionViewer from '@/components/form/FormatSubmissionViewer';
 
+import ActivityTimeline from '@/components/form/ActivityTimeline';
+
 import { useAuth } from '@/context/AuthContext';
 
 import { downloadSubmissionPdf } from '@/lib/downloadPdf';
@@ -197,6 +199,10 @@ export default function AdminReviewPage() {
 
           <span>Operario: {submission.operator?.fullName}</span>
 
+          {submission.submittedBy?.fullName && (
+            <span>Entregó: {submission.submittedBy.fullName}</span>
+          )}
+
           <span>Fecha: {formatWorkDateShort(workDate)}</span>
 
           <span>{sheets.length} hojas</span>
@@ -231,7 +237,14 @@ export default function AdminReviewPage() {
 
       </div>
 
+      {(submission.collaborators?.length ?? 0) > 0 && (
+        <div className="mb-4 text-sm text-sky-900 bg-sky-50 border border-sky-200 rounded-lg px-4 py-2">
+          <strong>Colaboradores:</strong>{' '}
+          {(submission.collaborators ?? []).map((c) => c.user.fullName).join(', ')}
+        </div>
+      )}
 
+      <ActivityTimeline activities={submission.activities} compact />
 
       <FormatSubmissionViewer
 
@@ -247,7 +260,15 @@ export default function AdminReviewPage() {
 
         workDate={workDate}
 
-        operatorName={submission.operator?.fullName ?? ''}
+        operatorName={
+          [
+            submission.operator?.fullName,
+            ...(submission.collaborators ?? []).map((c) => c.user.fullName),
+          ]
+            .filter(Boolean)
+            .filter((n, i, arr) => arr.indexOf(n) === i)
+            .join(', ') || (submission.operator?.fullName ?? '')
+        }
 
         readOnly
 

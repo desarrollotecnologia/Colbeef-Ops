@@ -1,5 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { SubmissionStatus, UsageEventType, UserRole } from '@prisma/client';
+import {
+  Prisma,
+  SubmissionActivityType,
+  SubmissionStatus,
+  UsageEventType,
+  UserRole,
+} from '@prisma/client';
 import prisma from '../lib/prisma';
 import { authenticate, denyPanel, requireRole } from '../middleware/auth';
 import { paramId } from '../utils/params';
@@ -16,25 +22,88 @@ import {
   buildFormatSchemaSnapshot,
 } from '../utils/schemaSnapshot';
 import { assertOperatorCanAccessFormat } from '../utils/formatAccess';
+import { getSubmissionAccess, assertCanEditSubmission } from '../utils/submissionAccess';
+import { mergeSheetDataWithLocks } from '../utils/fieldLocks';
+import { logSubmissionActivity } from '../utils/submissionActivity';
 
 const router = Router();
 
 router.use(authenticate);
 router.use(denyPanel);
 
+const userBrief = { select: { id: true, fullName: true, username: true } };
+
+const collaborationInclude = {
+  collaborators: {
+    include: {
+      user: userBrief,
+      addedBy: userBrief,
+    },
+    orderBy: { addedAt: 'asc' as const },
+  },
+  fieldLocks: {
+    include: { filledBy: userBrief },
+  },
+  activities: {
+    include: {
+      actor: userBrief,
+      targetUser: userBrief,
+    },
+    orderBy: { createdAt: 'asc' as const },
+  },
+  submittedBy: userBrief,
+};
+
+const submissionInclude = {
+  format: {
+    include: {
+      sheets: {
+        orderBy: { sheetOrder: 'asc' as const },
+        include: { fields: { orderBy: { sortOrder: 'asc' as const } } },
+      },
+    },
+  },
+  operator: userBrief,
+  reviewedBy: userBrief,
+  sheets: { include: { sheet: true } },
+  signature: { include: { admin: userBrief } },
+  ...collaborationInclude,
+};
+
 function withFrozenSchema<T extends Parameters<typeof applySchemaSnapshotToFormat>[0]>(submission: T) {
   return applySchemaSnapshotToFormat(submission);
 }
 
-// Listar envíos (operario ve los suyos, admin ve todos)
+function enrichForViewer<
+  T extends {
+    operatorId: string;
+    collaborators?: { userId: string; addedBy?: { id: string; fullName: string } | null }[];
+  },
+>(submission: T, viewerId: string, viewerRole: UserRole) {
+  const isOwner = submission.operatorId === viewerId;
+  const collab = submission.collaborators?.find((c) => c.userId === viewerId);
+  let myRole: 'OWNER' | 'COLLABORATOR' | 'ADMIN' | null = null;
+  if (viewerRole === UserRole.ADMIN) myRole = 'ADMIN';
+  else if (isOwner) myRole = 'OWNER';
+  else if (collab) myRole = 'COLLABORATOR';
+
+  return {
+    ...submission,
+    myRole,
+    addedBy: collab?.addedBy ?? null,
+  };
+}
+
+// Listar envíos (operario: propios + colaboraciones; admin: todos)
 router.get('/', async (req: Request, res: Response) => {
   const { status, formatId, workDate, from, to } = req.query;
   const isAdmin = req.user!.role === UserRole.ADMIN;
+  const userId = req.user!.userId;
 
   const where: Record<string, unknown> = {};
 
   if (!isAdmin) {
-    where.operatorId = req.user!.userId;
+    where.OR = [{ operatorId: userId }, { collaborators: { some: { userId } } }];
   }
 
   if (status) where.status = status as SubmissionStatus;
@@ -53,10 +122,14 @@ router.get('/', async (req: Request, res: Response) => {
     orderBy: { updatedAt: 'desc' },
     include: {
       format: { select: { id: true, code: true, name: true } },
-      operator: { select: { id: true, fullName: true } },
-      reviewedBy: { select: { id: true, fullName: true } },
+      operator: userBrief,
+      reviewedBy: userBrief,
+      submittedBy: userBrief,
       signature: true,
-      _count: { select: { sheets: true } },
+      collaborators: {
+        include: { user: userBrief, addedBy: userBrief },
+      },
+      _count: { select: { sheets: true, collaborators: true } },
     },
   });
 
@@ -71,10 +144,9 @@ router.get('/', async (req: Request, res: Response) => {
     });
   }
 
-  res.json(submissions);
+  res.json(submissions.map((s) => enrichForViewer(s, userId, req.user!.role)));
 });
 
-// Pendientes de revisión (solo admin)
 router.get('/pending', requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
   logUsageEvent({
     eventType: UsageEventType.PENDING_VIEWED,
@@ -88,26 +160,13 @@ router.get('/pending', requireRole(UserRole.ADMIN), async (req: Request, res: Re
     orderBy: { submittedAt: 'asc' },
     include: {
       format: { select: { id: true, code: true, name: true, sheetCount: true } },
-      operator: { select: { id: true, fullName: true } },
+      operator: userBrief,
+      submittedBy: userBrief,
+      collaborators: { include: { user: userBrief } },
     },
   });
   res.json(pending);
 });
-
-const submissionInclude = {
-  format: {
-    include: {
-      sheets: {
-        orderBy: { sheetOrder: 'asc' as const },
-        include: { fields: { orderBy: { sortOrder: 'asc' as const } } },
-      },
-    },
-  },
-  operator: { select: { id: true, fullName: true } },
-  reviewedBy: { select: { id: true, fullName: true } },
-  sheets: { include: { sheet: true } },
-  signature: { include: { admin: { select: { id: true, fullName: true } } } },
-};
 
 // Crear borrador
 router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
@@ -145,7 +204,6 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
     return res.status(400).json({ error: dateCheck.error });
   }
 
-  // Congela el esquema al crear el borrador para que cambios posteriores del formato no lo alteren
   const schemaSnapshot = buildFormatSchemaSnapshot(format.sheets);
 
   const submission = await prisma.formSubmission.create({
@@ -164,6 +222,12 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
     include: submissionInclude,
   });
 
+  await logSubmissionActivity({
+    submissionId: submission.id,
+    type: SubmissionActivityType.CREATED,
+    actorId: req.user!.userId,
+  });
+
   logUsageEvent({
     eventType: UsageEventType.SUBMISSION_CREATED,
     userId: req.user!.userId,
@@ -176,10 +240,152 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
     path: '/api/submissions',
   });
 
-  res.status(201).json(withFrozenSchema(submission));
+  const refreshed = await prisma.formSubmission.findUnique({
+    where: { id: submission.id },
+    include: submissionInclude,
+  });
+
+  res.status(201).json(
+    enrichForViewer(withFrozenSchema(refreshed!), req.user!.userId, req.user!.role)
+  );
 });
 
-// Descargar PDF: ?sheetId=uuid (solo esa hoja) | ?scope=all (todas con separadores)
+// Candidatos a colaborador (operarios con acceso al formato)
+router.get('/:id/collaborator-candidates', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
+  const submissionId = paramId(req.params.id);
+  const access = await getSubmissionAccess(submissionId, req.user!.userId, req.user!.role);
+  if (!access.ok || access.role !== 'OWNER') {
+    return res.status(403).json({ error: 'Solo el dueño puede gestionar colaboradores' });
+  }
+
+  const submission = await prisma.formSubmission.findUnique({
+    where: { id: submissionId },
+    select: {
+      formatId: true,
+      operatorId: true,
+      collaborators: { select: { userId: true } },
+    },
+  });
+  if (!submission) return res.status(404).json({ error: 'Envío no encontrado' });
+
+  const excludeIds = [submission.operatorId, ...submission.collaborators.map((c) => c.userId)];
+
+  const candidates = await prisma.user.findMany({
+    where: {
+      role: UserRole.OPERARIO,
+      active: true,
+      id: { notIn: excludeIds },
+      formatAccess: { some: { formatId: submission.formatId } },
+    },
+    orderBy: { fullName: 'asc' },
+    select: { id: true, fullName: true, username: true },
+  });
+
+  res.json(candidates);
+});
+
+// Agregar colaborador
+router.post('/:id/collaborators', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
+  const submissionId = paramId(req.params.id);
+  const { userId } = req.body as { userId?: string };
+
+  if (!userId) return res.status(400).json({ error: 'userId es obligatorio' });
+
+  const access = await getSubmissionAccess(submissionId, req.user!.userId, req.user!.role);
+  if (!access.ok || access.role !== 'OWNER') {
+    return res.status(403).json({ error: 'Solo el dueño puede agregar colaboradores' });
+  }
+
+  const submission = await prisma.formSubmission.findUnique({ where: { id: submissionId } });
+  if (!submission) return res.status(404).json({ error: 'Envío no encontrado' });
+
+  if (submission.status !== SubmissionStatus.DRAFT && submission.status !== SubmissionStatus.REJECTED) {
+    return res.status(400).json({ error: 'Solo se pueden agregar colaboradores en borrador o rechazado' });
+  }
+
+  if (userId === submission.operatorId) {
+    return res.status(400).json({ error: 'El dueño ya forma parte del envío' });
+  }
+
+  const candidate = await prisma.user.findUnique({ where: { id: userId } });
+  if (!candidate || candidate.role !== UserRole.OPERARIO || !candidate.active) {
+    return res.status(400).json({ error: 'Usuario no válido' });
+  }
+
+  const formatAccess = await assertOperatorCanAccessFormat(userId, UserRole.OPERARIO, submission.formatId);
+  if (!formatAccess.ok) {
+    return res.status(400).json({ error: 'Ese operario no tiene acceso a este formato' });
+  }
+
+  try {
+    await prisma.submissionCollaborator.create({
+      data: {
+        submissionId,
+        userId,
+        addedById: req.user!.userId,
+      },
+    });
+  } catch {
+    return res.status(409).json({ error: 'Ese usuario ya es colaborador' });
+  }
+
+  await logSubmissionActivity({
+    submissionId,
+    type: SubmissionActivityType.COLLABORATOR_ADDED,
+    actorId: req.user!.userId,
+    targetUserId: userId,
+  });
+
+  const updated = await prisma.formSubmission.findUnique({
+    where: { id: submissionId },
+    include: submissionInclude,
+  });
+
+  res.status(201).json(
+    enrichForViewer(withFrozenSchema(updated!), req.user!.userId, req.user!.role)
+  );
+});
+
+// Quitar colaborador
+router.delete('/:id/collaborators/:userId', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
+  const submissionId = paramId(req.params.id);
+  const targetUserId = paramId(req.params.userId);
+
+  const access = await getSubmissionAccess(submissionId, req.user!.userId, req.user!.role);
+  if (!access.ok || access.role !== 'OWNER') {
+    return res.status(403).json({ error: 'Solo el dueño puede quitar colaboradores' });
+  }
+
+  const submission = await prisma.formSubmission.findUnique({ where: { id: submissionId } });
+  if (!submission) return res.status(404).json({ error: 'Envío no encontrado' });
+
+  if (submission.status !== SubmissionStatus.DRAFT && submission.status !== SubmissionStatus.REJECTED) {
+    return res.status(400).json({ error: 'Solo se pueden quitar colaboradores en borrador o rechazado' });
+  }
+
+  const deleted = await prisma.submissionCollaborator.deleteMany({
+    where: { submissionId, userId: targetUserId },
+  });
+  if (deleted.count === 0) {
+    return res.status(404).json({ error: 'Colaborador no encontrado' });
+  }
+
+  await logSubmissionActivity({
+    submissionId,
+    type: SubmissionActivityType.COLLABORATOR_REMOVED,
+    actorId: req.user!.userId,
+    targetUserId,
+  });
+
+  const updated = await prisma.formSubmission.findUnique({
+    where: { id: submissionId },
+    include: submissionInclude,
+  });
+
+  res.json(enrichForViewer(withFrozenSchema(updated!), req.user!.userId, req.user!.role));
+});
+
+// Descargar PDF
 router.get('/:id/pdf', async (req: Request, res: Response) => {
   const submission = await prisma.formSubmission.findUnique({
     where: { id: paramId(req.params.id) },
@@ -190,14 +396,15 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Envío no encontrado' });
   }
 
-  const isAdmin = req.user!.role === UserRole.ADMIN;
-  if (!isAdmin && submission.operatorId !== req.user!.userId) {
-    return res.status(403).json({ error: 'No tiene acceso' });
+  const access = await getSubmissionAccess(paramId(req.params.id), req.user!.userId, req.user!.role);
+  if (!access.ok) {
+    return res.status(403).json({ error: access.error });
   }
 
+  const isAdmin = req.user!.role === UserRole.ADMIN;
   const canDownload =
     isAdmin ||
-    (submission.operatorId === req.user!.userId &&
+    (access.isEditor &&
       (submission.status === SubmissionStatus.APPROVED ||
         submission.status === SubmissionStatus.DRAFT ||
         submission.status === SubmissionStatus.PENDING_REVIEW ||
@@ -212,20 +419,10 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
   try {
     const sheetId = typeof req.query.sheetId === 'string' ? req.query.sheetId : undefined;
     const scopeAll = req.query.scope === 'all';
-
-    const pdfOptions = sheetId
-      ? { sheetId }
-      : scopeAll
-        ? { sheetBoundaries: true }
-        : undefined;
+    let sheetName: string | undefined;
 
     const frozenSubmission = withFrozenSchema(submission);
-    const pdfBuffer = await generateSubmissionPdf(
-      frozenSubmission as typeof submission,
-      pdfOptions
-    );
 
-    let sheetName: string | undefined;
     if (sheetId) {
       sheetName = frozenSubmission.format.sheets.find((s) => s.id === sheetId)?.name;
       if (!sheetName) {
@@ -233,10 +430,16 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
       }
     }
 
-    const filename = buildPdfFilename(submission, {
-      sheetName,
-      allSheets: scopeAll && !sheetId,
+    const pdfBuffer = await generateSubmissionPdf(frozenSubmission, {
+      sheetId: scopeAll ? undefined : sheetId,
+      sheetBoundaries: scopeAll || !sheetId,
     });
+
+    const filename = buildPdfFilename(frozenSubmission, {
+      sheetName,
+      allSheets: scopeAll || !sheetId,
+    });
+
     logUsageEvent({
       eventType: UsageEventType.PDF_DOWNLOADED,
       userId: req.user!.userId,
@@ -248,6 +451,7 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
       submissionId: submission.id,
       path: '/api/submissions/pdf',
     });
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(pdfBuffer);
@@ -257,7 +461,7 @@ router.get('/:id/pdf', async (req: Request, res: Response) => {
   }
 });
 
-// Obtener envío con datos
+// Obtener envío
 router.get('/:id', async (req: Request, res: Response) => {
   let submission = await prisma.formSubmission.findUnique({
     where: { id: paramId(req.params.id) },
@@ -268,16 +472,17 @@ router.get('/:id', async (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Envío no encontrado' });
   }
 
-  const isAdmin = req.user!.role === UserRole.ADMIN;
-  if (!isAdmin && submission.operatorId !== req.user!.userId) {
-    return res.status(403).json({ error: 'No tiene acceso a este envío' });
+  const access = await getSubmissionAccess(submission.id, req.user!.userId, req.user!.role);
+  if (!access.ok) {
+    return res.status(403).json({ error: access.error });
   }
 
+  const isAdmin = req.user!.role === UserRole.ADMIN;
   const isEditable =
     submission.status === SubmissionStatus.DRAFT ||
     submission.status === SubmissionStatus.REJECTED;
 
-  if (isEditable && !isAdmin && !isSameWorkDate(submission.workDate, getTodayWorkDate())) {
+  if (isEditable && !isAdmin && access.isEditor && !isSameWorkDate(submission.workDate, getTodayWorkDate())) {
     submission = await prisma.formSubmission.update({
       where: { id: submission.id },
       data: { workDate: getTodayWorkDate() },
@@ -285,8 +490,6 @@ router.get('/:id', async (req: Request, res: Response) => {
     });
   }
 
-  // Borradores antiguos sin snapshot: congelar el esquema actual en la primera apertura
-  // para que un seed posterior no les cambie la estructura a mitad de llenado.
   if (
     (submission.status === SubmissionStatus.DRAFT || submission.status === SubmissionStatus.REJECTED) &&
     !submission.schemaSnapshot
@@ -312,22 +515,54 @@ router.get('/:id', async (req: Request, res: Response) => {
     metadata: { status: submission.status },
   });
 
-  res.json(withFrozenSchema(submission));
+  res.json(enrichForViewer(withFrozenSchema(submission), req.user!.userId, req.user!.role));
 });
 
-// Guardar datos de una hoja
+// Guardar hoja
 router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
   const { data } = req.body;
-  const submission = await prisma.formSubmission.findUnique({
-    where: { id: paramId(req.params.id) },
-  });
+  const submissionId = paramId(req.params.id);
+  const sheetId = paramId(req.params.sheetId);
 
-  if (!submission || submission.operatorId !== req.user!.userId) {
-    return res.status(403).json({ error: 'No tiene acceso' });
+  const editCheck = await assertCanEditSubmission(submissionId, req.user!.userId, req.user!.role);
+  if (!editCheck.ok) {
+    return res.status(editCheck.status).json({ error: editCheck.error });
   }
+
+  const submission = await prisma.formSubmission.findUnique({
+    where: { id: submissionId },
+  });
+  if (!submission) return res.status(404).json({ error: 'Envío no encontrado' });
 
   if (submission.status !== SubmissionStatus.DRAFT && submission.status !== SubmissionStatus.REJECTED) {
     return res.status(400).json({ error: 'Este envío ya no se puede editar' });
+  }
+
+  const existingSheet = await prisma.formSubmissionSheet.findUnique({
+    where: {
+      submissionId_sheetId: { submissionId, sheetId },
+    },
+  });
+  if (!existingSheet) {
+    return res.status(404).json({ error: 'Hoja no encontrada' });
+  }
+
+  const existingData = (existingSheet.data ?? {}) as Record<string, unknown>;
+  const incomingData = (data ?? {}) as Record<string, unknown>;
+
+  const mergeResult = await mergeSheetDataWithLocks({
+    submissionId,
+    sheetId,
+    userId: req.user!.userId,
+    existingData,
+    incomingData,
+  });
+
+  if (!mergeResult.ok) {
+    return res.status(409).json({
+      error: mergeResult.error,
+      conflicts: mergeResult.conflicts,
+    });
   }
 
   const draftPatch: { workDate: Date; schemaSnapshot?: ReturnType<typeof buildFormatSchemaSnapshot> } = {
@@ -359,13 +594,17 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
 
   const updated = await prisma.formSubmissionSheet.update({
     where: {
-      submissionId_sheetId: {
-        submissionId: paramId(req.params.id),
-        sheetId: paramId(req.params.sheetId),
-      },
+      submissionId_sheetId: { submissionId, sheetId },
     },
-    data: { data },
+    data: { data: mergeResult.merged as Prisma.InputJsonValue },
     include: { sheet: { select: { name: true } }, submission: { include: { format: true } } },
+  });
+
+  await logSubmissionActivity({
+    submissionId,
+    type: SubmissionActivityType.SHEET_SAVED,
+    actorId: req.user!.userId,
+    metadata: { sheetId, sheetName: updated.sheet.name },
   });
 
   logUsageEvent({
@@ -382,13 +621,24 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
     path: '/api/submissions/sheets',
   });
 
-  res.json(updated);
+  const locks = await prisma.submissionFieldLock.findMany({
+    where: { submissionId, sheetId },
+    include: { filledBy: userBrief },
+  });
+
+  res.json({ ...updated, fieldLocks: locks });
 });
 
-// Entregar para revisión
+// Entregar
 router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
+  const submissionId = paramId(req.params.id);
+  const editCheck = await assertCanEditSubmission(submissionId, req.user!.userId, req.user!.role);
+  if (!editCheck.ok) {
+    return res.status(editCheck.status).json({ error: editCheck.error });
+  }
+
   const submission = await prisma.formSubmission.findUnique({
-    where: { id: paramId(req.params.id) },
+    where: { id: submissionId },
     include: {
       format: {
         include: {
@@ -402,9 +652,7 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
     },
   });
 
-  if (!submission || submission.operatorId !== req.user!.userId) {
-    return res.status(403).json({ error: 'No tiene acceso' });
-  }
+  if (!submission) return res.status(404).json({ error: 'Envío no encontrado' });
 
   if (submission.status !== SubmissionStatus.DRAFT && submission.status !== SubmissionStatus.REJECTED) {
     return res.status(400).json({ error: 'Este envío ya fue entregado' });
@@ -451,19 +699,25 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
     });
   }
 
-  // Conserva el snapshot del borrador (o congela el usado en la validación)
   const schemaSnapshot =
     (submission.schemaSnapshot as object | null) ??
     buildFormatSchemaSnapshot(forValidation.format.sheets);
 
   const updated = await prisma.formSubmission.update({
-    where: { id: paramId(req.params.id) },
+    where: { id: submissionId },
     data: {
       status: SubmissionStatus.PENDING_REVIEW,
       submittedAt: new Date(),
+      submittedById: req.user!.userId,
       schemaSnapshot,
     },
-    include: { format: true },
+    include: { format: true, submittedBy: userBrief, operator: userBrief },
+  });
+
+  await logSubmissionActivity({
+    submissionId,
+    type: SubmissionActivityType.SUBMITTED,
+    actorId: req.user!.userId,
   });
 
   logUsageEvent({
@@ -481,7 +735,7 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
   res.json(updated);
 });
 
-// Aprobar y firmar (admin)
+// Aprobar
 router.post('/:id/approve', requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
   const { notes } = req.body;
 
@@ -512,10 +766,19 @@ router.post('/:id/approve', requireRole(UserRole.ADMIN), async (req: Request, re
       },
     },
     include: {
-      signature: { include: { admin: { select: { id: true, fullName: true } } } },
-      reviewedBy: { select: { id: true, fullName: true } },
+      signature: { include: { admin: userBrief } },
+      reviewedBy: userBrief,
       format: true,
+      operator: userBrief,
+      submittedBy: userBrief,
     },
+  });
+
+  await logSubmissionActivity({
+    submissionId: updated.id,
+    type: SubmissionActivityType.APPROVED,
+    actorId: req.user!.userId,
+    notes: notes ?? null,
   });
 
   logUsageEvent({
@@ -533,7 +796,7 @@ router.post('/:id/approve', requireRole(UserRole.ADMIN), async (req: Request, re
   res.json(updated);
 });
 
-// Eliminar borrador (solo el operario dueño)
+// Eliminar borrador (solo dueño)
 router.delete('/:id', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
   const submission = await prisma.formSubmission.findUnique({
     where: { id: paramId(req.params.id) },
@@ -544,7 +807,7 @@ router.delete('/:id', requireRole(UserRole.OPERARIO), async (req: Request, res: 
   }
 
   if (submission.operatorId !== req.user!.userId) {
-    return res.status(403).json({ error: 'No tiene acceso a este envío' });
+    return res.status(403).json({ error: 'Solo el dueño puede eliminar el borrador' });
   }
 
   if (submission.status !== SubmissionStatus.DRAFT) {
@@ -571,7 +834,7 @@ router.delete('/:id', requireRole(UserRole.OPERARIO), async (req: Request, res: 
   res.status(204).send();
 });
 
-// Rechazar (admin)
+// Rechazar
 router.post('/:id/reject', requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
   const { notes } = req.body;
 
@@ -600,6 +863,13 @@ router.post('/:id/reject', requireRole(UserRole.ADMIN), async (req: Request, res
       reviewNotes: notes,
     },
     include: { format: true },
+  });
+
+  await logSubmissionActivity({
+    submissionId: updated.id,
+    type: SubmissionActivityType.REJECTED,
+    actorId: req.user!.userId,
+    notes,
   });
 
   logUsageEvent({

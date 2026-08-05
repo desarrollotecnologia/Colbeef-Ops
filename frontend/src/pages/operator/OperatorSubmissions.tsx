@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, CheckCircle, XCircle, AlertCircle, Trash2, Download } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, Trash2, Download, Users } from 'lucide-react';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
@@ -14,7 +14,11 @@ const statusConfig = {
   DRAFT: { label: 'Borrador', color: 'bg-gray-100 text-gray-700', icon: Clock },
   PENDING_REVIEW: { label: 'Pendiente revisión', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
   APPROVED: { label: 'Aprobado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  REJECTED: { label: 'Rechazado', color: 'bg-red-100 text-red-800', icon: XCircle },
+  REJECTED: {
+    label: 'Rechazado — pendiente ajustar',
+    color: 'bg-red-100 text-red-800 ring-2 ring-red-300',
+    icon: XCircle,
+  },
 };
 
 export default function OperatorSubmissions() {
@@ -51,7 +55,7 @@ export default function OperatorSubmissions() {
     <Layout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Mis envíos</h1>
-        <p className="text-gray-500 mt-1">Historial de formatos llenados</p>
+        <p className="text-gray-500 mt-1">Historial de formatos llenados (propios y colaboraciones)</p>
       </div>
 
       {loading ? (
@@ -71,12 +75,30 @@ export default function OperatorSubmissions() {
             const Icon = cfg.icon;
             const workDateStr = toWorkDateString(sub.workDate);
             const isOldDraft = sub.status === 'DRAFT' && workDateStr !== today;
+            const isCollaborator = sub.myRole === 'COLLABORATOR';
+            const isRejected = sub.status === 'REJECTED';
 
             return (
-              <Card key={sub.id} className="hover:shadow-md transition-shadow">
+              <Card
+                key={sub.id}
+                className={`hover:shadow-md transition-shadow ${
+                  isRejected
+                    ? 'border-2 border-red-300 bg-red-50/40'
+                    : isCollaborator
+                      ? 'border-2 border-sky-300 bg-sky-50/50'
+                      : ''
+                }`}
+              >
                 <CardBody className="flex items-center justify-between gap-4">
                   <Link to={`/submissions/${sub.id}`} className="flex-1 min-w-0">
-                    <h3 className="font-semibold">{sub.format?.name}</h3>
+                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                      <h3 className="font-semibold">{sub.format?.name}</h3>
+                      {isCollaborator && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-200 text-sky-900">
+                          <Users size={12} /> Colaborador
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-500">
                       Fecha: {formatWorkDateShort(workDateStr)}
                       {sub.status === 'DRAFT' && sub.updatedAt && (
@@ -86,6 +108,21 @@ export default function OperatorSubmissions() {
                         <span className="ml-2 text-amber-600 font-medium">· Borrador anterior</span>
                       )}
                     </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Inició: {sub.operator?.fullName ?? '—'}
+                      {isCollaborator && sub.addedBy && (
+                        <> · Te agregó: {sub.addedBy.fullName}</>
+                      )}
+                      {(sub._count?.collaborators ?? sub.collaborators?.length ?? 0) > 0 &&
+                        !isCollaborator && (
+                          <> · {sub._count?.collaborators ?? sub.collaborators?.length} colaborador(es)</>
+                        )}
+                    </p>
+                    {isRejected && sub.reviewNotes && (
+                      <p className="text-xs text-red-700 mt-1 font-medium">
+                        Motivo rechazo: {sub.reviewNotes}
+                      </p>
+                    )}
                   </Link>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${cfg.color}`}>
@@ -93,22 +130,22 @@ export default function OperatorSubmissions() {
                       {cfg.label}
                     </span>
                     <Button
-                        variant="outline"
-                        size="sm"
-                        loading={pdfLoadingId === sub.id}
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          setPdfLoadingId(sub.id);
-                          try {
-                            await downloadSubmissionPdf(sub.id, { scope: 'all' });
-                          } finally {
-                            setPdfLoadingId(null);
-                          }
-                        }}
-                      >
-                        <Download size={16} /> PDF
-                      </Button>
-                    {sub.status === 'DRAFT' && (
+                      variant="outline"
+                      size="sm"
+                      loading={pdfLoadingId === sub.id}
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        setPdfLoadingId(sub.id);
+                        try {
+                          await downloadSubmissionPdf(sub.id, { scope: 'all' });
+                        } finally {
+                          setPdfLoadingId(null);
+                        }
+                      }}
+                    >
+                      <Download size={16} /> PDF
+                    </Button>
+                    {sub.status === 'DRAFT' && sub.myRole === 'OWNER' && (
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(sub)}

@@ -281,16 +281,93 @@ export function drawContinuationHeader(
   return y + 20;
 }
 
-export function drawSignatures(doc: PdfDoc, operatorName: string, y: number): number {
+export function drawSignatures(
+  doc: PdfDoc,
+  operatorName: string,
+  y: number,
+  opts?: { submittedByName?: string | null; collaboratorNames?: string[] }
+): number {
   const bottom = contentBottom(doc);
-  if (y > bottom - 40) y = bottom - 40;
+  if (y > bottom - 52) y = bottom - 52;
+
+  const elaboro =
+    opts?.collaboratorNames && opts.collaboratorNames.length > 0
+      ? [operatorName, ...opts.collaboratorNames].filter((n, i, arr) => arr.indexOf(n) === i).join(', ')
+      : operatorName;
+  const entrego = opts?.submittedByName || operatorName;
 
   doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ELABORÓ', MARGIN, y);
-  doc.fontSize(9).font('Helvetica').fillColor('#111').text(operatorName, MARGIN, y + 10, {
+  doc.fontSize(8).font('Helvetica').fillColor('#111').text(elaboro, MARGIN, y + 10, {
     width: (pageWidth(doc) - MARGIN * 2) / 2 - 10,
   });
-  doc.moveTo(MARGIN, y + 24).lineTo(MARGIN + (pageWidth(doc) - MARGIN * 2) / 2 - 16, y + 24).strokeColor('#666').stroke();
+  doc
+    .moveTo(MARGIN, y + 24)
+    .lineTo(MARGIN + (pageWidth(doc) - MARGIN * 2) / 2 - 16, y + 24)
+    .strokeColor('#666')
+    .stroke();
+
+  const midX = MARGIN + (pageWidth(doc) - MARGIN * 2) / 2 + 8;
+  doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ENTREGÓ', midX, y);
+  doc.fontSize(8).font('Helvetica').fillColor('#111').text(entrego, midX, y + 10, {
+    width: (pageWidth(doc) - MARGIN * 2) / 2 - 10,
+  });
+  doc
+    .moveTo(midX, y + 24)
+    .lineTo(midX + (pageWidth(doc) - MARGIN * 2) / 2 - 16, y + 24)
+    .strokeColor('#666')
+    .stroke();
+
   return y + 32;
+}
+
+export function drawActivityTrail(
+  doc: PdfDoc,
+  y: number,
+  activities: {
+    type: string;
+    createdAt: Date;
+    notes?: string | null;
+    actor?: { fullName: string } | null;
+    targetUser?: { fullName: string } | null;
+  }[]
+): number {
+  if (!activities.length) return y;
+
+  const bump = (needed: number) => {
+    if (y + needed > contentBottom(doc)) {
+      doc.addPage({ size: 'A4', layout: 'portrait', margin: MARGIN });
+      y = MARGIN;
+    }
+  };
+
+  bump(40);
+  doc.fontSize(8).font('Helvetica-Bold').fillColor('#333').text('Trazabilidad del envío', MARGIN, y);
+  y += 12;
+
+  const labels: Record<string, string> = {
+    CREATED: 'Inició el formato',
+    COLLABORATOR_ADDED: 'Agregó colaborador',
+    COLLABORATOR_REMOVED: 'Quitó colaborador',
+    SHEET_SAVED: 'Guardó hoja',
+    SUBMITTED: 'Entregó a revisión',
+    REJECTED: 'Rechazado (devolver para ajustar)',
+    APPROVED: 'Aprobado y firmado',
+  };
+
+  for (const a of activities) {
+    if (a.type === 'SHEET_SAVED') continue;
+    bump(18);
+    const when = a.createdAt.toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+    const actor = a.actor?.fullName ?? '—';
+    let line = `${when} · ${labels[a.type] ?? a.type} · ${actor}`;
+    if (a.targetUser?.fullName) line += ` → ${a.targetUser.fullName}`;
+    if (a.type === 'REJECTED' && a.notes) line += ` · Motivo: ${a.notes}`;
+    doc.fontSize(7).font('Helvetica').fillColor('#444').text(line, MARGIN, y, {
+      width: pageWidth(doc) - MARGIN * 2,
+    });
+    y += doc.heightOfString(line, { width: pageWidth(doc) - MARGIN * 2 }) + 3;
+  }
+  return y + 4;
 }
 
 export type SheetPageContext = {

@@ -8,6 +8,7 @@ import {
   drawSectionBanner,
   drawSheetBoundaryEnd,
   drawSignatures,
+  drawActivityTrail,
   ensurePageSpace,
   formatWorkDate,
   pageWidth,
@@ -70,6 +71,15 @@ export type SubmissionForPdf = FormSubmission & {
   };
   operator: Pick<User, 'fullName'>;
   reviewedBy: Pick<User, 'fullName'> | null;
+  submittedBy?: Pick<User, 'fullName'> | null;
+  collaborators?: { user: Pick<User, 'fullName'> }[];
+  activities?: {
+    type: string;
+    createdAt: Date;
+    notes?: string | null;
+    actor?: Pick<User, 'fullName'> | null;
+    targetUser?: Pick<User, 'fullName'> | null;
+  }[];
   sheets: { sheetId: string; data: unknown }[];
 };
 
@@ -1786,11 +1796,40 @@ function renderSheetPage(
     }
   }
 
-  drawSignatures(doc, submission.operator.fullName, contentBottom(doc) - 28);
+  drawSignatures(doc, submission.operator.fullName, contentBottom(doc) - 36, {
+    submittedByName: submission.submittedBy?.fullName,
+    collaboratorNames: (submission.collaborators ?? []).map((c) => c.user.fullName),
+  });
 
   if (renderOpts?.showBoundaries && !renderOpts.isLastInPdf) {
     drawSheetBoundaryEnd(doc, ctx.sheetIndex, ctx.totalSheets, ctx.sheetName);
   }
+}
+
+function drawCollaborationSummaryPage(doc: PDFKit.PDFDocument, submission: SubmissionForPdf) {
+  doc.addPage({ size: 'A4', layout: 'portrait', margin: MARGIN });
+  let y = MARGIN;
+  doc.fontSize(12).font('Helvetica-Bold').fillColor('#111').text('Resumen de elaboración', MARGIN, y);
+  y += 18;
+  doc.fontSize(9).font('Helvetica').fillColor('#333');
+  doc.text(`Inició: ${submission.operator.fullName}`, MARGIN, y);
+  y += 14;
+  const collabs = (submission.collaborators ?? []).map((c) => c.user.fullName);
+  doc.text(
+    collabs.length ? `Colaboradores: ${collabs.join(', ')}` : 'Colaboradores: (ninguno)',
+    MARGIN,
+    y
+  );
+  y += 14;
+  doc.text(`Entregó: ${submission.submittedBy?.fullName ?? submission.operator.fullName}`, MARGIN, y);
+  y += 14;
+  if (submission.reviewedBy?.fullName) {
+    doc.text(`Revisó: ${submission.reviewedBy.fullName}`, MARGIN, y);
+    y += 14;
+  }
+  y += 8;
+  y = drawActivityTrail(doc, y, submission.activities ?? []);
+  return y;
 }
 
 function sortedFormatSheets(submission: SubmissionForPdf): SheetWithFields[] {
@@ -1839,6 +1878,13 @@ export function generateSubmissionPdf(
         isLastInPdf: index === sheetsToRender.length - 1,
       });
     });
+
+    const hasTrail =
+      (submission.collaborators?.length ?? 0) > 0 ||
+      (submission.activities ?? []).some((a) => a.type !== 'SHEET_SAVED');
+    if (hasTrail && !options?.sheetId) {
+      drawCollaborationSummaryPage(doc, submission);
+    }
 
     doc.end();
   });
