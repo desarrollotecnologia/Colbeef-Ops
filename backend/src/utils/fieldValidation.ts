@@ -24,6 +24,7 @@ type FieldOptions = {
   platformCount?: number;
   minRows?: number;
   minRegistros?: number;
+  allowAddRows?: boolean;
   matrix?: boolean;
   columns_def?: { key: string; required?: boolean; label?: string; type?: string }[];
 };
@@ -94,8 +95,23 @@ export function isFieldComplete(
 
   if (options.layout === 'formal_measure_table') {
     const items = options.items ?? [];
-    const data = (value as Record<string, Record<string, string>>) ?? {};
     const tableType = options.tableType ?? 'cloro';
+
+    if (tableType === 'pediluvios' && options.allowAddRows && options.pediluviosLayout === 'operativo') {
+      const rows: Record<string, string>[] = Array.isArray(value)
+        ? (value as Record<string, string>[])
+        : value && typeof value === 'object'
+          ? Object.values(value as Record<string, Record<string, string>>)
+          : [];
+      const minRows = options.minRows ?? 1;
+      if (rows.length < minRows) return false;
+      for (const row of rows) {
+        if (!row.hora || !row.principio_activo || !row.concentracion || !row.cnc) return false;
+      }
+      return true;
+    }
+
+    const data = (value as Record<string, Record<string, string>>) ?? {};
 
     for (const item of items) {
       const row = data[item.key] ?? {};

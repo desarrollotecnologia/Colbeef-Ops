@@ -98,14 +98,16 @@ export function getFormat4Fields(slug: string): FieldDef[] {
           'pediluvios',
           'Pediluvios',
           'pediluvios',
-          [
-            { key: 'ped_1', label: 'Pediluvios 1 y 2' },
-            { key: 'ped_2', label: 'Pediluvios 1 y 2' },
-            { key: 'ped_3', label: 'Pediluvios 1 y 2' },
-          ],
+          [{ key: 'ped', label: 'Pediluvios 1 y 2' }],
           40,
           'Pediluvios',
-          { pediluviosLayout: 'operativo' }
+          {
+            pediluviosLayout: 'operativo',
+            allowAddRows: true,
+            minRows: 1,
+            maxRows: 24,
+            helpText: 'Inicie con un registro; use Añadir para más tomas.',
+          }
         ),
         textareaField('observaciones', 'Observaciones', 60, { groupName: 'Diario 1' }),
       ];

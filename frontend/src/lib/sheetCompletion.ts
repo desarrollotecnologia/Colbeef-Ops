@@ -52,8 +52,28 @@ export function isFieldComplete(
 
   if (options.layout === 'formal_measure_table') {
     const items = options.items ?? [];
-    const data = (value as Record<string, Record<string, string>>) ?? {};
     const tableType = options.tableType ?? 'cloro';
+    const allowAddRows = Boolean(options.allowAddRows);
+
+    const pediluvioOk = (row: Record<string, string>) => {
+      if (options.pediluviosLayout === 'operativo') {
+        return Boolean(row.hora && row.principio_activo && row.concentracion && row.cnc);
+      }
+      return Boolean(row.principio_activo && row.concentracion && row.cnc);
+    };
+
+    if (tableType === 'pediluvios' && allowAddRows && options.pediluviosLayout === 'operativo') {
+      const rows: Record<string, string>[] = Array.isArray(value)
+        ? (value as Record<string, string>[])
+        : value && typeof value === 'object'
+          ? Object.values(value as Record<string, Record<string, string>>)
+          : [];
+      const minRows = options.minRows ?? 1;
+      if (rows.length < minRows) return false;
+      return rows.every(pediluvioOk);
+    }
+
+    const data = (value as Record<string, Record<string, string>>) ?? {};
 
     return items.every((item) => {
       const row = data[item.key] ?? {};
@@ -72,10 +92,7 @@ export function isFieldComplete(
         return Boolean(row.estado);
       }
       if (tableType === 'pediluvios') {
-        if (options.pediluviosLayout === 'operativo') {
-          return Boolean(row.hora && row.principio_activo && row.concentracion && row.cnc);
-        }
-        return Boolean(row.principio_activo && row.concentracion && row.cnc);
+        return pediluvioOk(row);
       }
       return true;
     });

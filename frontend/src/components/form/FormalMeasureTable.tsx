@@ -3,6 +3,7 @@ import type { MeasureRowData } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
 import MonitoreoAspectTable from './MonitoreoAspectTable';
 import { CncColumnHeader, type CncChoice } from './CncToggle';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface Props {
   options: FieldOptions;
@@ -396,6 +397,172 @@ export default function FormalMeasureTable({ options, value, onChange, disabled 
 
   if (tableType === 'pediluvios') {
     const operativo = options.pediluviosLayout === 'operativo';
+    const areaLabel = items[0]?.label ?? 'Pediluvios 1 y 2';
+    const minRows = options.minRows ?? 1;
+    const maxRows = options.maxRows ?? 24;
+    const dynamic = Boolean(options.allowAddRows && operativo);
+
+    const normalizeDynamicRows = (): MeasureRowData[] => {
+      const raw = value as unknown;
+      if (Array.isArray(raw)) {
+        const arr = raw as MeasureRowData[];
+        if (arr.length >= minRows) return arr;
+        return [...arr, ...Array.from({ length: minRows - arr.length }, () => ({}))];
+      }
+      if (raw && typeof raw === 'object') {
+        const fromObj = Object.values(raw as Record<string, MeasureRowData | MeasureRowData[]>).map(
+          (v) => singleRow(v)
+        );
+        if (fromObj.length >= minRows) return fromObj;
+        return [...fromObj, ...Array.from({ length: minRows - fromObj.length }, () => ({}))];
+      }
+      return Array.from({ length: minRows }, () => ({}));
+    };
+
+    if (operativo && dynamic) {
+      const rows = normalizeDynamicRows();
+      const commit = (next: MeasureRowData[]) => onChange(next as unknown as Record<string, MeasureRowData>);
+
+      const updateAt = (idx: number, patch: Partial<MeasureRowData>) => {
+        const next = rows.map((r, i) => (i === idx ? { ...r, ...patch } : r));
+        commit(next);
+      };
+
+      const addRow = () => {
+        if (rows.length >= maxRows) return;
+        commit([...rows, {}]);
+      };
+
+      const removeRow = (idx: number) => {
+        if (rows.length <= minRows) return;
+        commit(rows.filter((_, i) => i !== idx));
+      };
+
+      const fillAllDynamic = (choice: CncChoice) => {
+        commit(rows.map((r) => ({ ...r, cnc: choice })));
+      };
+
+      return (
+        <div className="space-y-2">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead>
+                <tr className="bg-white border-b-2 border-gray-800">
+                  <th className={`${thClass} text-left`}>Área</th>
+                  <th className={thClass}>Hora</th>
+                  <th className={`${thClass} text-left`}>Principio activo</th>
+                  <th className={thClass}>Concentración (ppm)</th>
+                  <CncColumnHeader
+                    choice="C"
+                    label="Cumple"
+                    disabled={disabled}
+                    onFillAll={fillAllDynamic}
+                    className={`${thClass} bg-green-50`}
+                  />
+                  <CncColumnHeader
+                    choice="NC"
+                    label="No cumple"
+                    disabled={disabled}
+                    onFillAll={fillAllDynamic}
+                    className={`${thClass} bg-red-50`}
+                  />
+                  <th className={`${thClass} text-left min-w-[120px]`}>Corrección</th>
+                  {!disabled && rows.length > minRows && <th className={`${thClass} w-10`} />}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, idx) => {
+                  const cnc = row.cnc ?? '';
+                  return (
+                    <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className={`${tdClass} px-3 py-2 font-medium text-gray-900 text-xs`}>
+                        {areaLabel}
+                      </td>
+                      <td className={tdClass}>
+                        <input
+                          type="time"
+                          value={row.hora ?? ''}
+                          onChange={(e) => updateAt(idx, { hora: e.target.value })}
+                          disabled={disabled}
+                          className={`${INPUT_CLASS} text-xs py-1.5`}
+                        />
+                      </td>
+                      <td className={tdClass}>
+                        <input
+                          type="text"
+                          value={row.principio_activo ?? ''}
+                          onChange={(e) => updateAt(idx, { principio_activo: e.target.value })}
+                          disabled={disabled}
+                          placeholder="—"
+                          className={`${INPUT_CLASS} text-xs py-1.5`}
+                        />
+                      </td>
+                      <td className={tdClass}>
+                        <input
+                          type="text"
+                          value={row.concentracion ?? ''}
+                          onChange={(e) => updateAt(idx, { concentracion: e.target.value })}
+                          disabled={disabled}
+                          placeholder="—"
+                          className={`${INPUT_CLASS} text-xs py-1.5`}
+                        />
+                      </td>
+                      {(['C', 'NC'] as CncChoice[]).map((sub) => (
+                        <td
+                          key={sub}
+                          className={`${tdClass} text-center w-14 px-1 ${
+                            sub === 'C' ? 'bg-green-50/60' : 'bg-red-50/60'
+                          }`}
+                        >
+                          <CncToggle
+                            choice={sub}
+                            value={cnc}
+                            disabled={disabled}
+                            onChange={(v) => updateAt(idx, { cnc: v })}
+                          />
+                        </td>
+                      ))}
+                      <td className="px-2 py-1 border-b border-gray-400">
+                        <input
+                          type="text"
+                          value={row.corrective ?? ''}
+                          onChange={(e) => updateAt(idx, { corrective: e.target.value })}
+                          disabled={disabled}
+                          placeholder="—"
+                          className={`${INPUT_CLASS} text-xs py-1.5`}
+                        />
+                      </td>
+                      {!disabled && rows.length > minRows && (
+                        <td className="px-1 py-1 border-b border-gray-400 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeRow(idx)}
+                            className="p-1 text-gray-400 hover:text-red-600 rounded"
+                            title="Quitar fila"
+                            aria-label="Quitar fila"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {!disabled && rows.length < maxRows && (
+            <button
+              type="button"
+              onClick={addRow}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50"
+            >
+              <Plus size={14} /> Añadir registro
+            </button>
+          )}
+        </div>
+      );
+    }
 
     if (operativo) {
       return (

@@ -2,8 +2,11 @@ import type { FormatField } from '@prisma/client';
 import {
   MARGIN,
   contentBottom,
+  drawClosedBlank,
   drawMainSheetHeader,
   drawSectionBanner,
+  drawTextOrClosed,
+  isBlankPdfValue,
   pageWidth,
   str,
   type PdfDoc,
@@ -37,6 +40,7 @@ function drawFieldGrid(
   let maxRowH = 0;
   const labelSize = compact ? 5.5 : 6.5;
   const valSize = compact ? 7 : 8;
+  const labelGap = compact ? 7 : 9;
 
   pairs.forEach((pair, i) => {
     const col = i % cols;
@@ -46,10 +50,17 @@ function drawFieldGrid(
     }
     const x = MARGIN + col * colW;
     doc.fontSize(labelSize).font('Helvetica-Bold').fillColor('#555').text(pair.label, x, rowY, { width: colW - 6 });
-    const valY = rowY + (compact ? 7 : 9);
-    doc.fontSize(valSize).font('Helvetica').fillColor('#111').text(pair.value, x, valY, { width: colW - 6 });
-    const h = (compact ? 7 : 9) + doc.heightOfString(pair.value, { width: colW - 6 });
-    maxRowH = Math.max(maxRowH, h);
+    const valY = rowY + labelGap;
+    const valueH = isBlankPdfValue(pair.value)
+      ? valSize + 2
+      : doc.fontSize(valSize).font('Helvetica').heightOfString(pair.value, { width: colW - 6 });
+    const cellH = labelGap + valueH;
+    if (isBlankPdfValue(pair.value)) {
+      drawClosedBlank(doc, x, valY, colW - 6, valSize + 4);
+    } else {
+      doc.fontSize(valSize).font('Helvetica').fillColor('#111').text(pair.value, x, valY, { width: colW - 6 });
+    }
+    maxRowH = Math.max(maxRowH, cellH);
   });
 
   return rowY + maxRowH + (compact ? 4 : 8);
@@ -87,9 +98,18 @@ function drawVehiculosCargaTable(
     const ry = cy + ri * rowH;
     doc.rect(MARGIN + labelW, ry, cantW, rowH).strokeColor('#888').lineWidth(0.4).stroke();
     doc.rect(MARGIN + labelW + cantW, ry, prodW, rowH).strokeColor('#888').lineWidth(0.4).stroke();
-    doc.fontSize(6).font('Helvetica').fillColor('#111');
-    doc.text(str(row.cantidad), MARGIN + labelW + 2, ry + 2, { width: cantW - 4 });
-    doc.text(str(row.producto), MARGIN + labelW + cantW + 2, ry + 2, { width: prodW - 4 });
+    drawTextOrClosed(doc, row.cantidad, MARGIN + labelW + 2, ry + 2, {
+      width: cantW - 4,
+      rowH,
+      cellY: ry,
+      fontSize: 6,
+    });
+    drawTextOrClosed(doc, row.producto, MARGIN + labelW + cantW + 2, ry + 2, {
+      width: prodW - 4,
+      rowH,
+      cellY: ry,
+      fontSize: 6,
+    });
   });
 
   return cy + bodyH + 6;
@@ -103,17 +123,29 @@ function drawRepeaterTable(
   compact = false
 ): number {
   const w = pageWidth(doc) - MARGIN * 2;
-  const colW = w / columns.length;
+  const weights = columns.map((c) => {
+    const blob = `${c.key} ${c.label}`.toLowerCase();
+    if (/producto|alimento|nombre|observ/.test(blob)) return 2.2;
+    if (c.key === '_idx') return 0.4;
+    return 1;
+  });
+  const sum = weights.reduce((a, b) => a + b, 0) || 1;
+  const colWidths = weights.map((wt) => (wt / sum) * w);
   let cy = y;
   const fs = compact ? 5.5 : 6.5;
-  const rowH = compact ? 9 : 11;
+  const headerH = compact ? 9 : 11;
+  const padY = 2;
+  const minRowH = compact ? 10 : 12;
+  const maxRowH = 64;
 
   doc.fontSize(fs).font('Helvetica-Bold').fillColor('#333');
-  doc.rect(MARGIN, cy, w, rowH).fill('#f3f4f6').strokeColor('#ccc').lineWidth(0.4).stroke();
+  doc.rect(MARGIN, cy, w, headerH).fill('#f3f4f6').strokeColor('#ccc').lineWidth(0.4).stroke();
+  let hx = MARGIN;
   columns.forEach((col, i) => {
-    doc.text(col.label, MARGIN + i * colW + 2, cy + 2, { width: colW - 4 });
+    doc.text(col.label, hx + 2, cy + 2, { width: colWidths[i] - 4 });
+    hx += colWidths[i];
   });
-  cy += rowH;
+  cy += headerH;
 
   if (rows.length === 0) {
     doc.fontSize(7).font('Helvetica').fillColor('#666').text('Sin registros', MARGIN, cy + 2);
@@ -121,17 +153,60 @@ function drawRepeaterTable(
   }
 
   rows.forEach((row, ri) => {
-    if (cy > contentBottom(doc) - rowH) return;
+    let contentH = fs + 2;
+    columns.forEach((col, i) => {
+      if (col.key.startsWith('decomiso_')) return;
+      if (isBlankPdfValue(row[col.key])) return;
+      doc.fontSize(compact ? 6 : 7).font('Helvetica');
+      contentH = Math.max(
+        contentH,
+        Math.max(fs + 2, doc.heightOfString(str(row[col.key]), { width: Math.max(8, colWidths[i] - 4), lineGap: 0 }))
+      );
+    });
+    const rowH = Math.min(maxRowH, Math.max(minRowH, contentH + padY * 2));
+
+    if (cy + rowH > contentBottom(doc)) {
+      doc.addPage({ size: 'A4', layout: 'portrait', margin: MARGIN });
+      cy = MARGIN;
+      doc.fontSize(fs).font('Helvetica-Bold').fillColor('#333');
+      doc.rect(MARGIN, cy, w, headerH).fill('#f3f4f6').strokeColor('#ccc').lineWidth(0.4).stroke();
+      hx = MARGIN;
+      columns.forEach((col, i) => {
+        doc.text(col.label, hx + 2, cy + 2, { width: colWidths[i] - 4 });
+        hx += colWidths[i];
+      });
+      cy += headerH;
+    }
+
     if (ri % 2 === 1) doc.rect(MARGIN, cy, w, rowH).fill('#f9fafb');
     doc.rect(MARGIN, cy, w, rowH).strokeColor('#ccc').lineWidth(0.4).stroke();
+    let cx = MARGIN;
     columns.forEach((col, i) => {
-      let cell = str(row[col.key]);
-      if (col.key === 'decomiso_parcial') cell = markCell(row[col.key], 'Parcial') || '—';
-      if (col.key === 'decomiso_total') cell = markCell(row[col.key], 'Total') || '—';
-      doc.fontSize(compact ? 6 : 7).font('Helvetica').fillColor('#111').text(cell, MARGIN + i * colW + 2, cy + 1, {
-        width: colW - 4,
-        align: col.key.startsWith('decomiso_') ? 'center' : 'left',
-      });
+      if (col.key === 'decomiso_parcial') {
+        const mark = markCell(row[col.key], 'Parcial');
+        if (mark) {
+          doc.fontSize(compact ? 6 : 7).font('Helvetica').fillColor('#111').text(mark, cx + 2, cy + padY, {
+            width: colWidths[i] - 4,
+            align: 'center',
+          });
+        }
+      } else if (col.key === 'decomiso_total') {
+        const mark = markCell(row[col.key], 'Total');
+        if (mark) {
+          doc.fontSize(compact ? 6 : 7).font('Helvetica').fillColor('#111').text(mark, cx + 2, cy + padY, {
+            width: colWidths[i] - 4,
+            align: 'center',
+          });
+        }
+      } else {
+        drawTextOrClosed(doc, row[col.key], cx + 2, cy + padY, {
+          width: colWidths[i] - 4,
+          rowH,
+          cellY: cy,
+          fontSize: compact ? 6 : 7,
+        });
+      }
+      cx += colWidths[i];
     });
     cy += rowH;
   });
@@ -223,7 +298,6 @@ function drawDecomisosTable(doc: PdfDoc, y: number, rows: Record<string, unknown
   ];
   const widths = cols.map((c) => c.width * w);
   const headerH = 18;
-  const rowH = 10;
   let cy = y;
 
   doc.rect(MARGIN, cy, w, headerH).fill('#d9ead3').strokeColor('#888').lineWidth(0.4).stroke();
@@ -251,21 +325,78 @@ function drawDecomisosTable(doc: PdfDoc, y: number, rows: Record<string, unknown
 
   const dataRows = rows.length > 0 ? rows : [{}];
   dataRows.forEach((row, ri) => {
-    if (ri % 2 === 1) doc.rect(MARGIN, cy, w, rowH).fill('#f9fafb');
-    doc.rect(MARGIN, cy, w, rowH).strokeColor('#888').lineWidth(0.4).stroke();
+    let contentH = 7;
+    cols.forEach((col, i) => {
+      if (col.key === '_idx' || col.key.startsWith('decomiso_')) return;
+      if (isBlankPdfValue(row[col.key])) return;
+      doc.fontSize(5.5).font('Helvetica');
+      contentH = Math.max(
+        contentH,
+        Math.max(7, doc.heightOfString(str(row[col.key]), { width: Math.max(8, widths[i] - 2), lineGap: 0 }))
+      );
+    });
+    const dynRowH = Math.min(64, Math.max(10, contentH + 4));
+
+    if (cy + dynRowH > contentBottom(doc)) {
+      doc.addPage({ size: 'A4', layout: 'portrait', margin: MARGIN });
+      cy = MARGIN;
+      doc.rect(MARGIN, cy, w, headerH).fill('#d9ead3').strokeColor('#888').lineWidth(0.4).stroke();
+      doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
+      let hx = MARGIN;
+      for (let i = 0; i < 3; i++) {
+        doc.text(cols[i].label, hx + 1, cy + 5, { width: widths[i] - 2, align: 'center' });
+        hx += widths[i];
+      }
+      const causalW2 = widths[3] + widths[4] + widths[5] + widths[6];
+      doc.text('CAUSAL DE DECOMISO / KG', hx + 1, cy + 1, { width: causalW2 - 2, align: 'center' });
+      hx += causalW2;
+      const tipoW2 = widths[7] + widths[8];
+      doc.text('TIPO DE DECOMISO', hx + 1, cy + 1, { width: tipoW2 - 2, align: 'center' });
+      hx = MARGIN + widths[0] + widths[1] + widths[2];
+      for (let i = 3; i < cols.length; i++) {
+        doc.text(cols[i].label, hx + 1, cy + 10, { width: widths[i] - 2, align: 'center' });
+        hx += widths[i];
+      }
+      cy += headerH;
+    }
+
+    if (ri % 2 === 1) doc.rect(MARGIN, cy, w, dynRowH).fill('#f9fafb');
+    doc.rect(MARGIN, cy, w, dynRowH).strokeColor('#888').lineWidth(0.4).stroke();
     let cx = MARGIN;
     cols.forEach((col, i) => {
-      let cell = col.key === '_idx' ? String(ri + 1) : str(row[col.key]);
-      if (col.key === 'decomiso_parcial') cell = String(row[col.key] ?? '') === 'Parcial' ? 'X' : '';
-      if (col.key === 'decomiso_total') cell = String(row[col.key] ?? '') === 'Total' ? 'X' : '';
-      doc.fontSize(5.5).font(col.key === '_idx' ? 'Helvetica-Bold' : 'Helvetica').fillColor('#111');
-      doc.text(cell === '—' && (col.key === 'decomiso_parcial' || col.key === 'decomiso_total') ? '' : cell, cx + 1, cy + 2, {
-        width: widths[i] - 2,
-        align: col.key === 'nombre_corte' ? 'left' : 'center',
-      });
+      if (col.key === '_idx') {
+        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#111').text(String(ri + 1), cx + 1, cy + 2, {
+          width: widths[i] - 2,
+          align: 'center',
+        });
+      } else if (col.key === 'decomiso_parcial') {
+        const mark = String(row[col.key] ?? '') === 'Parcial' ? 'X' : '';
+        if (mark) {
+          doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(mark, cx + 1, cy + 2, {
+            width: widths[i] - 2,
+            align: 'center',
+          });
+        }
+      } else if (col.key === 'decomiso_total') {
+        const mark = String(row[col.key] ?? '') === 'Total' ? 'X' : '';
+        if (mark) {
+          doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(mark, cx + 1, cy + 2, {
+            width: widths[i] - 2,
+            align: 'center',
+          });
+        }
+      } else {
+        drawTextOrClosed(doc, row[col.key], cx + 1, cy + 2, {
+          width: widths[i] - 2,
+          rowH: dynRowH,
+          cellY: cy,
+          align: col.key === 'nombre_corte' ? 'left' : 'center',
+          fontSize: 5.5,
+        });
+      }
       cx += widths[i];
     });
-    cy += rowH;
+    cy += dynRowH;
   });
 
   return cy + 2;
@@ -405,20 +536,81 @@ export function renderDecomisosSheet(
     y += 16;
   }
 
-  y = drawSectionBanner(doc, y, 'Observaciones');
+  y = drawSectionBanner(doc, y, 'Añadir fotos / Observaciones');
+  const fotosField = fields.find((f) => f.fieldKey === 'fotos');
   const obsFijas = fields.find((f) => f.fieldKey === 'observaciones_fijas');
   const obsAdic = fields.find((f) => f.fieldKey === 'observaciones_adicionales');
-  if (obsFijas) {
-    doc.fontSize(7).font('Helvetica-Bold').fillColor('#333').text(str(obsFijas.defaultValue ?? sheetData.observaciones_fijas), MARGIN, y + 2, {
-      width: pageWidth(doc) - MARGIN * 2,
-    });
+
+  if (fotosField) {
+    const raw = sheetData.fotos;
+    const photos: string[] = [];
+    if (Array.isArray(raw)) {
+      photos.push(...raw.filter((v): v is string => typeof v === 'string' && v.startsWith('data:image')));
+    } else if (typeof raw === 'string' && raw.startsWith('data:image')) {
+      photos.push(raw);
+    }
+
+    if (photos.length === 0) {
+      doc.fontSize(7).font('Helvetica').fillColor('#666').text('Sin fotos adjuntas', MARGIN, y);
+      y += 14;
+    } else {
+      const maxW = pageWidth(doc) - MARGIN * 2;
+      const gap = 8;
+      const colW = (maxW - gap) / 2;
+      const imgH = 100;
+      let col = 0;
+      let rowTop = y;
+
+      for (const src of photos.slice(0, 12)) {
+        if (col === 0 && rowTop + imgH + 8 > contentBottom(doc)) {
+          doc.addPage({ size: 'A4', layout: 'portrait', margin: MARGIN });
+          rowTop = MARGIN;
+          y = MARGIN;
+        }
+        const x = MARGIN + col * (colW + gap);
+        try {
+          doc.image(src, x, rowTop, { fit: [colW, imgH], align: 'center', valign: 'center' });
+        } catch {
+          doc.fontSize(7).fillColor('#666').text('(imagen no disponible)', x, rowTop);
+        }
+        col += 1;
+        if (col >= 2) {
+          col = 0;
+          rowTop += imgH + gap;
+          y = rowTop;
+        }
+      }
+      if (col !== 0) {
+        y = rowTop + imgH + gap;
+      } else {
+        y = rowTop;
+      }
+      y += 4;
+    }
+  } else if (obsFijas) {
+    doc
+      .fontSize(7)
+      .font('Helvetica-Bold')
+      .fillColor('#333')
+      .text(str(obsFijas.defaultValue ?? sheetData.observaciones_fijas), MARGIN, y + 2, {
+        width: pageWidth(doc) - MARGIN * 2,
+      });
     y += 14;
   }
+
   if (obsAdic) {
-    doc.fontSize(7).font('Helvetica').fillColor('#111').text(str(sheetData.observaciones_adicionales), MARGIN, y, {
-      width: pageWidth(doc) - MARGIN * 2,
-    });
-    y += doc.heightOfString(str(sheetData.observaciones_adicionales), { width: pageWidth(doc) - MARGIN * 2 }) + 6;
+    y = drawSectionBanner(doc, y, 'Observaciones', undefined, true);
+    const rawObs = sheetData.observaciones_adicionales;
+    if (isBlankPdfValue(rawObs)) {
+      drawClosedBlank(doc, MARGIN, y, pageWidth(doc) - MARGIN * 2, 16);
+      y += 22;
+    } else {
+      const obsText = str(rawObs);
+      doc.fontSize(7).font('Helvetica').fillColor('#111').text(obsText, MARGIN, y, {
+        width: pageWidth(doc) - MARGIN * 2,
+      });
+      y += doc.heightOfString(obsText, { width: pageWidth(doc) - MARGIN * 2 }) + 6;
+    }
   }
 
   return y;

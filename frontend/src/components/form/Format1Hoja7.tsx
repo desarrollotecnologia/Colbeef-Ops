@@ -48,6 +48,7 @@ function MatrixSection({
 export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: Props) {
   const pcField = fields.find((f) => f.fieldKey === 'pc_comestibles');
   const refri = resolveHoja7Field(fields.find((f) => f.fieldKey === 'area_refri'));
+  const refriGenerales = fields.find((f) => f.fieldKey === 'area_refri_generales');
   const obsField = fields.find((f) => f.fieldKey === 'observaciones');
   const acField = fields.find((f) => f.fieldKey === 'acciones_correctivas');
 
@@ -78,7 +79,7 @@ export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: 
           splitAt={[4, 9, 14]}
           subtitles={[
             'Cavas principales — C#10 · C#9 · C#8 · C#7',
-            'Cavas y máquinas — M7 · C#6B · M6B · C#6A · C#5',
+            'Cavas y máquinas — M7 · C#6B · M6 · C#6A · C#5',
             'Cavas y máquinas — M5 · C#4 · M4 · C#3 · M#3',
             'Cavas y máquinas — C#2 · M2 · C#1 · M1 · PRE',
           ]}
@@ -94,6 +95,25 @@ export default function Format1Hoja7({ fields, sheetData, onUpdate, disabled }: 
           />
         </div>
       ) : null}
+
+      {refriGenerales && (
+        <div className="border-b border-gray-800">
+          <div className={SECTION_HEADER_CLASS}>
+            <h3 className="text-xs font-bold uppercase text-gray-900">{refriGenerales.label}</h3>
+            <p className="text-[11px] text-gray-600 mt-0.5">
+              {refriGenerales.helpText ??
+                'Una sola evaluación C/NC para todas las cavas y máquinas'}
+            </p>
+          </div>
+          <ItemChecklist
+            options={refriGenerales.options ?? {}}
+            value={(sheetData[refriGenerales.fieldKey] as Record<string, ChecklistItemData>) ?? {}}
+            onChange={(v) => onUpdate(refriGenerales.fieldKey, v)}
+            disabled={disabled}
+            tableMode
+          />
+        </div>
+      )}
 
       {(obsField || acField) && (
         <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-800">

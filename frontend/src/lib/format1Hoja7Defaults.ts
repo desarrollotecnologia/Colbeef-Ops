@@ -8,7 +8,7 @@ export const AREA_REFRI_COLUMN_DEFS = [
   { key: 'C#7', mode: 'cnc_na' as const },
   { key: 'M7', mode: 'cnc' as const },
   { key: 'C#6B', mode: 'cnc_na' as const },
-  { key: 'M6B', mode: 'cnc' as const },
+  { key: 'M6', mode: 'cnc' as const },
   { key: 'C#6A', mode: 'cnc_na' as const },
   { key: 'C#5', mode: 'cnc_na' as const },
   { key: 'M5', mode: 'cnc' as const },
@@ -23,6 +23,14 @@ export const AREA_REFRI_COLUMN_DEFS = [
   { key: 'PRE', mode: 'cnc' as const },
 ];
 
+/** Ítems que ya no van en la matriz (evaluación única al final) */
+const AREA_REFRI_GLOBAL_KEYS = new Set(['ar_12', 'ar_13', 'ar_14', 'ag_0', 'ag_1', 'ag_2']);
+const AREA_REFRI_GLOBAL_LABELS = new Set([
+  'Sierra circular de cuarteo',
+  'Pasillos cavas',
+  'Muelle pre-refrigeración',
+]);
+
 function mergeOptions(field: FormatField, patch: Partial<FieldOptions>): FormatField {
   return { ...field, options: { ...field.options, ...patch } };
 }
@@ -33,13 +41,22 @@ export function resolveHoja7Field(field: FormatField | undefined): FormatField |
 
   if (field.fieldKey === 'area_refri') {
     const cols = field.options?.columnDefs ?? [];
-    if (cols.length < AREA_REFRI_COLUMN_DEFS.length) {
-      return mergeOptions(field, {
-        columnDefs: AREA_REFRI_COLUMN_DEFS,
-        columns: ['cavaColumns', 'observation', 'corrective'],
-        areaLabel: field.options?.areaLabel ?? 'Área de refrigeración',
-      });
+    const rawItems = field.options?.items ?? [];
+    const items = rawItems.filter(
+      (item) =>
+        !AREA_REFRI_GLOBAL_KEYS.has(item.key) && !AREA_REFRI_GLOBAL_LABELS.has(item.label)
+    );
+    const patch: Partial<FieldOptions> = {
+      columns: ['cavaColumns', 'observation', 'corrective'],
+      areaLabel: field.options?.areaLabel ?? 'Área de refrigeración',
+    };
+    if (items.length > 0 && items.length !== rawItems.length) {
+      patch.items = items;
     }
+    if (cols.length < AREA_REFRI_COLUMN_DEFS.length) {
+      patch.columnDefs = AREA_REFRI_COLUMN_DEFS;
+    }
+    return mergeOptions(field, patch);
   }
 
   return field;

@@ -347,9 +347,22 @@ export function formalMeasureTableField(
     valorLabel?: string;
     aspectRows?: boolean;
     monitoreoVariant?: 'tiempos' | 'sanitario' | 'lavado' | 'temperatura';
+    allowAddRows?: boolean;
+    minRows?: number;
+    maxRows?: number;
   }
 ): FieldDef {
-  const { pediluviosLayout, measureCncMode, valorLabel, aspectRows, monitoreoVariant, ...fieldOpts } = opts ?? {};
+  const {
+    pediluviosLayout,
+    measureCncMode,
+    valorLabel,
+    aspectRows,
+    monitoreoVariant,
+    allowAddRows,
+    minRows,
+    maxRows,
+    ...fieldOpts
+  } = opts ?? {};
   return {
     fieldKey,
     label,
@@ -368,6 +381,9 @@ export function formalMeasureTableField(
       ...(valorLabel ? { valorLabel } : {}),
       ...(aspectRows ? { aspectRows } : {}),
       ...(monitoreoVariant ? { monitoreoVariant } : {}),
+      ...(allowAddRows ? { allowAddRows: true } : {}),
+      ...(minRows != null ? { minRows } : {}),
+      ...(maxRows != null ? { maxRows } : {}),
     },
   };
 }

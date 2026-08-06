@@ -1,7 +1,7 @@
 import {
   FieldDef,
   numberField,
-  readonlyField,
+  photoField,
   repeaterField,
   selectField,
   textField,
@@ -76,8 +76,6 @@ const DECOMISO_COLS: FieldDef[] = [
   },
 ];
 
-const OBS_FIJAS = 'ANEXO FOTOS EN CORREO ELECTRONICO';
-
 export function getFormat12Fields(_slug: string): FieldDef[] {
   return [
     textField('cliente', 'Cliente', 1, { required: true, groupName: 'Encabezado' }),
@@ -89,7 +87,13 @@ export function getFormat12Fields(_slug: string): FieldDef[] {
       maxRows: 50,
       groupName: 'Decomisos',
     }),
-    readonlyField('observaciones_fijas', 'Observaciones', OBS_FIJAS, 20),
-    textareaField('observaciones_adicionales', 'Observaciones adicionales', 21),
+    photoField('fotos', 'Añadir fotos', 20, {
+      groupName: 'Evidencia fotográfica',
+      options: { multiple: true, maxPhotos: 12 },
+      helpText: 'Adjunte las fotos al formato; se incluirán en el PDF al descargar.',
+    }),
+    textareaField('observaciones_adicionales', 'Observaciones', 21, {
+      groupName: 'Observaciones',
+    }),
   ];
 }

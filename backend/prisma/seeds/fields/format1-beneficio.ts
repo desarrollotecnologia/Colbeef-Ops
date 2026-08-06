@@ -28,7 +28,7 @@ const AREA_REFRI_COLUMN_DEFS: { key: string; mode: 'cnc' | 'cnc_na' }[] = [
   { key: 'C#7', mode: 'cnc_na' },
   { key: 'M7', mode: 'cnc' },
   { key: 'C#6B', mode: 'cnc_na' },
-  { key: 'M6B', mode: 'cnc' },
+  { key: 'M6', mode: 'cnc' },
   { key: 'C#6A', mode: 'cnc_na' },
   { key: 'C#5', mode: 'cnc_na' },
   { key: 'M5', mode: 'cnc' },
@@ -70,12 +70,19 @@ const PC_COMESTIBLES_ITEMS = [
   { key: 'cn_5', label: 'Paredes', section: 'Cuarto de canecas y canastillas' },
 ];
 
-const AREA_REFRI_ITEMS = [
+/** Filas evaluadas por cada cava/máquina (matriz) */
+const AREA_REFRI_MATRIX_ITEMS = [
   'Tubería de hierro', 'Paredes', 'Pisos', 'Canalinas y cajas cifonadas', 'Puerta de ingreso',
   'Puerta de ingreso a muelle', 'Carro porta poleas', 'Riel de transporte', 'Escalera de cargue',
-  'Lavamanos de piso', 'Puerta de muelle', 'Manguera', 'Sierra circular de cuarteo',
-  'Pasillos cavas', 'Muelle pre-refrigeración',
+  'Lavamanos de piso', 'Puerta de muelle', 'Manguera',
 ].map((l, i) => ({ key: `ar_${i}`, label: l }));
+
+/** Filas con una sola evaluación para todas las cavas/máquinas (al final de hoja 7) */
+const AREA_REFRI_GLOBAL_ITEMS = [
+  'Sierra circular de cuarteo',
+  'Pasillos cavas',
+  'Muelle pre-refrigeración',
+].map((l, i) => ({ key: `ag_${i}`, label: l }));
 
 const ZONA_SANGRIA_ITEMS = [
   'Cajón de noqueo', 'Plataformas fijas', 'Inspección de cabezas', 'Desendedor de cabezas',
@@ -174,15 +181,15 @@ export function getFormat1Fields(slug: string): FieldDef[] {
       return [
         itemChecklistField('refri_visceras', 'Cuarto refrigeración vísceras rojas y blancas', [
           'Carros percheros', 'Canastillas', 'Estibas acero', 'Cajas cifonadas', 'Pisos', 'Carros uso general', 'Paredes', 'Puertas ingreso',
-        ].map((l, i) => ({ key: `r_${i}`, label: l })), 1),
+        ].map((l, i) => ({ key: `r_${i}`, label: l })), 1, { mode: 'cnc_na' }),
         itemChecklistField('visceras_rojas', 'Proceso e inspección vísceras rojas', [
           'Riel vísceras', 'Carros perchero', 'Ganchos', 'Cuarto decomisos', 'Carros uso general',
           'Mesa acero inoxidable', 'Mangueras', 'Pisos', 'Techo', 'Paredes',
-        ].map((l, i) => ({ key: `v_${i}`, label: l })), 2),
+        ].map((l, i) => ({ key: `v_${i}`, label: l })), 2, { mode: 'cnc_na' }),
         itemChecklistField('retenidos', 'Cuarto de retenidos', [
           'Base inferior elevador', 'Base superior elevador', 'Debajo plataforma', 'Cajas cifonadas',
           'Pisos', 'Paredes', 'Puerta ingreso', 'Puerta ingreso a línea',
-        ].map((l, i) => ({ key: `t_${i}`, label: l })), 3),
+        ].map((l, i) => ({ key: `t_${i}`, label: l })), 3, { mode: 'cnc_na' }),
       ];
 
     case 'refrigeracion':
@@ -192,15 +199,26 @@ export function getFormat1Fields(slug: string): FieldDef[] {
           groupName: 'Refrigeración',
           areaLabel: 'Área de P.C. comestibles',
         }),
-        itemChecklistField('area_refri', 'Área de refrigeración — equipos y superficies', AREA_REFRI_ITEMS, 2, {
+        itemChecklistField('area_refri', 'Área de refrigeración — equipos y superficies', AREA_REFRI_MATRIX_ITEMS, 2, {
           groupName: 'Refrigeración',
           areaLabel: 'Área de refrigeración',
           columns: ['cavaColumns', 'observation', 'corrective'],
           columnDefs: AREA_REFRI_COLUMN_DEFS,
           helpText: 'Cavas y máquinas por bloque · Obs. y AC en cada fila · C# = Cava · M# = Máquina · hasta PRE',
         }),
-        textareaField('observaciones', 'Observaciones', 3, { groupName: 'Refrigeración' }),
-        textareaField('acciones_correctivas', 'Acciones correctivas', 4, { groupName: 'Refrigeración' }),
+        itemChecklistField(
+          'area_refri_generales',
+          'Evaluación general (todas las cavas y máquinas)',
+          AREA_REFRI_GLOBAL_ITEMS,
+          3,
+          {
+            mode: 'cnc',
+            groupName: 'Refrigeración',
+            helpText: 'Una sola marca C/NC para el conjunto de cavas y máquinas · no se evalúa por cava',
+          }
+        ),
+        textareaField('observaciones', 'Observaciones', 4, { groupName: 'Refrigeración' }),
+        textareaField('acciones_correctivas', 'Acciones correctivas', 5, { groupName: 'Refrigeración' }),
       ];
 
     case 'cavas':

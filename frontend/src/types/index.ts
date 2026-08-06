@@ -122,6 +122,7 @@ export interface FieldOptions {
   pcOperativoVariant?: 'codigo_responsable' | 'codigo_operario' | 'operario_cnc' | 'proceso_tiempos' | 'proceso_tiempos_cnc' | 'esterilizadores';
   operarioLabel?: string;
   allowAddEquipos?: boolean;
+  allowAddRows?: boolean;
   equiposIzq?: { key: string; label: string }[];
   equiposDer?: { key: string; label: string }[];
 }

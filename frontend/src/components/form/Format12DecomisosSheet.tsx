@@ -16,7 +16,9 @@ const HEADER_KEYS = new Set(['cliente', 'lote', 'especie', 'temp_inicio_proceso'
 export default function Format12DecomisosSheet({ fields, sheetData, onUpdate, disabled }: Props) {
   const headerFields = fields.filter((f) => HEADER_KEYS.has(f.fieldKey));
   const decomisos = fields.find((f) => f.fieldKey === 'decomisos');
-  const obsFijas = fields.find((f) => f.fieldKey === 'observaciones_fijas');
+  const fotos = fields.find((f) => f.fieldKey === 'fotos');
+  /** Compatibilidad con borradores antiguos que aún traen el texto fijo del correo */
+  const obsFijasLegacy = fields.find((f) => f.fieldKey === 'observaciones_fijas');
   const obsAdic = fields.find((f) => f.fieldKey === 'observaciones_adicionales');
 
   return (
@@ -24,7 +26,13 @@ export default function Format12DecomisosSheet({ fields, sheetData, onUpdate, di
       <Section title="Datos del proceso">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
           {headerFields.map((f) => (
-            <FormField key={f.fieldKey} field={f} value={sheetData[f.fieldKey]} onChange={(v) => onUpdate(f.fieldKey, v)} disabled={disabled} />
+            <FormField
+              key={f.fieldKey}
+              field={f}
+              value={sheetData[f.fieldKey]}
+              onChange={(v) => onUpdate(f.fieldKey, v)}
+              disabled={disabled}
+            />
           ))}
         </div>
       </Section>
@@ -33,23 +41,48 @@ export default function Format12DecomisosSheet({ fields, sheetData, onUpdate, di
         <Section title="Registro de decomisos" subtitle="Causal en kg · Tipo Parcial/Total · Totales automáticos">
           <DecomisosRepeater
             options={decomisos.options ?? {}}
-            value={Array.isArray(sheetData[decomisos.fieldKey]) ? (sheetData[decomisos.fieldKey] as Record<string, unknown>[]) : []}
+            value={
+              Array.isArray(sheetData[decomisos.fieldKey])
+                ? (sheetData[decomisos.fieldKey] as Record<string, unknown>[])
+                : []
+            }
             onChange={(v) => onUpdate(decomisos.fieldKey, v)}
             disabled={disabled}
           />
         </Section>
       )}
 
-      {(obsFijas || obsAdic) && (
+      {fotos && (
+        <Section title="Añadir fotos" subtitle="Se incluyen en el PDF al descargar el formato">
+          <div className="p-4">
+            <FormField
+              field={fotos}
+              value={sheetData[fotos.fieldKey]}
+              onChange={(v) => onUpdate(fotos.fieldKey, v)}
+              disabled={disabled}
+              compact
+            />
+          </div>
+        </Section>
+      )}
+
+      {(obsAdic || obsFijasLegacy) && (
         <Section title="Observaciones">
           <div className="p-4 space-y-3">
-            {obsFijas && (
-              <p className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-3 py-2 font-medium uppercase">
-                {obsFijas.defaultValue ?? String(sheetData[obsFijas.fieldKey] ?? '')}
+            {obsFijasLegacy && !fotos && (
+              <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                Este borrador aún tiene el aviso de fotos por correo. En envíos nuevos use &quot;Añadir
+                fotos&quot;.
               </p>
             )}
             {obsAdic && (
-              <FormField field={obsAdic} value={sheetData[obsAdic.fieldKey]} onChange={(v) => onUpdate(obsAdic.fieldKey, v)} disabled={disabled} compact />
+              <FormField
+                field={obsAdic}
+                value={sheetData[obsAdic.fieldKey]}
+                onChange={(v) => onUpdate(obsAdic.fieldKey, v)}
+                disabled={disabled}
+                compact
+              />
             )}
           </div>
         </Section>

@@ -12,7 +12,7 @@ import usersRoutes from './routes/users.routes';
 const app = express();
 
 app.use(cors({ origin: config.frontendUrl, credentials: true }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'colbeef-ops', timestamp: new Date().toISOString() });

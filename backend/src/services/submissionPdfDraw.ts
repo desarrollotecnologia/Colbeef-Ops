@@ -271,14 +271,38 @@ export function drawContinuationHeader(
 ): number {
   const w = pageWidth(doc) - MARGIN * 2;
   let y = MARGIN;
-  doc.rect(MARGIN, y, w, 14).fill('#f3f4f6');
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#333').text(
-    `${formatName} — ${sheetName} (${sheetIndex + 1}/${totalSheets}) · continuación`,
-    MARGIN + 4,
-    y + 3,
-    { width: w - 8 }
-  );
-  return y + 20;
+  doc.rect(MARGIN, y, w, 16).fill('#f3f4f6');
+  doc.strokeColor('#ccc').lineWidth(0.4).rect(MARGIN, y, w, 16).stroke();
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor('#333')
+    .text(
+      `${formatName} — Hoja formato ${sheetIndex + 1}/${totalSheets}: ${sheetName} · continuación`,
+      MARGIN + 4,
+      y + 4,
+      { width: w - 8 }
+    );
+  return y + 22;
+}
+
+/** Numera páginas del PDF (requiere bufferPages: true). Llamar antes de doc.end(). */
+export function stampPdfPageNumbers(doc: PdfDoc): void {
+  const range = doc.bufferedPageRange();
+  if (!range.count) return;
+  for (let i = 0; i < range.count; i++) {
+    doc.switchToPage(range.start + i);
+    const w = pageWidth(doc);
+    const h = pageHeight(doc);
+    doc
+      .fontSize(7)
+      .font('Helvetica')
+      .fillColor('#666')
+      .text(`Pág. ${i + 1} de ${range.count}`, MARGIN, h - MARGIN - 12, {
+        width: w - MARGIN * 2,
+        align: 'center',
+      });
+  }
 }
 
 export function drawSignatures(
@@ -423,4 +447,67 @@ export function str(value: unknown): string {
   if (value === undefined || value === null || value === '') return '—';
   if (Array.isArray(value)) return value.join(', ');
   return String(value);
+}
+
+/** Vacío para efectos de PDF (incluye el guión legado). */
+export function isBlankPdfValue(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (Array.isArray(value)) return value.length === 0 || value.every((v) => isBlankPdfValue(v));
+  const s = String(value).trim();
+  return s === '' || s === '—';
+}
+
+/** Línea fina a media altura: cierra un campo texto/número/obs no diligenciado. */
+export function drawClosedBlank(
+  doc: PdfDoc,
+  x: number,
+  cellY: number,
+  width: number,
+  rowH = 10
+): void {
+  const safeW = Math.max(6, width);
+  const pad = Math.min(4, safeW * 0.12);
+  const midY = cellY + rowH / 2;
+  doc
+    .strokeColor('#555')
+    .lineWidth(0.55)
+    .moveTo(x + pad, midY)
+    .lineTo(x + safeW - pad, midY)
+    .stroke();
+  doc.fillColor('#111');
+}
+
+/**
+ * Dibuja texto de celda; si está vacío, cierra con línea (no aplica a C/NC).
+ */
+export function drawTextOrClosed(
+  doc: PdfDoc,
+  value: unknown,
+  x: number,
+  textY: number,
+  opts: {
+    width: number;
+    rowH?: number;
+    cellY?: number;
+    fontSize?: number;
+    align?: 'left' | 'center' | 'right';
+    lineGap?: number;
+    font?: 'Helvetica' | 'Helvetica-Bold';
+  }
+): void {
+  const rowH = opts.rowH ?? 10;
+  const cellY = opts.cellY ?? Math.max(0, textY - 1);
+  if (isBlankPdfValue(value)) {
+    drawClosedBlank(doc, x, cellY, opts.width, rowH);
+    return;
+  }
+  doc
+    .fontSize(opts.fontSize ?? 5.5)
+    .font(opts.font ?? 'Helvetica')
+    .fillColor('#111')
+    .text(String(value), x, textY, {
+      width: opts.width,
+      align: opts.align ?? 'left',
+      lineGap: opts.lineGap ?? 0,
+    });
 }

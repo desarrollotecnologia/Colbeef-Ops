@@ -9,14 +9,19 @@ import {
   drawSheetBoundaryEnd,
   drawSignatures,
   drawActivityTrail,
+  drawTextOrClosed,
+  drawClosedBlank,
   ensurePageSpace,
   formatWorkDate,
+  isBlankPdfValue,
   pageWidth,
   startSheetPage,
+  stampPdfPageNumbers,
   str,
   type PdfDoc,
   type SheetPageContext,
 } from './submissionPdfDraw';
+import { allocateColWidths, measureTextHeight, type PdfTableColumn } from './pdfTable';
 
 type FieldOptions = {
   layout?: string;
@@ -33,6 +38,7 @@ type FieldOptions = {
   schedule?: Record<string, string[]>;
   areaLabel?: string;
   pediluviosLayout?: string;
+  allowAddRows?: boolean;
   valorLabel?: string;
   allowAddEquipos?: boolean;
   pcOperativoVariant?: string;
@@ -268,27 +274,35 @@ function renderSimpleChecklist(
   const corrW = showCorr ? 76 : 0;
   const cncBlockW = showCnc ? cW * cCols : 0;
   const labelW = Math.max(100, tableW - cncBlockW - obsW - corrW - 6);
+  const headerH = 12;
 
-  y = ensurePageSpace(doc, ctx, y, 14);
-  doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
-  drawTableRowBorder(doc, y, 12, '#f3f4f6');
-  doc.text('Equipo / superficie', MARGIN + 3, y + 2, { width: labelW });
-  let x = MARGIN + labelW;
-  if (showCnc) {
-    doc.text('C', x, y + 2, { width: cW, align: 'center' });
-    doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
-    if (showNa) doc.text('NA', x + cW * 2, y + 2, { width: cW, align: 'center' });
-    x += cW * cCols;
-  }
-  if (showObs) doc.text('Observaciones', x, y + 2, { width: obsW });
-  if (showCorr) doc.text('Acción correctiva', x + obsW, y + 2, { width: corrW });
-  y += 12;
+  const drawChecklistHeader = (atY: number): number => {
+    doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
+    drawTableRowBorder(doc, atY, headerH, '#f3f4f6');
+    doc.text('Equipo / superficie', MARGIN + 3, atY + 2, { width: labelW });
+    let hx = MARGIN + labelW;
+    if (showCnc) {
+      doc.text('C', hx, atY + 2, { width: cW, align: 'center' });
+      doc.text('NC', hx + cW, atY + 2, { width: cW, align: 'center' });
+      if (showNa) doc.text('NA', hx + cW * 2, atY + 2, { width: cW, align: 'center' });
+      hx += cW * cCols;
+    }
+    if (showObs) doc.text('Observaciones', hx, atY + 2, { width: obsW });
+    if (showCorr) doc.text('Acción correctiva', hx + obsW, atY + 2, { width: corrW });
+    return atY + headerH;
+  };
+
+  y = ensurePageSpace(doc, ctx, y, headerH);
+  y = drawChecklistHeader(y);
 
   let lastSection = '';
   for (const item of items) {
     if (item.section && item.section !== lastSection) {
       lastSection = item.section;
-      y = ensurePageSpace(doc, ctx, y, 11);
+      if (y + 11 > contentBottom(doc)) {
+        y = startSheetPage(doc, ctx, true);
+        y = drawChecklistHeader(y);
+      }
       drawTableRowBorder(doc, y, 10, '#dcfce7');
       doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#111').text(item.section.toUpperCase(), MARGIN + 3, y + 2, {
         width: tableW - 6,
@@ -298,19 +312,32 @@ function renderSimpleChecklist(
 
     const data = value[item.key] ?? {};
     const cnc = readItemCnc(data);
-    const rowH = 11;
-    y = ensurePageSpace(doc, ctx, y, rowH);
+    const obsText = showObs ? readScopedText(data, undefined, 'observation') : '';
+    const corrText = showCorr ? readScopedText(data, undefined, 'corrective') : '';
+    const labelH = measureTextHeight(doc, item.label, labelW - 4, 5.5);
+    const obsH = showObs && !isBlankPdfValue(obsText) ? measureTextHeight(doc, obsText, obsW - 2, 5.5) : showObs ? 7 : 0;
+    const corrH = showCorr && !isBlankPdfValue(corrText) ? measureTextHeight(doc, corrText, corrW - 2, 5.5) : showCorr ? 7 : 0;
+    const rowH = Math.min(64, Math.max(11, Math.max(labelH, obsH, corrH) + 4));
+
+    if (y + rowH > contentBottom(doc)) {
+      y = startSheetPage(doc, ctx, true);
+      y = drawChecklistHeader(y);
+    }
+
     drawTableRowBorder(doc, y, rowH);
-    doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(item.label, MARGIN + 3, y + 2, { width: labelW - 4 });
-    x = MARGIN + labelW;
+    doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(item.label, MARGIN + 3, y + 2, {
+      width: labelW - 4,
+      lineGap: 0,
+    });
+    let x = MARGIN + labelW;
     if (showCnc) {
       x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
     }
     if (showObs) {
-      doc.text(readScopedText(data, undefined, 'observation'), x, y + 2, { width: obsW - 2 });
+      drawTextOrClosed(doc, obsText, x, y + 2, { width: obsW - 2, rowH, cellY: y });
     }
     if (showCorr) {
-      doc.text(readScopedText(data, undefined, 'corrective'), x + (showObs ? obsW : 0), y + 2, { width: corrW - 2 });
+      drawTextOrClosed(doc, corrText, x + (showObs ? obsW : 0), y + 2, { width: corrW - 2, rowH, cellY: y });
     }
     y += rowH;
   }
@@ -388,10 +415,18 @@ function renderCavaMatrix(
         }
       }
       if (showObs) {
-        doc.text(readScopedText(data, scope, 'observation', ci === 0), MARGIN + labelW + cavaW, y + 1, { width: obsW - 2 });
+        drawTextOrClosed(doc, readScopedText(data, scope, 'observation', ci === 0), MARGIN + labelW + cavaW, y + 1, {
+          width: obsW - 2,
+          rowH,
+          cellY: y,
+        });
       }
       if (showCorr) {
-        doc.text(readScopedText(data, scope, 'corrective', ci === 0), MARGIN + labelW + cavaW + obsW, y + 1, { width: corrW - 2 });
+        drawTextOrClosed(doc, readScopedText(data, scope, 'corrective', ci === 0), MARGIN + labelW + cavaW + obsW, y + 1, {
+          width: corrW - 2,
+          rowH,
+          cellY: y,
+        });
       }
       y += rowH;
     }
@@ -458,14 +493,15 @@ function renderPlatformsTable(
       x += platBlockW;
     }
     if (showObs) {
-      doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(data.observation ?? '', x, y + 1, { width: obsW - 2 });
+      drawTextOrClosed(doc, data.observation, x, y + 1, { width: obsW - 2, rowH, cellY: y, fontSize: 5.5 });
     }
     if (showCorr) {
-      doc
-        .fontSize(5.5)
-        .font('Helvetica')
-        .fillColor('#111')
-        .text(data.corrective ?? '', x + (showObs ? obsW : 0), y + 1, { width: corrW - 2 });
+      drawTextOrClosed(doc, data.corrective, x + (showObs ? obsW : 0), y + 1, {
+        width: corrW - 2,
+        rowH,
+        cellY: y,
+        fontSize: 5.5,
+      });
     }
     y += rowH;
   }
@@ -517,8 +553,13 @@ function renderPoesOperativoTable(
 
   const renderTomaPdf = (toma: Record<string, unknown> | undefined, x0: number) => {
     let x = x0;
-    doc.fontSize(5).font('Helvetica').fillColor('#111');
-    doc.text(str(toma?.temp ?? '—'), x, y + 1, { width: cellW, align: 'center' });
+    drawTextOrClosed(doc, toma?.temp, x, y + 1, {
+      width: cellW,
+      rowH: 10,
+      cellY: y,
+      align: 'center',
+      fontSize: 5,
+    });
     x += cellW;
     const est = normalizeCnc(toma?.cnc_est);
     drawCncMark(doc, x, y + 1, est, 'C', cellW * 0.33);
@@ -539,10 +580,9 @@ function renderPoesOperativoTable(
     let x = MARGIN + labelW;
     x = renderTomaPdf(row.toma1, x);
     x = renderTomaPdf(row.toma2, x);
-    doc.fontSize(4.5).font('Helvetica').fillColor('#111');
-    doc.text(str(row.observation ?? '—'), x, y + 1, { width: obsW });
-    doc.text(str(row.corrective ?? '—'), x + obsW, y + 1, { width: acW });
-    doc.text(str(row.responsible ?? '—'), x + obsW + acW, y + 1, { width: respW });
+    drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y, fontSize: 4.5 });
+    drawTextOrClosed(doc, row.corrective, x + obsW, y + 1, { width: acW, rowH: 10, cellY: y, fontSize: 4.5 });
+    drawTextOrClosed(doc, row.responsible, x + obsW + acW, y + 1, { width: respW, rowH: 10, cellY: y, fontSize: 4.5 });
     y += 10;
   };
 
@@ -637,9 +677,9 @@ function renderPoesBpmTable(
     };
     renderBpmToma(t1);
     renderBpmToma(t2);
-    doc.text(str(row.observation), x, y + 1, { width: obsW });
-    doc.text(str(row.corrective), x + obsW, y + 1, { width: acW });
-    doc.text(str(row.responsible), x + obsW + acW, y + 1, { width: respW });
+    drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y, fontSize: 4.5 });
+    drawTextOrClosed(doc, row.corrective, x + obsW, y + 1, { width: acW, rowH: 10, cellY: y, fontSize: 4.5 });
+    drawTextOrClosed(doc, row.responsible, x + obsW + acW, y + 1, { width: respW, rowH: 10, cellY: y, fontSize: 4.5 });
     y += 10;
   });
   return y + 6;
@@ -777,19 +817,19 @@ function renderPcOperativoTable(
           cncDrawn = true;
         }
       } else if (c.kind === 'obs') {
-        doc.text(str(row.observation), x, y + 1, { width: c.w });
+        drawTextOrClosed(doc, row.observation, x, y + 1, { width: c.w, rowH: 10, cellY: y, fontSize: 4.5 });
       } else if (c.kind === 'ac') {
-        doc.text(str(row.corrective), x, y + 1, { width: c.w });
+        drawTextOrClosed(doc, row.corrective, x, y + 1, { width: c.w, rowH: 10, cellY: y, fontSize: 4.5 });
       } else {
-        let cell = '—';
-        if (c.label === 'Código') cell = str(row.codigo);
+        let raw: unknown = undefined;
+        if (c.label === 'Código') raw = row.codigo;
         else if (c.label === 'Responsable' || c.label === operarioLabel || c.label === 'Operario')
-          cell = str(row.operario ?? row.responsable);
-        else if (c.label === 'Cant.') cell = str(row.cantidad);
-        else if (c.label === 'Tiempo') cell = str(row.tiempo ?? row.minutos);
-        else if (c.label === 'Temp °C' || c.label === 'Temp') cell = str(row.temperatura ?? row.valor);
-        else if (c.label === 'Hora') cell = str(row.hora ?? row.turno);
-        doc.text(cell, x, y + 1, { width: c.w, align: 'center' });
+          raw = row.operario ?? row.responsable;
+        else if (c.label === 'Cant.') raw = row.cantidad;
+        else if (c.label === 'Tiempo') raw = row.tiempo ?? row.minutos;
+        else if (c.label === 'Temp °C' || c.label === 'Temp') raw = row.temperatura ?? row.valor;
+        else if (c.label === 'Hora') raw = row.hora ?? row.turno;
+        drawTextOrClosed(doc, raw, x, y + 1, { width: c.w, rowH: 10, cellY: y, align: 'center', fontSize: 4.5 });
       }
       x += c.w;
     });
@@ -869,7 +909,7 @@ function renderPcInocuidadRepeater(
     x = MARGIN;
     doc.text(String(i + 1), x, y + 1, { width: idxW, align: 'center' });
     x += idxW;
-    doc.text(str(row.codigo), x, y + 1, { width: codW });
+    drawTextOrClosed(doc, row.codigo, x, y + 1, { width: codW, rowH: 10, cellY: y, fontSize: 5 });
     x += codW;
     hallazgoCols.forEach((col) => {
       const cnc = normalizeCnc(hallazgos[col.key]);
@@ -878,8 +918,8 @@ function renderPcInocuidadRepeater(
       drawCncMark(doc, x + subW * 2, y + 1, cnc, 'NA', subW);
       x += hallBlockW;
     });
-    doc.text(str(row.observation), x, y + 1, { width: obsW });
-    doc.text(str(row.corrective), x + obsW, y + 1, { width: acW });
+    drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y, fontSize: 5 });
+    drawTextOrClosed(doc, row.corrective, x + obsW, y + 1, { width: acW, rowH: 10, cellY: y, fontSize: 5 });
     y += 10;
   });
   return y + 6;
@@ -948,11 +988,9 @@ function renderCardRepeater(
 
     cols.forEach((col) => {
       const isWide = col.type === 'TEXTAREA' || col.type === 'MULTI_SELECT';
-      let valueText = str(row[col.key]);
-      if (col.type === 'CHECKLIST') {
-        const cnc = normalizeCnc(row[col.key]);
-        valueText = cnc || '—';
-      }
+      const isCnc = col.type === 'CHECKLIST';
+      const raw = row[col.key];
+      const valueText = isCnc ? normalizeCnc(raw) : isBlankPdfValue(raw) ? '' : str(raw);
 
       if (isWide) {
         flushRow();
@@ -961,13 +999,18 @@ function renderCardRepeater(
           width: maxW,
         });
         y += 8;
-        const h = Math.max(
-          10,
-          doc.heightOfString(valueText, { width: maxW })
-        );
-        y = ensurePageSpace(doc, ctx, y, h);
-        doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
-        y += h + 3;
+        if (isCnc) {
+          doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
+          y += 12;
+        } else if (isBlankPdfValue(raw)) {
+          drawClosedBlank(doc, MARGIN, y, maxW, 12);
+          y += 16;
+        } else {
+          const h = Math.max(10, doc.heightOfString(valueText, { width: maxW }));
+          y = ensurePageSpace(doc, ctx, y, h);
+          doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
+          y += h + 3;
+        }
         rowTop = y;
         return;
       }
@@ -981,9 +1024,18 @@ function renderCardRepeater(
       doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(`${col.label}:`, x, rowTop, {
         width: half - 4,
       });
-      doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, x + 1, rowTop + 7, {
-        width: half - 6,
-      });
+      if (isCnc) {
+        doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, x + 1, rowTop + 7, {
+          width: half - 6,
+        });
+      } else {
+        drawTextOrClosed(doc, raw, x + 1, rowTop + 7, {
+          width: half - 6,
+          rowH: 11,
+          cellY: rowTop + 6,
+          fontSize: 6.5,
+        });
+      }
 
       colIndex += 1;
       if (colIndex >= 2) {
@@ -1021,7 +1073,12 @@ function renderProductoTerminadoLotes(
     y = ensurePageSpace(doc, ctx, y, 28);
     y = drawSectionBanner(doc, y, `Registro de lote ${loteIdx + 1}`, undefined, true);
     doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#333').text('Lote:', MARGIN, y);
-    doc.font('Helvetica').fillColor('#111').text(str(lote.lote), MARGIN + 28, y, { width: maxW - 28 });
+    drawTextOrClosed(doc, lote.lote, MARGIN + 28, y, {
+      width: maxW - 28,
+      rowH: 10,
+      cellY: y - 1,
+      fontSize: 6.5,
+    });
     y += 12;
 
     regs.forEach((row, regIdx) => {
@@ -1041,10 +1098,9 @@ function renderProductoTerminadoLotes(
 
       cols.forEach((col) => {
         const isWide = col.type === 'TEXTAREA' || col.type === 'MULTI_SELECT';
-        let valueText = str(row[col.key]);
-        if (col.type === 'CHECKLIST') {
-          valueText = normalizeCnc(row[col.key]) || '—';
-        }
+        const isCnc = col.type === 'CHECKLIST';
+        const raw = row[col.key];
+        const valueText = isCnc ? normalizeCnc(raw) : isBlankPdfValue(raw) ? '' : str(raw);
 
         if (isWide) {
           flushRow();
@@ -1053,10 +1109,18 @@ function renderProductoTerminadoLotes(
             width: maxW,
           });
           y += 8;
-          const h = Math.max(10, doc.heightOfString(valueText, { width: maxW }));
-          y = ensurePageSpace(doc, ctx, y, h);
-          doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
-          y += h + 3;
+          if (isCnc) {
+            doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
+            y += 12;
+          } else if (isBlankPdfValue(raw)) {
+            drawClosedBlank(doc, MARGIN, y, maxW, 12);
+            y += 16;
+          } else {
+            const h = Math.max(10, doc.heightOfString(valueText, { width: maxW }));
+            y = ensurePageSpace(doc, ctx, y, h);
+            doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
+            y += h + 3;
+          }
           rowTop = y;
           return;
         }
@@ -1069,9 +1133,18 @@ function renderProductoTerminadoLotes(
         doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(`${col.label}:`, x, rowTop, {
           width: half - 4,
         });
-        doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, x + 1, rowTop + 7, {
-          width: half - 6,
-        });
+        if (isCnc) {
+          doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, x + 1, rowTop + 7, {
+            width: half - 6,
+          });
+        } else {
+          drawTextOrClosed(doc, raw, x + 1, rowTop + 7, {
+            width: half - 6,
+            rowH: 11,
+            cellY: rowTop + 6,
+            fontSize: 6.5,
+          });
+        }
         colIndex += 1;
         if (colIndex >= 2) {
           y = rowTop + 18;
@@ -1180,119 +1253,171 @@ function renderRepeaterTable(
     }
   }
 
-  const colW = tableW / expanded.length;
+  const widthCols: PdfTableColumn[] = expanded.map((col) => ({
+    key: col.key,
+    label: col.label,
+    weight: col.key === '_idx' ? 0.35 : col.cncChoice ? 0.42 : undefined,
+    compact: Boolean(col.cncChoice) || col.key === '_idx' || col.key.startsWith('decomiso_'),
+  }));
+  const colWidths = allocateColWidths(tableW, widthCols);
+  const colX = (i: number) => MARGIN + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
+  const spanW = (start: number, count: number) =>
+    colWidths.slice(start, start + count).reduce((a, b) => a + b, 0);
+
   let y = startY;
   const hasGroups = checklistGroups.length > 0;
   const hasBands = bands.length > 0;
   const headerH = hasBands && hasGroups ? 26 : hasGroups ? 18 : 11;
 
-  y = ensurePageSpace(doc, ctx, y, headerH);
-  drawTableRowBorder(doc, y, headerH, '#d9ead3');
-  doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
+  const drawRepeaterHeader = (atY: number): number => {
+    drawTableRowBorder(doc, atY, headerH, '#d9ead3');
+    doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
 
-  if (hasBands && hasGroups) {
-    // Fila 1: bandas Empaque / Temperatura + columnas sueltas
-    expanded.forEach((col, i) => {
-      if (col.key === '_idx' || col.headerGroup) return;
-      doc.text(col.label, MARGIN + i * colW + 1, y + 2, {
-        width: colW - 2,
-        align: 'left',
+    if (hasBands && hasGroups) {
+      expanded.forEach((col, i) => {
+        if (col.key === '_idx' || col.headerGroup) return;
+        doc.text(col.label, colX(i) + 1, atY + 2, {
+          width: colWidths[i] - 2,
+          align: 'left',
+        });
       });
-    });
-    doc.text('#', MARGIN + 1, y + 2, { width: colW - 2, align: 'center' });
-    bands.forEach((b) => {
-      doc.text(b.label.toUpperCase(), MARGIN + b.start * colW + 1, y + 1, {
-        width: b.count * colW - 2,
-        align: 'center',
-      });
-    });
-    // Fila 2: Vacío / Granel / Refr / Cong
-    checklistGroups.forEach((g) => {
-      doc.text(g.label.toUpperCase(), MARGIN + g.start * colW + 1, y + 10, {
-        width: g.count * colW - 2,
-        align: 'center',
-      });
-    });
-    expanded.forEach((col, i) => {
-      if (col.cncChoice || col.key === '_idx' || !col.headerGroup) return;
-      doc.text(col.label, MARGIN + i * colW + 1, y + 10, {
-        width: colW - 2,
-        align: 'center',
-      });
-    });
-    // Fila 3: C / NC / NA
-    checklistGroups.forEach((g) => {
-      for (let j = 0; j < g.count; j++) {
-        const col = expanded[g.start + j];
-        doc.text(col.label, MARGIN + (g.start + j) * colW + 1, y + 18, {
-          width: colW - 2,
+      doc.text('#', colX(0) + 1, atY + 2, { width: colWidths[0] - 2, align: 'center' });
+      bands.forEach((b) => {
+        doc.text(b.label.toUpperCase(), colX(b.start) + 1, atY + 1, {
+          width: spanW(b.start, b.count) - 2,
           align: 'center',
         });
-      }
-    });
-  } else if (hasGroups) {
-    // Fila 1: títulos de aspecto encima de C/NC/NA
-    expanded.forEach((col, i) => {
-      if (col.key === '_idx' || !col.cncChoice) {
-        doc.text(col.label, MARGIN + i * colW + 1, y + 2, {
-          width: colW - 2,
-          align: col.key === '_idx' ? 'center' : 'left',
-        });
-      }
-    });
-    checklistGroups.forEach((g) => {
-      const x = MARGIN + g.start * colW;
-      doc.text(g.label.toUpperCase(), x + 1, y + 1, {
-        width: g.count * colW - 2,
-        align: 'center',
       });
-    });
-    // Fila 2: C / NC / NA
-    checklistGroups.forEach((g) => {
-      for (let j = 0; j < g.count; j++) {
-        const col = expanded[g.start + j];
-        doc.text(col.label, MARGIN + (g.start + j) * colW + 1, y + 10, {
-          width: colW - 2,
+      checklistGroups.forEach((g) => {
+        doc.text(g.label.toUpperCase(), colX(g.start) + 1, atY + 10, {
+          width: spanW(g.start, g.count) - 2,
           align: 'center',
         });
-      }
-    });
-  } else {
-    expanded.forEach((col, i) =>
-      doc.text(col.label, MARGIN + i * colW + 2, y + 2, {
-        width: colW - 4,
-        align: col.key === '_idx' || col.cncChoice ? 'center' : 'left',
-      })
-    );
-  }
-  y += headerH;
+      });
+      expanded.forEach((col, i) => {
+        if (col.cncChoice || col.key === '_idx' || !col.headerGroup) return;
+        doc.text(col.label, colX(i) + 1, atY + 10, {
+          width: colWidths[i] - 2,
+          align: 'center',
+        });
+      });
+      checklistGroups.forEach((g) => {
+        for (let j = 0; j < g.count; j++) {
+          const col = expanded[g.start + j];
+          doc.text(col.label, colX(g.start + j) + 1, atY + 18, {
+            width: colWidths[g.start + j] - 2,
+            align: 'center',
+          });
+        }
+      });
+    } else if (hasGroups) {
+      expanded.forEach((col, i) => {
+        if (col.key === '_idx' || !col.cncChoice) {
+          doc.text(col.label, colX(i) + 1, atY + 2, {
+            width: colWidths[i] - 2,
+            align: col.key === '_idx' ? 'center' : 'left',
+          });
+        }
+      });
+      checklistGroups.forEach((g) => {
+        doc.text(g.label.toUpperCase(), colX(g.start) + 1, atY + 1, {
+          width: spanW(g.start, g.count) - 2,
+          align: 'center',
+        });
+      });
+      checklistGroups.forEach((g) => {
+        for (let j = 0; j < g.count; j++) {
+          const col = expanded[g.start + j];
+          doc.text(col.label, colX(g.start + j) + 1, atY + 10, {
+            width: colWidths[g.start + j] - 2,
+            align: 'center',
+          });
+        }
+      });
+    } else {
+      expanded.forEach((col, i) =>
+        doc.text(col.label, colX(i) + 2, atY + 2, {
+          width: colWidths[i] - 4,
+          align: col.key === '_idx' || col.cncChoice ? 'center' : 'left',
+        })
+      );
+    }
+    return atY + headerH;
+  };
+
+  y = ensurePageSpace(doc, ctx, y, headerH);
+  y = drawRepeaterHeader(y);
 
   if (rows.length === 0) {
     doc.fontSize(6).font('Helvetica').fillColor('#666').text('Sin registros', MARGIN, y + 2);
     return y + 12;
   }
 
+  const fontSize = 5.5;
+  const padY = 2;
+  const minRowH = 11;
+  const maxRowH = 72;
+
   rows.forEach((row, ri) => {
-    const rowH = 10;
-    y = ensurePageSpace(doc, ctx, y, rowH);
+    let contentH = fontSize + 2;
+    expanded.forEach((col, i) => {
+      if (col.cncChoice || col.key === '_idx') return;
+      if (col.key === 'decomiso_parcial' || col.key === 'decomiso_total') return;
+      const cell = row[col.key];
+      if (isBlankPdfValue(cell)) return;
+      contentH = Math.max(contentH, measureTextHeight(doc, str(cell), colWidths[i] - 4, fontSize));
+    });
+    const rowH = Math.min(maxRowH, Math.max(minRowH, contentH + padY * 2));
+
+    if (y + rowH > contentBottom(doc)) {
+      y = startSheetPage(doc, ctx, true);
+      y = drawRepeaterHeader(y);
+    }
+
     if (ri % 2 === 1) drawTableRowBorder(doc, y, rowH, '#f9fafb');
     else drawTableRowBorder(doc, y, rowH);
+
     expanded.forEach((col, i) => {
-      const x = MARGIN + i * colW + 2;
+      const x = colX(i) + 2;
+      const cellW = colWidths[i] - 4;
       if (col.key === '_idx') {
-        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#666').text(String(ri + 1), x, y + 1, { width: colW - 4, align: 'center' });
+        doc
+          .fontSize(fontSize)
+          .font('Helvetica-Bold')
+          .fillColor('#666')
+          .text(String(ri + 1), x, y + padY, { width: cellW, align: 'center' });
         return;
       }
       if (col.cncChoice) {
-        drawCncMark(doc, x, y + 1, normalizeCnc(row[col.key]), col.cncChoice, colW - 4);
+        drawCncMark(doc, x, y + padY, normalizeCnc(row[col.key]), col.cncChoice, cellW);
         return;
       }
-      let cell = str(row[col.key]);
-      if (col.key === 'decomiso_parcial') cell = String(row[col.key] ?? '') === 'Parcial' ? 'X' : '—';
-      if (col.key === 'decomiso_total') cell = String(row[col.key] ?? '') === 'Total' ? 'X' : '—';
-      doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(cell, x, y + 1, {
-        width: colW - 4,
-        align: col.key.startsWith('decomiso_') ? 'center' : 'left',
+      if (col.key === 'decomiso_parcial') {
+        const mark = String(row[col.key] ?? '') === 'Parcial' ? 'X' : '';
+        if (mark) {
+          doc.fontSize(fontSize).font('Helvetica').fillColor('#111').text(mark, x, y + padY, {
+            width: cellW,
+            align: 'center',
+          });
+        }
+        return;
+      }
+      if (col.key === 'decomiso_total') {
+        const mark = String(row[col.key] ?? '') === 'Total' ? 'X' : '';
+        if (mark) {
+          doc.fontSize(fontSize).font('Helvetica').fillColor('#111').text(mark, x, y + padY, {
+            width: cellW,
+            align: 'center',
+          });
+        }
+        return;
+      }
+      drawTextOrClosed(doc, row[col.key], x, y + padY, {
+        width: cellW,
+        rowH,
+        cellY: y,
+        fontSize,
+        align: 'left',
       });
     });
     y += rowH;
@@ -1346,19 +1471,49 @@ function renderDaySchedule(
       const key = slugifyPoint(punto);
       const row = value[key] ?? {};
       const cnc = normalizeCnc(row.cnc);
-      y = ensurePageSpace(doc, ctx, y, 10);
-      drawTableRowBorder(doc, y, 10);
+      const obsRaw = row.observaciones ?? row.observation;
+      const puntoH = measureTextHeight(doc, punto, puntoW - 4, 5.5);
+      const obsH = !isBlankPdfValue(obsRaw) ? measureTextHeight(doc, str(obsRaw), obsW - 4, 5.5) : 7;
+      const rowH = Math.min(48, Math.max(10, Math.max(puntoH, obsH) + 4));
+
+      if (y + rowH > contentBottom(doc)) {
+        y = startSheetPage(doc, ctx, true);
+        drawTableRowBorder(doc, y, 11, '#f3f4f6');
+        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
+        x = MARGIN;
+        doc.text('Puntos inspeccionados', x + 2, y + 2, { width: puntoW });
+        x += puntoW;
+        doc.text('Cloro (0.3–2 ppm)', x, y + 2, { width: cloroW, align: 'center' });
+        x += cloroW;
+        doc.text('pH', x, y + 2, { width: phW, align: 'center' });
+        x += phW;
+        doc.text('C', x, y + 2, { width: cW, align: 'center' });
+        doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+        doc.text('Observaciones', x + cW * 2 + 2, y + 2, { width: obsW - 4 });
+        y += 11;
+      }
+
+      drawTableRowBorder(doc, y, rowH);
       doc.fontSize(5.5).font('Helvetica').fillColor('#111');
       x = MARGIN;
-      doc.text(punto, x + 2, y + 1, { width: puntoW - 4 });
+      doc.text(punto, x + 2, y + 1, { width: puntoW - 4, lineGap: 0 });
       x += puntoW;
-      doc.text(row.cloro_residual ?? '—', x, y + 1, { width: cloroW, align: 'center' });
+      drawTextOrClosed(doc, row.cloro_residual, x, y + 1, {
+        width: cloroW,
+        rowH,
+        cellY: y,
+        align: 'center',
+      });
       x += cloroW;
       doc.text('7.0', x, y + 1, { width: phW, align: 'center' });
       x += phW;
       drawCncCells(doc, x, y + 1, cnc, cW, false);
-      doc.text(row.observaciones ?? '—', x + cW * 2 + 2, y + 1, { width: obsW - 4 });
-      y += 10;
+      drawTextOrClosed(doc, obsRaw, x + cW * 2 + 2, y + 1, {
+        width: obsW - 4,
+        rowH,
+        cellY: y,
+      });
+      y += rowH;
     }
   } else if (tableType === 'esterilizadores') {
     const noteW = 52;
@@ -1401,10 +1556,19 @@ function renderDaySchedule(
       x += noteW;
       doc.text(punto, x + 2, y + 1, { width: puntoW - 4 });
       x += puntoW;
-      doc.text(row.temperatura ?? '—', x, y + 1, { width: tempW, align: 'center' });
+      drawTextOrClosed(doc, row.temperatura, x, y + 1, {
+        width: tempW,
+        rowH: pi === 0 ? 22 : 10,
+        cellY: y,
+        align: 'center',
+      });
       x += tempW;
       drawCncCells(doc, x, y + 1, cnc, cW, false);
-      doc.text(row.observaciones ?? '—', x + cW * 2 + 2, y + 1, { width: obsW - 4 });
+      drawTextOrClosed(doc, row.observaciones, x + cW * 2 + 2, y + 1, {
+        width: obsW - 4,
+        rowH: pi === 0 ? 22 : 10,
+        cellY: y,
+      });
       y += pi === 0 ? 22 : 10;
     }
   } else {
@@ -1420,7 +1584,7 @@ function renderFormalMeasureTable(
   doc: PdfDoc,
   ctx: SheetPageContext,
   field: FormatField,
-  value: Record<string, MeasureRow>,
+  value: Record<string, MeasureRow> | MeasureRow[],
   startY: number
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
@@ -1430,6 +1594,7 @@ function renderFormalMeasureTable(
   const { title, subtitle } = fieldBannerTitle(field);
   let y = drawSectionBanner(doc, startY, title, subtitle ?? field.helpText ?? undefined, true);
   const w = pageWidth(doc) - MARGIN * 2;
+  const valueMap: Record<string, MeasureRow> = Array.isArray(value) ? {} : (value ?? {});
 
   if (tableType === 'cloro') {
     const cols = [
@@ -1458,7 +1623,7 @@ function renderFormalMeasureTable(
     y += 11;
 
     items.forEach((item, idx) => {
-      const row = value[item.key] ?? {};
+      const row = valueMap[item.key] ?? {};
       const cnc = normalizeCnc(row.cnc);
       y = ensurePageSpace(doc, ctx, y, 10);
       drawTableRowBorder(doc, y, 10);
@@ -1466,16 +1631,25 @@ function renderFormalMeasureTable(
       x = MARGIN;
       doc.text(String(idx + 1), x, y + 1, { width: cols[0].w, align: 'center' });
       x += cols[0].w;
-      doc.text(row.hora ?? '—', x, y + 1, { width: cols[1].w });
+      drawTextOrClosed(doc, row.hora, x, y + 1, { width: cols[1].w, rowH: 10, cellY: y });
       x += cols[1].w;
       doc.text(row.punto_toma ?? item.label, x, y + 1, { width: cols[2].w });
       x += cols[2].w;
       doc.text(row.ph ?? '7.0', x, y + 1, { width: cols[3].w, align: 'center' });
       x += cols[3].w;
-      doc.text(row.cloro_residual ?? '—', x, y + 1, { width: cols[4].w, align: 'center' });
+      drawTextOrClosed(doc, row.cloro_residual, x, y + 1, {
+        width: cols[4].w,
+        rowH: 10,
+        cellY: y,
+        align: 'center',
+      });
       x += cols[4].w;
       x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
-      doc.text(row.corrective ?? row.observation ?? '—', x, y + 1, { width: corrW });
+      drawTextOrClosed(doc, row.corrective ?? row.observation, x, y + 1, {
+        width: corrW,
+        rowH: 10,
+        cellY: y,
+      });
       y += 10;
     });
     return y + 6;
@@ -1506,7 +1680,7 @@ function renderFormalMeasureTable(
     y += 11;
 
     items.forEach((item) => {
-      const row = value[item.key] ?? {};
+      const row = valueMap[item.key] ?? {};
       const cnc = normalizeCnc(row.cnc);
       y = ensurePageSpace(doc, ctx, y, 10);
       drawTableRowBorder(doc, y, 10);
@@ -1514,14 +1688,98 @@ function renderFormalMeasureTable(
       x = MARGIN;
       doc.text(item.label, x, y + 1, { width: cols[0].w });
       x += cols[0].w;
-      doc.text(row.hora ?? '—', x, y + 1, { width: cols[1].w });
+      drawTextOrClosed(doc, row.hora, x, y + 1, { width: cols[1].w, rowH: 10, cellY: y });
       x += cols[1].w;
-      doc.text(row.temperatura ?? '—', x, y + 1, { width: cols[2].w, align: 'center' });
+      drawTextOrClosed(doc, row.temperatura, x, y + 1, {
+        width: cols[2].w,
+        rowH: 10,
+        cellY: y,
+        align: 'center',
+      });
       x += cols[2].w;
       x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
-      doc.text(row.observation ?? '—', x, y + 1, { width: obsW });
+      drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y });
       y += 10;
     });
+    return y + 6;
+  }
+
+  if (tableType === 'pediluvios') {
+    const areaLabel = items[0]?.label ?? 'Pediluvios';
+    const operativo = opts.pediluviosLayout === 'operativo';
+    const rowsFromValue = (): MeasureRow[] => {
+      if (Array.isArray(value)) return value as MeasureRow[];
+      if (value && typeof value === 'object') {
+        if (opts.allowAddRows) {
+          return Object.values(value as Record<string, MeasureRow>);
+        }
+        return items.map((item) => valueMap[item.key] ?? {});
+      }
+      return [];
+    };
+    const rows = rowsFromValue();
+
+    y = ensurePageSpace(doc, ctx, y, 12);
+    drawTableRowBorder(doc, y, 11, '#f3f4f6');
+    doc.fontSize(5.5).font('Helvetica-Bold');
+    let x = MARGIN;
+    if (operativo) {
+      const cols = [
+        { l: 'Área', w: 90 },
+        { l: 'Hora', w: 34 },
+        { l: 'Principio activo', w: 90 },
+        { l: 'Conc. ppm', w: 40 },
+      ];
+      const cW = 12;
+      const corrW = w - cols.reduce((a, c) => a + c.w, 0) - cW * 2;
+      cols.forEach((c) => {
+        doc.text(c.l, x, y + 2, { width: c.w });
+        x += c.w;
+      });
+      doc.text('C', x, y + 2, { width: cW, align: 'center' });
+      doc.text('NC', x + cW, y + 2, { width: cW, align: 'center' });
+      doc.text('Corrección', x + cW * 2, y + 2, { width: corrW });
+      y += 11;
+
+      rows.forEach((row) => {
+        const cnc = normalizeCnc(row.cnc);
+        y = ensurePageSpace(doc, ctx, y, 10);
+        drawTableRowBorder(doc, y, 10);
+        doc.fontSize(5.5).font('Helvetica').fillColor('#111');
+        x = MARGIN;
+        doc.text(areaLabel, x, y + 1, { width: cols[0].w });
+        x += cols[0].w;
+        drawTextOrClosed(doc, row.hora, x, y + 1, { width: cols[1].w, rowH: 10, cellY: y });
+        x += cols[1].w;
+        drawTextOrClosed(doc, row.principio_activo, x, y + 1, { width: cols[2].w, rowH: 10, cellY: y });
+        x += cols[2].w;
+        drawTextOrClosed(doc, row.concentracion, x, y + 1, {
+          width: cols[3].w,
+          rowH: 10,
+          cellY: y,
+          align: 'center',
+        });
+        x += cols[3].w;
+        x = drawCncCells(doc, x, y + 1, cnc, cW, false);
+        drawTextOrClosed(doc, row.corrective, x, y + 1, { width: corrW, rowH: 10, cellY: y });
+        y += 10;
+      });
+    } else {
+      items.forEach((item) => {
+        const row = valueMap[item.key] ?? {};
+        const parts = [
+          row.principio_activo && `PA: ${row.principio_activo}`,
+          row.concentracion && `ppm: ${row.concentracion}`,
+          row.cnc && `C/NC: ${row.cnc}`,
+          row.corrective && `Corr: ${row.corrective}`,
+        ].filter(Boolean);
+        y = ensurePageSpace(doc, ctx, y, 10);
+        doc.fontSize(5.5).font('Helvetica').text(`${item.label}: ${parts.join(' · ') || '—'}`, MARGIN, y, {
+          width: w,
+        });
+        y += 10;
+      });
+    }
     return y + 6;
   }
 
@@ -1585,10 +1843,9 @@ function renderFormalMeasureTable(
 
     items.forEach((item) => {
       const minSlots = (item as { slotCount?: number }).slotCount ?? (aspectRows ? 4 : 1);
-      const entries = aspectRows ? normalizePdfEntries(value[item.key], minSlots) : [value[item.key] ?? {}];
+      const entries = aspectRows ? normalizePdfEntries(valueMap[item.key], minSlots) : [valueMap[item.key] ?? {}];
       entries.forEach((row, ei) => {
         const cnc = normalizeCnc(row.cnc);
-        const valor = row.valor ?? row.minutos ?? row.temperatura ?? '—';
         y = ensurePageSpace(doc, ctx, y, 10);
         drawTableRowBorder(doc, y, 10);
         doc.fontSize(5).font('Helvetica').fillColor('#111');
@@ -1599,15 +1856,34 @@ function renderFormalMeasureTable(
           doc.text('', x, y + 1, { width: aspectW });
         }
         x += aspectW;
-        doc.text(str(row.turno), x, y + 1, { width: turnoW });
+        drawTextOrClosed(doc, row.turno, x, y + 1, { width: turnoW, rowH: 10, cellY: y, fontSize: 5 });
         x += turnoW;
         if (hasValor) {
-          doc.text(String(valor), x, y + 1, { width: valorW, align: 'center' });
+          const valor = row.valor ?? row.minutos ?? row.temperatura;
+          drawTextOrClosed(doc, valor, x, y + 1, {
+            width: valorW,
+            rowH: 10,
+            cellY: y,
+            align: 'center',
+            fontSize: 5,
+          });
           x += valorW;
         }
         x = drawCncCells(doc, x, y + 1, cnc, cW, false);
-        doc.text(str(row.observation), x, y + 1, { width: aspectRows ? obsW : obsW * 0.55 });
-        if (!aspectRows) doc.text(str(row.corrective), x + obsW * 0.55, y + 1, { width: obsW * 0.45 });
+        drawTextOrClosed(doc, row.observation, x, y + 1, {
+          width: aspectRows ? obsW : obsW * 0.55,
+          rowH: 10,
+          cellY: y,
+          fontSize: 5,
+        });
+        if (!aspectRows) {
+          drawTextOrClosed(doc, row.corrective, x + obsW * 0.55, y + 1, {
+            width: obsW * 0.45,
+            rowH: 10,
+            cellY: y,
+            fontSize: 5,
+          });
+        }
         y += 10;
       });
     });
@@ -1616,7 +1892,7 @@ function renderFormalMeasureTable(
 
   // Fallback: list rows as text
   items.forEach((item) => {
-    const row = value[item.key] ?? {};
+    const row = valueMap[item.key] ?? {};
     const parts = Object.entries(row).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
     y = ensurePageSpace(doc, ctx, y, 10);
     doc.fontSize(5.5).font('Helvetica').text(`${item.label}: ${parts.join(' · ') || '—'}`, MARGIN, y, { width: w });
@@ -1659,7 +1935,13 @@ function renderField(
   }
 
   if (isFormalMeasure) {
-    return renderFormalMeasureTable(doc, ctx, field, (value as Record<string, MeasureRow>) ?? {}, y);
+    return renderFormalMeasureTable(
+      doc,
+      ctx,
+      field,
+      (value as Record<string, MeasureRow> | MeasureRow[]) ?? {},
+      y
+    );
   }
 
   if (field.fieldType === 'CHECKLIST' && opts.layout === 'poes_operativo_table') {
@@ -1699,8 +1981,8 @@ function renderField(
       photos.push(value);
     }
     if (photos.length === 0) {
-      doc.fontSize(7).font('Helvetica').fillColor('#666').text('—', MARGIN, y);
-      return y + 12;
+      drawClosedBlank(doc, MARGIN, y, maxW, 12);
+      return y + 16;
     }
     let py = y;
     for (const src of photos.slice(0, 8)) {
@@ -1717,6 +1999,10 @@ function renderField(
   }
 
   if (field.fieldType === 'TEXTAREA') {
+    if (isBlankPdfValue(value)) {
+      drawClosedBlank(doc, MARGIN, y, maxW, 16);
+      return y + 22;
+    }
     doc.fontSize(7).font('Helvetica').fillColor('#111').text(str(value), MARGIN, y, { width: maxW });
     return y + doc.heightOfString(str(value), { width: maxW }) + 8;
   }
@@ -1739,10 +2025,18 @@ function renderField(
   }
 
   if (Array.isArray(value)) {
+    if (value.length === 0) {
+      drawClosedBlank(doc, MARGIN, y, maxW, 12);
+      return y + 16;
+    }
     doc.fontSize(7).font('Helvetica').text(value.join(', '), MARGIN, y, { width: maxW });
     return y + 14;
   }
 
+  if (isBlankPdfValue(value)) {
+    drawClosedBlank(doc, MARGIN, y, maxW, 12);
+    return y + 16;
+  }
   doc.fontSize(7).font('Helvetica').fillColor('#111').text(str(value), MARGIN, y, { width: maxW });
   return y + 14;
 }
@@ -1861,6 +2155,7 @@ export function generateSubmissionPdf(
     if (sheetsToRender.length === 0) {
       doc.addPage({ size: 'A4', margin: MARGIN });
       doc.fontSize(12).text('Formato sin hojas configuradas.', MARGIN, MARGIN);
+      stampPdfPageNumbers(doc);
       doc.end();
       return;
     }
@@ -1886,6 +2181,7 @@ export function generateSubmissionPdf(
       drawCollaborationSummaryPage(doc, submission);
     }
 
+    stampPdfPageNumbers(doc);
     doc.end();
   });
 }

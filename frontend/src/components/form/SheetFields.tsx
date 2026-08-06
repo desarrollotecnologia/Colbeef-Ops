@@ -193,7 +193,7 @@ export default function SheetFields({ fields, sheetData, onUpdate, workDate, dis
     );
   }
 
-  if (has('decomisos') && has('observaciones_fijas')) {
+  if (has('decomisos') && (has('fotos') || has('observaciones_fijas') || has('observaciones_adicionales'))) {
     return (
       <div className="space-y-6">
         <Format12DecomisosSheet fields={visible} sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
