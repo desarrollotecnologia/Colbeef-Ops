@@ -20,11 +20,12 @@ flowchart TB
   Filtro --> Abrir[Abrir formato]
   Abrir --> Local[Borrador en pantalla]
   Local --> Guardar[Guardar hoja]
-  Guardar --> Draft[Crear envío DRAFT<br/>+ schemaSnapshot]
-  Draft --> Llenar[Completar hojas]
+  Guardar --> Draft[Crear envío DRAFT<br/>congela schema_snapshot]
+  Draft --> Collab[Opcional: colaboradores<br/>y bloqueo de campos]
+  Collab --> Llenar[Completar hojas]
   Llenar --> Validar{¿Campos OK?}
   Validar -->|No| Llenar
-  Validar -->|Sí| Enviar[Enviar formato]
+  Validar -->|Sí| Enviar[Entregar formato]
   Enviar --> Pending[Estado: PENDING_REVIEW]
   Pending --> MisEnvios[Mis Envíos]
   MisEnvios --> VerEstado{¿Estado?}
@@ -70,7 +71,9 @@ flowchart TB
 ## Resumen
 
 1. El usuario inicia sesión y recibe un JWT según su rol (`OPERARIO`, `ADMIN` o `PANEL`).
-2. El **operario** solo ve los formatos asignados, llena el formulario, guarda un borrador (`DRAFT`) y lo envía a revisión (`PENDING_REVIEW`).
-3. El **admin** revisa pendientes: aprueba (crea firma y habilita PDF) o rechaza (el operario corrige y reenvía).
-4. El admin también gestiona usuarios y permisos de formatos, y puede buscar envíos.
-5. El rol **PANEL** solo accede al dashboard de usabilidad.
+2. El **operario** solo ve los formatos asignados, llena el formulario, guarda un borrador (`DRAFT`) y lo entrega a revisión (`PENDING_REVIEW`). Al crear el borrador se congela `schema_snapshot` (compatibilidad: cambios de catálogo no alteran ese envío).
+3. Puede haber **colaboradores** en el mismo borrador; los campos ya llenados quedan bloqueados para su autor.
+4. El **admin** revisa pendientes: aprueba (crea firma) o rechaza (el operario/colaboradores corrigen y reenvían).
+5. El admin también gestiona usuarios y permisos de formatos, y puede buscar envíos.
+6. El rol **PANEL** solo accede al dashboard de usabilidad.
+7. Detalle del modelo: [diagrama-uml-base-datos.md](./diagrama-uml-base-datos.md). Colaboración: [colaboracion-formatos.md](./colaboracion-formatos.md).

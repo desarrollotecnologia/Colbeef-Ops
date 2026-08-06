@@ -9,6 +9,7 @@ Varios operarios pueden llenar el mismo envío en turnos distintos.
 - Cada campo guardado queda bloqueado para su autor: los demás solo llenan lo vacío.
 - Si el admin **rechaza** (motivo obligatorio), el envío vuelve a todos con color de “pendiente ajustar”.
 - En ficha y PDF queda la trazabilidad (inició, colaboradores, entregó, rechazos/aprobaciones).
+- El **PDF** solo incluye la hoja de resumen/trazabilidad si el envío **tiene colaboradores**. Sin colaboración no se agrega ese reporte.
 
 ## Migración
 

@@ -479,6 +479,7 @@ export function drawClosedBlank(
 
 /**
  * Dibuja texto de celda; si está vacío, cierra con línea (no aplica a C/NC).
+ * Observaciones: pasar `closeIfEmpty: false` para dejar la celda en blanco.
  */
 export function drawTextOrClosed(
   doc: PdfDoc,
@@ -493,12 +494,16 @@ export function drawTextOrClosed(
     align?: 'left' | 'center' | 'right';
     lineGap?: number;
     font?: 'Helvetica' | 'Helvetica-Bold';
+    /** Default true. false = vacío sin línea (p. ej. observaciones). */
+    closeIfEmpty?: boolean;
   }
 ): void {
   const rowH = opts.rowH ?? 10;
   const cellY = opts.cellY ?? Math.max(0, textY - 1);
   if (isBlankPdfValue(value)) {
-    drawClosedBlank(doc, x, cellY, opts.width, rowH);
+    if (opts.closeIfEmpty !== false) {
+      drawClosedBlank(doc, x, cellY, opts.width, rowH);
+    }
     return;
   }
   doc
@@ -510,4 +515,9 @@ export function drawTextOrClosed(
       align: opts.align ?? 'left',
       lineGap: opts.lineGap ?? 0,
     });
+}
+
+/** Clave/etiqueta de observación: no se cierra con línea si va vacía. */
+export function isObservationPdfField(keyOrLabel: string): boolean {
+  return /observ/i.test(keyOrLabel);
 }

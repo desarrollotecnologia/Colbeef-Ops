@@ -690,6 +690,9 @@ Una respuesta correcta incluye:
 
 - [Guía de base de datos MySQL](docs/DATABASE.md)
 - [Paso a paso de MySQL](docs/PASO-A-PASO-MYSQL.md)
+- [Diagrama UML / ER (modelo actual + compatibilidad)](docs/diagrama-uml-base-datos.md)
+- [Diagrama de flujo](docs/diagrama-flujo-colbeef-ops.md)
+- [Colaboración en formatos](docs/colaboracion-formatos.md)
 - [Documentación de formatos](formatos/README.md)
 - Archivos `CAMPOS.md` dentro de cada carpeta de `formatos/`.
 
@@ -704,6 +707,8 @@ Al agregar o modificar un formato:
 5. Ejecute `npm run db:seed`.
 6. Compile frontend y backend.
 7. Pruebe el diligenciamiento, guardado, revisión y PDF.
+
+**Compatibilidad:** los envíos ya creados usan `schema_snapshot` y no cambian de esquema al reseedar. Ver [diagrama UML — sección Compatibilidad](docs/diagrama-uml-base-datos.md#compatibilidad-de-formatos-schema_snapshot).
 
 ## Estado del proyecto
 

@@ -204,6 +204,7 @@ function drawRepeaterTable(
           rowH,
           cellY: cy,
           fontSize: compact ? 6 : 7,
+          closeIfEmpty: !/observ/i.test(col.key) && !/observ/i.test(col.label),
         });
       }
       cx += colWidths[i];
@@ -602,8 +603,7 @@ export function renderDecomisosSheet(
     y = drawSectionBanner(doc, y, 'Observaciones', undefined, true);
     const rawObs = sheetData.observaciones_adicionales;
     if (isBlankPdfValue(rawObs)) {
-      drawClosedBlank(doc, MARGIN, y, pageWidth(doc) - MARGIN * 2, 16);
-      y += 22;
+      y += 10;
     } else {
       const obsText = str(rawObs);
       doc.fontSize(7).font('Helvetica').fillColor('#111').text(obsText, MARGIN, y, {

@@ -14,6 +14,7 @@ import {
   ensurePageSpace,
   formatWorkDate,
   isBlankPdfValue,
+  isObservationPdfField,
   pageWidth,
   startSheetPage,
   stampPdfPageNumbers,
@@ -334,7 +335,7 @@ function renderSimpleChecklist(
       x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
     }
     if (showObs) {
-      drawTextOrClosed(doc, obsText, x, y + 2, { width: obsW - 2, rowH, cellY: y });
+      drawTextOrClosed(doc, obsText, x, y + 2, { width: obsW - 2, rowH, cellY: y, closeIfEmpty: false });
     }
     if (showCorr) {
       drawTextOrClosed(doc, corrText, x + (showObs ? obsW : 0), y + 2, { width: corrW - 2, rowH, cellY: y });
@@ -419,6 +420,7 @@ function renderCavaMatrix(
           width: obsW - 2,
           rowH,
           cellY: y,
+          closeIfEmpty: false,
         });
       }
       if (showCorr) {
@@ -493,7 +495,13 @@ function renderPlatformsTable(
       x += platBlockW;
     }
     if (showObs) {
-      drawTextOrClosed(doc, data.observation, x, y + 1, { width: obsW - 2, rowH, cellY: y, fontSize: 5.5 });
+      drawTextOrClosed(doc, data.observation, x, y + 1, {
+        width: obsW - 2,
+        rowH,
+        cellY: y,
+        fontSize: 5.5,
+        closeIfEmpty: false,
+      });
     }
     if (showCorr) {
       drawTextOrClosed(doc, data.corrective, x + (showObs ? obsW : 0), y + 1, {
@@ -580,7 +588,13 @@ function renderPoesOperativoTable(
     let x = MARGIN + labelW;
     x = renderTomaPdf(row.toma1, x);
     x = renderTomaPdf(row.toma2, x);
-    drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y, fontSize: 4.5 });
+    drawTextOrClosed(doc, row.observation, x, y + 1, {
+      width: obsW,
+      rowH: 10,
+      cellY: y,
+      fontSize: 4.5,
+      closeIfEmpty: false,
+    });
     drawTextOrClosed(doc, row.corrective, x + obsW, y + 1, { width: acW, rowH: 10, cellY: y, fontSize: 4.5 });
     drawTextOrClosed(doc, row.responsible, x + obsW + acW, y + 1, { width: respW, rowH: 10, cellY: y, fontSize: 4.5 });
     y += 10;
@@ -677,7 +691,13 @@ function renderPoesBpmTable(
     };
     renderBpmToma(t1);
     renderBpmToma(t2);
-    drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y, fontSize: 4.5 });
+    drawTextOrClosed(doc, row.observation, x, y + 1, {
+      width: obsW,
+      rowH: 10,
+      cellY: y,
+      fontSize: 4.5,
+      closeIfEmpty: false,
+    });
     drawTextOrClosed(doc, row.corrective, x + obsW, y + 1, { width: acW, rowH: 10, cellY: y, fontSize: 4.5 });
     drawTextOrClosed(doc, row.responsible, x + obsW + acW, y + 1, { width: respW, rowH: 10, cellY: y, fontSize: 4.5 });
     y += 10;
@@ -817,7 +837,13 @@ function renderPcOperativoTable(
           cncDrawn = true;
         }
       } else if (c.kind === 'obs') {
-        drawTextOrClosed(doc, row.observation, x, y + 1, { width: c.w, rowH: 10, cellY: y, fontSize: 4.5 });
+        drawTextOrClosed(doc, row.observation, x, y + 1, {
+          width: c.w,
+          rowH: 10,
+          cellY: y,
+          fontSize: 4.5,
+          closeIfEmpty: false,
+        });
       } else if (c.kind === 'ac') {
         drawTextOrClosed(doc, row.corrective, x, y + 1, { width: c.w, rowH: 10, cellY: y, fontSize: 4.5 });
       } else {
@@ -918,7 +944,13 @@ function renderPcInocuidadRepeater(
       drawCncMark(doc, x + subW * 2, y + 1, cnc, 'NA', subW);
       x += hallBlockW;
     });
-    drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y, fontSize: 5 });
+    drawTextOrClosed(doc, row.observation, x, y + 1, {
+      width: obsW,
+      rowH: 10,
+      cellY: y,
+      fontSize: 5,
+      closeIfEmpty: false,
+    });
     drawTextOrClosed(doc, row.corrective, x + obsW, y + 1, { width: acW, rowH: 10, cellY: y, fontSize: 5 });
     y += 10;
   });
@@ -1003,8 +1035,12 @@ function renderCardRepeater(
           doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
           y += 12;
         } else if (isBlankPdfValue(raw)) {
-          drawClosedBlank(doc, MARGIN, y, maxW, 12);
-          y += 16;
+          if (!isObservationPdfField(col.key) && !isObservationPdfField(col.label)) {
+            drawClosedBlank(doc, MARGIN, y, maxW, 12);
+            y += 16;
+          } else {
+            y += 10;
+          }
         } else {
           const h = Math.max(10, doc.heightOfString(valueText, { width: maxW }));
           y = ensurePageSpace(doc, ctx, y, h);
@@ -1034,6 +1070,7 @@ function renderCardRepeater(
           rowH: 11,
           cellY: rowTop + 6,
           fontSize: 6.5,
+          closeIfEmpty: !isObservationPdfField(col.key) && !isObservationPdfField(col.label),
         });
       }
 
@@ -1113,8 +1150,12 @@ function renderProductoTerminadoLotes(
             doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
             y += 12;
           } else if (isBlankPdfValue(raw)) {
-            drawClosedBlank(doc, MARGIN, y, maxW, 12);
-            y += 16;
+            if (!isObservationPdfField(col.key) && !isObservationPdfField(col.label)) {
+              drawClosedBlank(doc, MARGIN, y, maxW, 12);
+              y += 16;
+            } else {
+              y += 10;
+            }
           } else {
             const h = Math.max(10, doc.heightOfString(valueText, { width: maxW }));
             y = ensurePageSpace(doc, ctx, y, h);
@@ -1143,6 +1184,7 @@ function renderProductoTerminadoLotes(
             rowH: 11,
             cellY: rowTop + 6,
             fontSize: 6.5,
+            closeIfEmpty: !isObservationPdfField(col.key) && !isObservationPdfField(col.label),
           });
         }
         colIndex += 1;
@@ -1418,6 +1460,7 @@ function renderRepeaterTable(
         cellY: y,
         fontSize,
         align: 'left',
+        closeIfEmpty: !isObservationPdfField(col.key) && !isObservationPdfField(col.label),
       });
     });
     y += rowH;
@@ -1512,6 +1555,7 @@ function renderDaySchedule(
         width: obsW - 4,
         rowH,
         cellY: y,
+        closeIfEmpty: false,
       });
       y += rowH;
     }
@@ -1568,6 +1612,7 @@ function renderDaySchedule(
         width: obsW - 4,
         rowH: pi === 0 ? 22 : 10,
         cellY: y,
+        closeIfEmpty: false,
       });
       y += pi === 0 ? 22 : 10;
     }
@@ -1698,7 +1743,7 @@ function renderFormalMeasureTable(
       });
       x += cols[2].w;
       x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
-      drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y });
+      drawTextOrClosed(doc, row.observation, x, y + 1, { width: obsW, rowH: 10, cellY: y, closeIfEmpty: false });
       y += 10;
     });
     return y + 6;
@@ -1875,6 +1920,7 @@ function renderFormalMeasureTable(
           rowH: 10,
           cellY: y,
           fontSize: 5,
+          closeIfEmpty: false,
         });
         if (!aspectRows) {
           drawTextOrClosed(doc, row.corrective, x + obsW * 0.55, y + 1, {
@@ -2000,6 +2046,9 @@ function renderField(
 
   if (field.fieldType === 'TEXTAREA') {
     if (isBlankPdfValue(value)) {
+      if (isObservationPdfField(field.fieldKey) || isObservationPdfField(field.label)) {
+        return y + 14;
+      }
       drawClosedBlank(doc, MARGIN, y, maxW, 16);
       return y + 22;
     }
@@ -2034,6 +2083,9 @@ function renderField(
   }
 
   if (isBlankPdfValue(value)) {
+    if (isObservationPdfField(field.fieldKey) || isObservationPdfField(field.label)) {
+      return y + 12;
+    }
     drawClosedBlank(doc, MARGIN, y, maxW, 12);
     return y + 16;
   }
@@ -2174,10 +2226,8 @@ export function generateSubmissionPdf(
       });
     });
 
-    const hasTrail =
-      (submission.collaborators?.length ?? 0) > 0 ||
-      (submission.activities ?? []).some((a) => a.type !== 'SHEET_SAVED');
-    if (hasTrail && !options?.sheetId) {
+    const hasCollaborators = (submission.collaborators?.length ?? 0) > 0;
+    if (hasCollaborators && !options?.sheetId) {
       drawCollaborationSummaryPage(doc, submission);
     }
 
