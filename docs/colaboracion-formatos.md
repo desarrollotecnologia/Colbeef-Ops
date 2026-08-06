@@ -10,6 +10,7 @@ Varios operarios pueden llenar el mismo envío en turnos distintos.
 - Si el admin **rechaza** (motivo obligatorio), el envío vuelve a todos con color de “pendiente ajustar”.
 - En ficha y PDF queda la trazabilidad (inició, colaboradores, entregó, rechazos/aprobaciones).
 - El **PDF** solo incluye la hoja de resumen/trazabilidad si el envío **tiene colaboradores**. Sin colaboración no se agrega ese reporte.
+- En firmas del PDF: sin colaboradores solo aparece **ELABORÓ**; **ENTREGÓ** solo en modo colaboración.
 
 ## Migración
 

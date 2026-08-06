@@ -314,32 +314,37 @@ export function drawSignatures(
   const bottom = contentBottom(doc);
   if (y > bottom - 52) y = bottom - 52;
 
-  const elaboro =
-    opts?.collaboratorNames && opts.collaboratorNames.length > 0
-      ? [operatorName, ...opts.collaboratorNames].filter((n, i, arr) => arr.indexOf(n) === i).join(', ')
-      : operatorName;
-  const entrego = opts?.submittedByName || operatorName;
+  const hasCollaborators = (opts?.collaboratorNames?.length ?? 0) > 0;
+  const elaboro = hasCollaborators
+    ? [operatorName, ...(opts?.collaboratorNames ?? [])].filter((n, i, arr) => arr.indexOf(n) === i).join(', ')
+    : operatorName;
+  const halfW = (pageWidth(doc) - MARGIN * 2) / 2 - 10;
+  const fullW = pageWidth(doc) - MARGIN * 2 - 16;
 
   doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ELABORÓ', MARGIN, y);
   doc.fontSize(8).font('Helvetica').fillColor('#111').text(elaboro, MARGIN, y + 10, {
-    width: (pageWidth(doc) - MARGIN * 2) / 2 - 10,
+    width: hasCollaborators ? halfW : fullW,
   });
   doc
     .moveTo(MARGIN, y + 24)
-    .lineTo(MARGIN + (pageWidth(doc) - MARGIN * 2) / 2 - 16, y + 24)
+    .lineTo(MARGIN + (hasCollaborators ? halfW : fullW), y + 24)
     .strokeColor('#666')
     .stroke();
 
-  const midX = MARGIN + (pageWidth(doc) - MARGIN * 2) / 2 + 8;
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ENTREGÓ', midX, y);
-  doc.fontSize(8).font('Helvetica').fillColor('#111').text(entrego, midX, y + 10, {
-    width: (pageWidth(doc) - MARGIN * 2) / 2 - 10,
-  });
-  doc
-    .moveTo(midX, y + 24)
-    .lineTo(midX + (pageWidth(doc) - MARGIN * 2) / 2 - 16, y + 24)
-    .strokeColor('#666')
-    .stroke();
+  // ENTREGÓ solo en modo colaboración (quien pulsó entregar puede ser distinto)
+  if (hasCollaborators) {
+    const entrego = opts?.submittedByName || operatorName;
+    const midX = MARGIN + (pageWidth(doc) - MARGIN * 2) / 2 + 8;
+    doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ENTREGÓ', midX, y);
+    doc.fontSize(8).font('Helvetica').fillColor('#111').text(entrego, midX, y + 10, {
+      width: halfW,
+    });
+    doc
+      .moveTo(midX, y + 24)
+      .lineTo(midX + halfW, y + 24)
+      .strokeColor('#666')
+      .stroke();
+  }
 
   return y + 32;
 }
