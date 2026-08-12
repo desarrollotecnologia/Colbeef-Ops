@@ -16,6 +16,7 @@ import {
   isObservationPdfField,
   pageWidth,
   startSheetPage,
+  startContentPage,
   stampPdfPageNumbers,
   str,
   type PdfDoc,
@@ -2246,8 +2247,16 @@ function renderField(
       drawClosedBlank(doc, MARGIN, y, maxW, 16);
       return y + 22;
     }
-    doc.fontSize(7).font('Helvetica').fillColor('#111').text(str(value), MARGIN, y, { width: maxW });
-    return y + doc.heightOfString(str(value), { width: maxW }) + 8;
+    const text = str(value);
+    const textH = Math.min(120, Math.max(10, doc.heightOfString(text, { width: maxW })));
+    y = ensurePageSpace(doc, ctx, y, textH + 4);
+    doc.fontSize(7).font('Helvetica').fillColor('#111').text(text, MARGIN, y, {
+      width: maxW,
+      height: textH,
+      ellipsis: true,
+      lineGap: 0,
+    });
+    return y + textH + 8;
   }
 
   if (field.fieldType === 'REPEATER' && Array.isArray(value)) {
@@ -2283,8 +2292,14 @@ function renderField(
     drawClosedBlank(doc, MARGIN, y, maxW, 12);
     return y + 16;
   }
-  doc.fontSize(7).font('Helvetica').fillColor('#111').text(str(value), MARGIN, y, { width: maxW });
-  return y + 14;
+  const plain = str(value);
+  doc.fontSize(7).font('Helvetica').fillColor('#111').text(plain, MARGIN, y, {
+    width: maxW,
+    height: 28,
+    ellipsis: true,
+    lineGap: 0,
+  });
+  return y + Math.min(28, doc.heightOfString(plain, { width: maxW })) + 8;
 }
 
 type RenderSheetOptions = {
@@ -2336,11 +2351,11 @@ function renderSheetPage(
     }
   }
 
-  // Firmas justo después del contenido (no fijar al pie: evita páginas en blanco de PDFKit)
-  const sigH = 48;
-  y += 10;
+  // Firmas después del contenido; página nueva limpia (sin cabecera larga) si no caben
+  const sigH = 40;
+  y += 8;
   if (y + sigH > contentBottom(doc)) {
-    y = startSheetPage(doc, ctx, true);
+    y = startContentPage(doc, ctx);
   }
   drawSignatures(doc, submission.operator.fullName, y, {
     submittedByName: submission.submittedBy?.fullName,
