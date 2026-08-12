@@ -34,6 +34,7 @@ export function measureTextHeight(
 
 export function allocateColWidths(tableW: number, columns: PdfTableColumn[]): number[] {
   if (columns.length === 0) return [];
+  const compactCount = columns.filter((c) => c.compact || c.key === '_idx').length;
   const weights = columns.map((c) => {
     if (c.weight != null) return Math.max(0.25, c.weight);
     if (c.key === '_idx' || c.compact) return 0.45;
@@ -44,10 +45,11 @@ export function allocateColWidths(tableW: number, columns: PdfTableColumn[]): nu
   });
   const sum = weights.reduce((a, b) => a + b, 0) || 1;
   const raw = weights.map((w) => (w / sum) * tableW);
-  // Evitar columnas demasiado estrechas en texto largo
-  const minText = 36;
+  // Con muchas columnas C/NC, bajar mínimos de texto para no aplastar marcas
+  const minText = compactCount >= 10 ? 24 : 36;
+  const minCompact = compactCount >= 10 ? 12 : 14;
   const adjusted = raw.map((w, i) => {
-    if (columns[i].compact || columns[i].key === '_idx') return Math.max(14, w);
+    if (columns[i].compact || columns[i].key === '_idx') return Math.max(minCompact, w);
     return Math.max(minText, w);
   });
   const adjSum = adjusted.reduce((a, b) => a + b, 0);

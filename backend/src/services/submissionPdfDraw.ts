@@ -123,13 +123,14 @@ export function drawSheetBoundaryEnd(
   sheetName: string
 ): void {
   const w = pageWidth(doc) - MARGIN * 2;
-  const y = pageHeight(doc) - MARGIN - 14;
-  doc.moveTo(MARGIN, y).lineTo(MARGIN + w, y).strokeColor('#166534').lineWidth(1.5).stroke();
+  // Zona de pie: por encima de la numeración de página
+  const y = pageHeight(doc) - MARGIN - FOOTER_H + 4;
+  doc.moveTo(MARGIN, y).lineTo(MARGIN + w, y).strokeColor('#166534').lineWidth(1.2).stroke();
   doc
-    .fontSize(7)
+    .fontSize(6.5)
     .font('Helvetica-Bold')
     .fillColor('#166534')
-    .text(`— FIN HOJA ${sheetIndex + 1} DE ${totalSheets}: ${sheetName.toUpperCase()} —`, MARGIN, y + 3, {
+    .text(`— FIN HOJA ${sheetIndex + 1} DE ${totalSheets}: ${sheetName.toUpperCase()} —`, MARGIN, y + 4, {
       width: w,
       align: 'center',
     });
@@ -294,11 +295,12 @@ export function stampPdfPageNumbers(doc: PdfDoc): void {
     doc.switchToPage(range.start + i);
     const w = pageWidth(doc);
     const h = pageHeight(doc);
+    // Banda inferior, sin solaparse con FIN HOJA (que usa la zona FOOTER_H)
     doc
-      .fontSize(7)
+      .fontSize(6.5)
       .font('Helvetica')
       .fillColor('#666')
-      .text(`Pág. ${i + 1} de ${range.count}`, MARGIN, h - MARGIN - 12, {
+      .text(`Pág. ${i + 1} de ${range.count}`, MARGIN, h - 14, {
         width: w - MARGIN * 2,
         align: 'center',
       });

@@ -117,7 +117,27 @@ function needsLandscape(fields: FormatField[]): boolean {
   return fields.some((f) => {
     const opts = (f.options ?? {}) as FieldOptions;
     const colCount = opts.columnDefs?.length ?? opts.cavaColumns?.length ?? 0;
-    return colCount >= 6 || (stringColumns(opts).includes('platforms') && (opts.platformCount ?? 0) >= 5);
+    if (colCount >= 6 || (stringColumns(opts).includes('platforms') && (opts.platformCount ?? 0) >= 5)) {
+      return true;
+    }
+    if (f.fieldType === 'REPEATER') {
+      const raw = opts.columns_def ?? opts.columns ?? [];
+      const cols = Array.isArray(raw) ? raw : [];
+      let cncSlots = 0;
+      let totalSlots = 0;
+      for (const col of cols) {
+        if (!col || typeof col !== 'object' || !('key' in col)) continue;
+        const c = col as { key: string; type?: string; options?: { choices?: string[] } };
+        totalSlots += 1;
+        if (c.key === 'cnc' || c.type === 'CHECKLIST') {
+          const choices = (c.options?.choices ?? ['C', 'NC']).filter((x) => x === 'C' || x === 'NC' || x === 'NA');
+          cncSlots += choices.length || 2;
+        }
+      }
+      // Empaque (6) y manipulador (15): cabecera ancha
+      if (cncSlots >= 6 || totalSlots >= 8) return true;
+    }
+    return false;
   });
 }
 
@@ -1312,6 +1332,24 @@ function renderProductoTerminadoLotes(
   return y + 2;
 }
 
+/** Etiquetas cortas para cabeceras de grupos C/NC en PDF (evita solapes). */
+function pdfChecklistGroupLabel(label: string): string {
+  const key = label.trim().toLowerCase();
+  const map: Record<string, string> = {
+    'sellado y presentación': 'Sellado',
+    'sellado y presentacion': 'Sellado',
+    'información etiqueta': 'Info. etiq.',
+    'informacion etiqueta': 'Info. etiq.',
+    'etiqueta legible': 'Etiq. legible',
+    guantes: 'Guantes',
+    'guante de malla': 'G. malla',
+    cuchillo: 'Cuchillo',
+    'gancho despostador': 'Gancho',
+    'soporte gancho deshuesador': 'Sop. gancho',
+  };
+  return map[key] ?? label;
+}
+
 function renderRepeaterTable(
   doc: PdfDoc,
   ctx: SheetPageContext,
@@ -1409,7 +1447,7 @@ function renderRepeaterTable(
   const widthCols: PdfTableColumn[] = expanded.map((col) => ({
     key: col.key,
     label: col.label,
-    weight: col.key === '_idx' ? 0.35 : col.cncChoice ? 0.42 : undefined,
+    weight: col.key === '_idx' ? 0.3 : col.cncChoice ? (checklistGroups.length >= 4 ? 0.55 : 0.48) : undefined,
     compact: Boolean(col.cncChoice) || col.key === '_idx' || col.key.startsWith('decomiso_'),
   }));
   const colWidths = allocateColWidths(tableW, widthCols);
@@ -1420,13 +1458,31 @@ function renderRepeaterTable(
   let y = startY;
   const hasGroups = checklistGroups.length > 0;
   const hasBands = bands.length > 0;
-  const headerH = hasBands && hasGroups ? 26 : hasGroups ? 18 : 11;
+  const cncSubRowH = 9;
+
+  const measureGroupedHeaderH = (): number => {
+    if (!hasGroups) return 11;
+    doc.fontSize(4.5).font('Helvetica-Bold');
+    let maxGroupH = 8;
+    for (const g of checklistGroups) {
+      const label = pdfChecklistGroupLabel(g.label).toUpperCase();
+      const w = Math.max(10, spanW(g.start, g.count) - 2);
+      maxGroupH = Math.max(maxGroupH, measureTextHeight(doc, label, w, 4.5, 'Helvetica-Bold'));
+    }
+    if (hasBands) {
+      return Math.min(42, 10 + maxGroupH + cncSubRowH);
+    }
+    return Math.min(36, 3 + maxGroupH + cncSubRowH);
+  };
+
+  const headerH = measureGroupedHeaderH();
 
   const drawRepeaterHeader = (atY: number): number => {
     drawTableRowBorder(doc, atY, headerH, '#d9ead3');
-    doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
+    doc.fillColor('#333');
 
     if (hasBands && hasGroups) {
+      doc.fontSize(5).font('Helvetica-Bold');
       expanded.forEach((col, i) => {
         if (col.key === '_idx' || col.headerGroup) return;
         doc.text(col.label, colX(i) + 1, atY + 2, {
@@ -1436,58 +1492,72 @@ function renderRepeaterTable(
       });
       doc.text('#', colX(0) + 1, atY + 2, { width: colWidths[0] - 2, align: 'center' });
       bands.forEach((b) => {
-        doc.text(b.label.toUpperCase(), colX(b.start) + 1, atY + 1, {
+        doc.fontSize(4.5).font('Helvetica-Bold').text(b.label.toUpperCase(), colX(b.start) + 1, atY + 1, {
           width: spanW(b.start, b.count) - 2,
           align: 'center',
+          lineGap: 0,
         });
       });
+      const groupTop = atY + 9;
       checklistGroups.forEach((g) => {
-        doc.text(g.label.toUpperCase(), colX(g.start) + 1, atY + 10, {
+        doc.fontSize(4.5).font('Helvetica-Bold').text(pdfChecklistGroupLabel(g.label).toUpperCase(), colX(g.start) + 1, groupTop, {
           width: spanW(g.start, g.count) - 2,
           align: 'center',
+          lineGap: 0,
         });
       });
       expanded.forEach((col, i) => {
         if (col.cncChoice || col.key === '_idx' || !col.headerGroup) return;
-        doc.text(col.label, colX(i) + 1, atY + 10, {
+        doc.fontSize(4.5).font('Helvetica-Bold').text(col.label, colX(i) + 1, groupTop, {
           width: colWidths[i] - 2,
           align: 'center',
+          lineGap: 0,
         });
       });
+      const subY = atY + headerH - cncSubRowH + 1;
       checklistGroups.forEach((g) => {
         for (let j = 0; j < g.count; j++) {
           const col = expanded[g.start + j];
-          doc.text(col.label, colX(g.start + j) + 1, atY + 18, {
+          doc.fontSize(5).font('Helvetica-Bold').text(col.label, colX(g.start + j) + 1, subY, {
             width: colWidths[g.start + j] - 2,
             align: 'center',
           });
         }
       });
     } else if (hasGroups) {
+      const subY = atY + headerH - cncSubRowH + 1;
+      const midY = atY + Math.max(2, (headerH - cncSubRowH) / 2 - 2);
+
       expanded.forEach((col, i) => {
         if (col.key === '_idx' || !col.cncChoice) {
-          doc.text(col.label, colX(i) + 1, atY + 2, {
+          doc.fontSize(5).font('Helvetica-Bold').text(col.label, colX(i) + 1, midY, {
             width: colWidths[i] - 2,
             align: col.key === '_idx' ? 'center' : 'left',
+            lineGap: 0,
           });
         }
       });
       checklistGroups.forEach((g) => {
-        doc.text(g.label.toUpperCase(), colX(g.start) + 1, atY + 1, {
-          width: spanW(g.start, g.count) - 2,
-          align: 'center',
-        });
+        doc
+          .fontSize(4.5)
+          .font('Helvetica-Bold')
+          .text(pdfChecklistGroupLabel(g.label).toUpperCase(), colX(g.start) + 1, atY + 2, {
+            width: spanW(g.start, g.count) - 2,
+            align: 'center',
+            lineGap: 0,
+          });
       });
       checklistGroups.forEach((g) => {
         for (let j = 0; j < g.count; j++) {
           const col = expanded[g.start + j];
-          doc.text(col.label, colX(g.start + j) + 1, atY + 10, {
+          doc.fontSize(5).font('Helvetica-Bold').text(col.label, colX(g.start + j) + 1, subY, {
             width: colWidths[g.start + j] - 2,
             align: 'center',
           });
         }
       });
     } else {
+      doc.fontSize(5).font('Helvetica-Bold');
       expanded.forEach((col, i) =>
         doc.text(col.label, colX(i) + 2, atY + 2, {
           width: colWidths[i] - 4,
