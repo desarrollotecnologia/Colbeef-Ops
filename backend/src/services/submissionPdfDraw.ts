@@ -314,7 +314,11 @@ export function drawSignatures(
   opts?: { submittedByName?: string | null; collaboratorNames?: string[] }
 ): number {
   const bottom = contentBottom(doc);
-  if (y > bottom - 52) y = bottom - 52;
+  const sigH = 40;
+  // Si no cabe en la página actual, no empujar al borde (PDFKit crea páginas fantasma)
+  if (y + sigH > bottom) {
+    y = Math.max(MARGIN, bottom - sigH);
+  }
 
   const hasCollaborators = (opts?.collaboratorNames?.length ?? 0) > 0;
   const elaboro = hasCollaborators
@@ -323,9 +327,15 @@ export function drawSignatures(
   const halfW = (pageWidth(doc) - MARGIN * 2) / 2 - 10;
   const fullW = pageWidth(doc) - MARGIN * 2 - 16;
 
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ELABORÓ', MARGIN, y);
+  doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ELABORÓ', MARGIN, y, {
+    width: hasCollaborators ? halfW : fullW,
+    lineBreak: false,
+  });
   doc.fontSize(8).font('Helvetica').fillColor('#111').text(elaboro, MARGIN, y + 10, {
     width: hasCollaborators ? halfW : fullW,
+    height: 12,
+    ellipsis: true,
+    lineBreak: false,
   });
   doc
     .moveTo(MARGIN, y + 24)
@@ -333,13 +343,18 @@ export function drawSignatures(
     .strokeColor('#666')
     .stroke();
 
-  // ENTREGÓ solo en modo colaboración (quien pulsó entregar puede ser distinto)
   if (hasCollaborators) {
     const entrego = opts?.submittedByName || operatorName;
     const midX = MARGIN + (pageWidth(doc) - MARGIN * 2) / 2 + 8;
-    doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ENTREGÓ', midX, y);
+    doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ENTREGÓ', midX, y, {
+      width: halfW,
+      lineBreak: false,
+    });
     doc.fontSize(8).font('Helvetica').fillColor('#111').text(entrego, midX, y + 10, {
       width: halfW,
+      height: 12,
+      ellipsis: true,
+      lineBreak: false,
     });
     doc
       .moveTo(midX, y + 24)
@@ -454,7 +469,11 @@ export function startSheetPage(
 }
 
 export function ensurePageSpace(doc: PdfDoc, ctx: SheetPageContext, y: number, needed: number): number {
-  if (y + needed <= contentBottom(doc)) return y;
+  const bottom = contentBottom(doc);
+  // Evitar bucles de páginas en blanco si `needed` supera el alto útil
+  const maxBlock = Math.max(24, bottom - MARGIN - 12);
+  const req = Math.min(Math.max(0, needed), maxBlock);
+  if (y + req <= bottom) return y;
   return startSheetPage(doc, ctx, true);
 }
 

@@ -120,22 +120,21 @@ function needsLandscape(fields: FormatField[]): boolean {
     if (colCount >= 6 || (stringColumns(opts).includes('platforms') && (opts.platformCount ?? 0) >= 5)) {
       return true;
     }
-    if (f.fieldType === 'REPEATER') {
+    // Tarjetas (card_repeater) se ven mejor en vertical; no forzar landscape por ellas
+    if (f.fieldType === 'REPEATER' && opts.layout !== 'card_repeater') {
       const raw = opts.columns_def ?? opts.columns ?? [];
       const cols = Array.isArray(raw) ? raw : [];
       let cncSlots = 0;
-      let totalSlots = 0;
       for (const col of cols) {
         if (!col || typeof col !== 'object' || !('key' in col)) continue;
         const c = col as { key: string; type?: string; options?: { choices?: string[] } };
-        totalSlots += 1;
         if (c.key === 'cnc' || c.type === 'CHECKLIST') {
           const choices = (c.options?.choices ?? ['C', 'NC']).filter((x) => x === 'C' || x === 'NC' || x === 'NA');
           cncSlots += choices.length || 2;
         }
       }
-      // Empaque (6) y manipulador (15): cabecera ancha
-      if (cncSlots >= 6 || totalSlots >= 8) return true;
+      // Manipulador (~15); empaque (6) se queda en vertical con cabeceras cortas
+      if (cncSlots >= 10) return true;
     }
     return false;
   });
@@ -226,6 +225,7 @@ function drawCncValueOrClosed(
   }
   doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(formatCncPdfLabel(cnc), x, textY, {
     width: opts.width,
+    lineBreak: false,
   });
 }
 
@@ -1109,6 +1109,8 @@ function renderCardRepeater(
   const cols = getRepeaterColumns(opts);
   const entryLabel = opts.entryLabel ?? 'Registro';
   const maxW = pageWidth(doc) - MARGIN * 2;
+  const gap = 10;
+  const colW = (maxW - gap) / 2;
   let y = startY;
 
   if (rows.length === 0) {
@@ -1116,8 +1118,42 @@ function renderCardRepeater(
     return y + 12;
   }
 
+  const drawCardField = (
+    col: (typeof cols)[0],
+    raw: unknown,
+    x: number,
+    top: number,
+    width: number
+  ): number => {
+    const isCnc = col.type === 'CHECKLIST';
+    const label = `${col.label}:`;
+    const labelH = measureTextHeight(doc, label, width, 5.5, 'Helvetica-Bold');
+    doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(label, x, top, {
+      width,
+      lineGap: 0,
+    });
+    const valueTop = top + labelH + 1;
+    const valueH = 10;
+    if (isCnc) {
+      drawCncValueOrClosed(doc, raw, x, valueTop, { width, rowH: valueH, cellY: valueTop });
+    } else {
+      const closeEmpty = !isObservationPdfField(col.key) && !isObservationPdfField(col.label);
+      if (isBlankPdfValue(raw)) {
+        if (closeEmpty) drawClosedBlank(doc, x, valueTop, width, valueH);
+      } else {
+        const text = str(raw);
+        doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(text, x, valueTop, {
+          width,
+          lineGap: 0,
+        });
+        return labelH + 1 + Math.max(valueH, measureTextHeight(doc, text, width, 6.5));
+      }
+    }
+    return labelH + 1 + valueH;
+  };
+
   rows.forEach((row, idx) => {
-    y = ensurePageSpace(doc, ctx, y, 36);
+    y = ensurePageSpace(doc, ctx, y, 28);
     y = drawSectionBanner(doc, y, `${entryLabel} ${idx + 1}`, undefined, true);
 
     if (cols.length === 0) {
@@ -1131,88 +1167,61 @@ function renderCardRepeater(
       return;
     }
 
-    const half = maxW / 2;
-    let colIndex = 0;
-    let rowTop = y;
-
-    const flushRow = () => {
-      if (colIndex > 0) {
-        y = rowTop + 11;
-        colIndex = 0;
-      }
-    };
-
-    cols.forEach((col) => {
+    let i = 0;
+    while (i < cols.length) {
+      const col = cols[i];
       const isWide = col.type === 'TEXTAREA' || col.type === 'MULTI_SELECT';
-      const isCnc = col.type === 'CHECKLIST';
       const raw = row[col.key];
-      const valueText = isCnc ? formatCncPdfLabel(normalizeCnc(raw)) : isBlankPdfValue(raw) ? '' : str(raw);
 
       if (isWide) {
-        flushRow();
-        y = ensurePageSpace(doc, ctx, y, 14);
-        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(`${col.label}:`, MARGIN, y, {
+        const label = `${col.label}:`;
+        const labelH = measureTextHeight(doc, label, maxW, 5.5, 'Helvetica-Bold');
+        let bodyH = 10;
+        if (!isBlankPdfValue(raw)) {
+          bodyH = Math.max(10, measureTextHeight(doc, str(raw), maxW, 6.5));
+        }
+        const blockH = labelH + bodyH + 6;
+        y = ensurePageSpace(doc, ctx, y, blockH);
+        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(label, MARGIN, y, {
           width: maxW,
+          lineGap: 0,
         });
-        y += 8;
-        if (isCnc) {
-          if (!normalizeCnc(raw)) {
-            drawClosedBlank(doc, MARGIN, y, maxW, 12);
-            y += 16;
-          } else {
-            doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
-            y += 12;
-          }
-        } else if (isBlankPdfValue(raw)) {
+        const valueTop = y + labelH + 1;
+        if (isBlankPdfValue(raw)) {
           if (!isObservationPdfField(col.key) && !isObservationPdfField(col.label)) {
-            drawClosedBlank(doc, MARGIN, y, maxW, 12);
-            y += 16;
-          } else {
-            y += 10;
+            drawClosedBlank(doc, MARGIN, valueTop, maxW, 10);
           }
         } else {
-          const h = Math.max(10, doc.heightOfString(valueText, { width: maxW }));
-          y = ensurePageSpace(doc, ctx, y, h);
-          doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
-          y += h + 3;
+          doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(str(raw), MARGIN, valueTop, {
+            width: maxW,
+            lineGap: 0,
+          });
         }
-        rowTop = y;
-        return;
+        y += blockH;
+        i += 1;
+        continue;
       }
 
-      if (colIndex === 0) {
-        y = ensurePageSpace(doc, ctx, y, 12);
-        rowTop = y;
-      }
-
-      const x = MARGIN + colIndex * half;
-      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#444').text(`${col.label}:`, x, rowTop, {
-        width: half - 4,
-      });
-      if (isCnc) {
-        drawCncValueOrClosed(doc, raw, x + 1, rowTop + 7, {
-          width: half - 6,
-          rowH: 11,
-          cellY: rowTop + 6,
-        });
+      const next = cols[i + 1];
+      const nextWide = next && (next.type === 'TEXTAREA' || next.type === 'MULTI_SELECT');
+      if (next && !nextWide) {
+        const leftLabelH = measureTextHeight(doc, `${col.label}:`, colW, 5.5, 'Helvetica-Bold');
+        const rightLabelH = measureTextHeight(doc, `${next.label}:`, colW, 5.5, 'Helvetica-Bold');
+        const pairH = Math.max(leftLabelH, rightLabelH) + 14;
+        y = ensurePageSpace(doc, ctx, y, pairH);
+        const hL = drawCardField(col, row[col.key], MARGIN, y, colW);
+        const hR = drawCardField(next, row[next.key], MARGIN + colW + gap, y, colW);
+        y += Math.max(hL, hR) + 6;
+        i += 2;
       } else {
-        drawTextOrClosed(doc, raw, x + 1, rowTop + 7, {
-          width: half - 6,
-          rowH: 11,
-          cellY: rowTop + 6,
-          fontSize: 6.5,
-          closeIfEmpty: !isObservationPdfField(col.key) && !isObservationPdfField(col.label),
-        });
+        const labelH = measureTextHeight(doc, `${col.label}:`, maxW, 5.5, 'Helvetica-Bold');
+        y = ensurePageSpace(doc, ctx, y, labelH + 14);
+        const h = drawCardField(col, raw, MARGIN, y, maxW);
+        y += h + 6;
+        i += 1;
       }
+    }
 
-      colIndex += 1;
-      if (colIndex >= 2) {
-        y = rowTop + 18;
-        colIndex = 0;
-      }
-    });
-
-    flushRow();
     y += 4;
   });
 
@@ -2327,7 +2336,13 @@ function renderSheetPage(
     }
   }
 
-  drawSignatures(doc, submission.operator.fullName, contentBottom(doc) - 36, {
+  // Firmas justo después del contenido (no fijar al pie: evita páginas en blanco de PDFKit)
+  const sigH = 48;
+  y += 10;
+  if (y + sigH > contentBottom(doc)) {
+    y = startSheetPage(doc, ctx, true);
+  }
+  drawSignatures(doc, submission.operator.fullName, y, {
     submittedByName: submission.submittedBy?.fullName,
     collaboratorNames: (submission.collaborators ?? []).map((c) => c.user.fullName),
   });
