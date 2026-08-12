@@ -25,8 +25,8 @@ erDiagram
   form_submissions ||--o{ submission_collaborators : invita
   users ||--o{ submission_collaborators : es_colaborador
   users ||--o{ submission_collaborators : agrega_colaborador
-  form_submissions ||--o{ submission_field_locks : bloquea_campos
-  users ||--o{ submission_field_locks : lleno_por
+  form_submissions ||--o{ submission_field_locks : ultimo_editor
+  users ||--o{ submission_field_locks : edito_campo
   form_submissions ||--o{ submission_activities : trazabilidad
   users ||--o{ submission_activities : actor
   users ||--o{ submission_activities : usuario_objetivo
@@ -180,7 +180,7 @@ Al **crear el borrador** (y de nuevo al entregar si faltara), el sistema guarda 
 
 **Regla operativa:** se puede cambiar un formato en seed/UI sin alterar documentos ya iniciados o enviados.
 
-**Excepción PDF (solo presentación):** al descargar, el PDF se **regenera** con el motor actual (filas dinámicas, cabeceras de continuación, numeración, campos vacíos con línea excepto observaciones). Eso no cambia los datos ni el esquema congelado; solo el layout del archivo. La hoja de trazabilidad/colaboración solo se incluye si el envío tiene colaboradores.
+**Excepción PDF (solo presentación):** al descargar, el PDF se **regenera** con el motor actual (filas dinámicas, cabeceras de continuación, numeración, campos vacíos con línea excepto observaciones). Eso no cambia los datos ni el esquema congelado; solo el layout del archivo. La hoja de resumen de colaboración solo se incluye si el envío tiene colaboradores. Los **movimientos** (quién editó/guardó) se ven solo en la UI para operario y admin, no en el PDF.
 
 Código de referencia: `backend/src/utils/schemaSnapshot.ts`.
 
@@ -207,7 +207,7 @@ Código de referencia: `backend/src/utils/schemaSnapshot.ts`.
 | `users` | `form_submissions` | 1:N | Quién revisó (`reviewed_by_id`) |
 | `form_submissions` | `form_submission_sheets` | 1:N | Datos JSON por hoja |
 | `form_submissions` | `submission_collaborators` | 1:N | Operarios invitados al mismo envío |
-| `form_submissions` | `submission_field_locks` | 1:N | Campo ya llenado (otros no lo editan) |
+| `form_submissions` | `submission_field_locks` | 1:N | Último editor de cada campo (trazabilidad; no bloquea edición) |
 | `form_submissions` | `submission_activities` | 1:N | Trazabilidad (crear, entregar, aprobar, etc.) |
 | `form_submissions` | `signatures` | 1:0..1 | Firma al aprobar |
 | `users` | `usage_events` | 1:N | Telemetría de usabilidad |

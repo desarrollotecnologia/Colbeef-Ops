@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import type { FormatField } from '@/types';
+import type { FieldOptions, FormatField, RepeaterColumn } from '@/types';
 import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 import FormField from './FormField';
-import CardRepeater from './CardRepeater';
+import CardRepeater, { getCardRepeaterColumns } from './CardRepeater';
 
 interface Props {
   fields: FormatField[];
@@ -13,6 +13,28 @@ interface Props {
 
 function isCardRepeater(field: FormatField) {
   return field.fieldType === 'REPEATER' && field.options?.layout === 'card_repeater';
+}
+
+/** Asegura N.A. en checklists C/NC de POES 4h (también borradores con schema viejo). */
+function withPoes4hNaOptions(options: FieldOptions): FieldOptions {
+  const columns = getCardRepeaterColumns(options).map((col): RepeaterColumn => {
+    if (col.type !== 'CHECKLIST') return col;
+    const choices = [...(col.options?.choices ?? ['C', 'NC'])];
+    if (!choices.includes('NA')) choices.push('NA');
+    return {
+      ...col,
+      options: {
+        ...col.options,
+        mode: 'cnc_na',
+        choices,
+      },
+    };
+  });
+  return {
+    ...options,
+    columns,
+    columns_def: columns,
+  };
 }
 
 export default function Format4Diario3({ fields, sheetData, onUpdate, disabled }: Props) {
@@ -30,9 +52,9 @@ export default function Format4Diario3({ fields, sheetData, onUpdate, disabled }
       )}
 
       {poes4h && isCardRepeater(poes4h) && (
-        <Section title="POES equipos — cada 4 horas" subtitle="Tablas · Sierra · Bandas · Delantales">
+        <Section title="POES equipos — cada 4 horas" subtitle="Tablas · Sierra · Bandas · Delantales · C / NC / N.A.">
           <CardRepeater
-            options={poes4h.options ?? {}}
+            options={withPoes4hNaOptions(poes4h.options ?? {})}
             value={Array.isArray(sheetData[poes4h.fieldKey]) ? (sheetData[poes4h.fieldKey] as Record<string, unknown>[]) : []}
             onChange={(v) => onUpdate(poes4h.fieldKey, v)}
             disabled={disabled}

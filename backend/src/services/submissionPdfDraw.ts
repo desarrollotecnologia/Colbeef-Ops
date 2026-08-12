@@ -358,6 +358,7 @@ export function drawActivityTrail(
     notes?: string | null;
     actor?: { fullName: string } | null;
     targetUser?: { fullName: string } | null;
+    metadata?: unknown;
   }[]
 ): number {
   if (!activities.length) return y;
@@ -377,18 +378,25 @@ export function drawActivityTrail(
     CREATED: 'Inició el formato',
     COLLABORATOR_ADDED: 'Agregó colaborador',
     COLLABORATOR_REMOVED: 'Quitó colaborador',
-    SHEET_SAVED: 'Guardó hoja',
+    SHEET_SAVED: 'Guardó / editó hoja',
     SUBMITTED: 'Entregó a revisión',
     REJECTED: 'Rechazado (devolver para ajustar)',
     APPROVED: 'Aprobado y firmado',
   };
 
   for (const a of activities) {
-    if (a.type === 'SHEET_SAVED') continue;
     bump(18);
     const when = a.createdAt.toLocaleString('es-CO', { timeZone: 'America/Bogota' });
     const actor = a.actor?.fullName ?? '—';
-    let line = `${when} · ${labels[a.type] ?? a.type} · ${actor}`;
+    const meta = (a.metadata ?? {}) as { sheetName?: string; changedCount?: number };
+    let action = labels[a.type] ?? a.type;
+    if (a.type === 'SHEET_SAVED') {
+      if (meta.sheetName) action += ` «${meta.sheetName}»`;
+      if (typeof meta.changedCount === 'number' && meta.changedCount > 0) {
+        action += ` (${meta.changedCount} cambio${meta.changedCount === 1 ? '' : 's'})`;
+      }
+    }
+    let line = `${when} · ${action} · ${actor}`;
     if (a.targetUser?.fullName) line += ` → ${a.targetUser.fullName}`;
     if (a.type === 'REJECTED' && a.notes) line += ` · Motivo: ${a.notes}`;
     doc.fontSize(7).font('Helvetica').fillColor('#444').text(line, MARGIN, y, {

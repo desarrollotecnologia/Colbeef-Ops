@@ -14,6 +14,10 @@ const COLORS: Record<string, string> = {
   Apagado: 'bg-gray-500 text-white border-gray-500',
 };
 
+const LABELS: Record<string, string> = {
+  NA: 'N.A.',
+};
+
 export default function ChoiceButtons({ choices, value, onChange, disabled, size = 'md' }: Props) {
   const pad = size === 'sm' ? 'px-3 py-1 text-xs' : 'px-5 py-2 text-sm';
 
@@ -32,7 +36,7 @@ export default function ChoiceButtons({ choices, value, onChange, disabled, size
               active ? color : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
             }`}
           >
-            {choice}
+            {LABELS[choice] ?? choice}
           </button>
         );
       })}

@@ -21,7 +21,7 @@ flowchart TB
   Abrir --> Local[Borrador en pantalla]
   Local --> Guardar[Guardar hoja]
   Guardar --> Draft[Crear envío DRAFT<br/>congela schema_snapshot]
-  Draft --> Collab[Opcional: colaboradores<br/>y bloqueo de campos]
+  Draft --> Collab[Opcional: colaboradores<br/>edición compartida]
   Collab --> Llenar[Completar hojas]
   Llenar --> Validar{¿Campos OK?}
   Validar -->|No| Llenar
@@ -72,7 +72,7 @@ flowchart TB
 
 1. El usuario inicia sesión y recibe un JWT según su rol (`OPERARIO`, `ADMIN` o `PANEL`).
 2. El **operario** solo ve los formatos asignados, llena el formulario, guarda un borrador (`DRAFT`) y lo entrega a revisión (`PENDING_REVIEW`). Al crear el borrador se congela `schema_snapshot` (compatibilidad: cambios de catálogo no alteran ese envío).
-3. Puede haber **colaboradores** en el mismo borrador; los campos ya llenados quedan bloqueados para su autor.
+3. Puede haber **colaboradores** en el mismo borrador; dueño y colaboradores pueden editar (y sobrescribir) los mismos campos.
 4. El **admin** revisa pendientes: aprueba (crea firma) o rechaza (el operario/colaboradores corrigen y reenvían).
 5. El admin también gestiona usuarios y permisos de formatos, y puede buscar envíos.
 6. El rol **PANEL** solo accede al dashboard de usabilidad.

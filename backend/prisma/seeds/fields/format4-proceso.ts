@@ -67,10 +67,10 @@ const PRODUCTO_ETIQUETA = (
 
 const POES_4H_COLS: FieldDef[] = [
   { fieldKey: 'hora', label: 'Hora — POES cada 4 horas', fieldType: 'TIME' as const, sortOrder: 0, manualOnly: true, required: true },
-  { fieldKey: 'tablas', label: 'Tablas (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 1, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
-  { fieldKey: 'sierra', label: 'Sierra sin fin (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 2, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
-  { fieldKey: 'bandas', label: 'Bandas 1,2 y recortes (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 3, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
-  { fieldKey: 'delantales', label: 'Delantales plásticos (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 4, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+  { fieldKey: 'tablas', label: 'Tablas (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 1, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
+  { fieldKey: 'sierra', label: 'Sierra sin fin (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 2, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
+  { fieldKey: 'bandas', label: 'Bandas 1,2 y recortes (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 3, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
+  { fieldKey: 'delantales', label: 'Delantales plásticos (cada 4 h)', fieldType: 'CHECKLIST' as const, sortOrder: 4, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
   { fieldKey: 'correccion', label: 'Corrección POES 4h', fieldType: 'TEXTAREA' as const, sortOrder: 5, manualOnly: true, config: { requiredIf: 'nc_or_observation' } },
 ];
 

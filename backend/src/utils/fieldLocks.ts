@@ -23,8 +23,8 @@ export type FieldLockInfo = {
 };
 
 /**
- * Fusiona datos de hoja respetando locks: solo el autor puede cambiar su campo;
- * campos vacíos los puede tomar cualquier editor.
+ * Fusiona datos de hoja entre dueño y colaboradores.
+ * Cualquiera del equipo puede sobrescribir; el lock registra el último editor (trazabilidad).
  */
 export async function mergeSheetDataWithLocks(params: {
   submissionId: string;
@@ -33,69 +33,57 @@ export async function mergeSheetDataWithLocks(params: {
   existingData: Record<string, unknown>;
   incomingData: Record<string, unknown>;
 }): Promise<
-  | { ok: true; merged: Record<string, unknown> }
+  | {
+      ok: true;
+      merged: Record<string, unknown>;
+      changedFieldKeys: string[];
+    }
   | { ok: false; error: string; conflicts: { fieldKey: string; filledByName: string }[] }
 > {
   const { submissionId, sheetId, userId, existingData, incomingData } = params;
 
   const locks = await prisma.submissionFieldLock.findMany({
     where: { submissionId, sheetId },
-    include: { filledBy: { select: { id: true, fullName: true } } },
   });
   const lockByKey = new Map(locks.map((l) => [l.fieldKey, l]));
 
   const merged: Record<string, unknown> = { ...existingData };
-  const conflicts: { fieldKey: string; filledByName: string }[] = [];
+  const changedFieldKeys: string[] = [];
   const lockUpserts: { fieldKey: string; action: 'upsert' | 'delete' }[] = [];
 
   const allKeys = new Set([...Object.keys(existingData), ...Object.keys(incomingData)]);
 
   for (const key of allKeys) {
-    const incoming = incomingData[key];
-    const existing = existingData[key];
-    const lock = lockByKey.get(key);
-
-    // Cliente no envió la clave → conservar
     if (!(key in incomingData)) {
       continue;
     }
 
-    if (lock && lock.filledById !== userId) {
-      if (!valuesEqual(incoming, existing)) {
-        conflicts.push({
-          fieldKey: key,
-          filledByName: lock.filledBy.fullName,
-        });
-      }
-      continue;
-    }
+    const incoming = incomingData[key];
+    const existing = existingData[key];
+    const lock = lockByKey.get(key);
+    const changed = !valuesEqual(incoming, existing);
 
     merged[key] = incoming;
 
+    if (changed) {
+      changedFieldKeys.push(key);
+    }
+
     if (isFieldValueEmpty(incoming)) {
-      if (lock && lock.filledById === userId) {
+      if (lock) {
         lockUpserts.push({ fieldKey: key, action: 'delete' });
       }
-    } else if (!lock || lock.filledById === userId) {
+    } else if (changed || !lock || lock.filledById !== userId) {
+      // Actualiza autor al guardar valor no vacío (incluye reasignación al sobrescribir)
       lockUpserts.push({ fieldKey: key, action: 'upsert' });
     }
-  }
-
-  if (conflicts.length > 0) {
-    return {
-      ok: false,
-      error: `No puede modificar campos llenados por otros: ${conflicts
-        .map((c) => `${c.fieldKey} (${c.filledByName})`)
-        .join(', ')}`,
-      conflicts,
-    };
   }
 
   await prisma.$transaction(async (tx) => {
     for (const item of lockUpserts) {
       if (item.action === 'delete') {
         await tx.submissionFieldLock.deleteMany({
-          where: { submissionId, sheetId, fieldKey: item.fieldKey, filledById: userId },
+          where: { submissionId, sheetId, fieldKey: item.fieldKey },
         });
       } else {
         await tx.submissionFieldLock.upsert({
@@ -118,5 +106,5 @@ export async function mergeSheetDataWithLocks(params: {
     }
   });
 
-  return { ok: true, merged };
+  return { ok: true, merged, changedFieldKeys };
 }

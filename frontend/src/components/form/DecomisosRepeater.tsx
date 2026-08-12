@@ -10,7 +10,14 @@ interface Props {
   disabled?: boolean;
 }
 
-const KG_KEYS = ['hematoma_kg', 'absceso_kg', 'fibrosis_kg', 'vacuna_kg'] as const;
+const KG_KEYS = ['hematoma_kg', 'absceso_kg', 'fibrosis_kg', 'vacuna_kg', 'contaminacion_kg'] as const;
+const KG_LABELS: Record<(typeof KG_KEYS)[number], string> = {
+  hematoma_kg: 'Hematoma',
+  absceso_kg: 'Absceso',
+  fibrosis_kg: 'Fibrosis',
+  vacuna_kg: 'Residuos de vacuna',
+  contaminacion_kg: 'Contaminación',
+};
 
 function parseNum(v: unknown): number {
   const n = parseFloat(String(v ?? '').replace(',', '.'));
@@ -135,11 +142,11 @@ export default function DecomisosRepeater({ options, value, onChange, disabled }
 
   const totals = {
     unidades: sumColumn(rows, 'unidades'),
-    hematoma_kg: sumColumn(rows, 'hematoma_kg'),
-    absceso_kg: sumColumn(rows, 'absceso_kg'),
-    fibrosis_kg: sumColumn(rows, 'fibrosis_kg'),
-    vacuna_kg: sumColumn(rows, 'vacuna_kg'),
     peso_total: KG_KEYS.reduce((acc, key) => acc + sumColumn(rows, key), 0),
+    ...Object.fromEntries(KG_KEYS.map((key) => [key, sumColumn(rows, key)])) as Record<
+      (typeof KG_KEYS)[number],
+      number
+    >,
   };
 
   const th = 'px-1 py-1.5 text-center text-[9px] font-bold uppercase border border-gray-800 leading-tight';
@@ -149,7 +156,7 @@ export default function DecomisosRepeater({ options, value, onChange, disabled }
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[780px] border-collapse">
+        <table className="w-full text-sm min-w-[900px] border-collapse">
           <thead>
             <tr className="bg-[#d9ead3]">
               <th className={`${th} w-8`} rowSpan={2}>
@@ -161,7 +168,7 @@ export default function DecomisosRepeater({ options, value, onChange, disabled }
               <th className={`${th} w-20`} rowSpan={2}>
                 Unidades decomisadas
               </th>
-              <th className={th} colSpan={4}>
+              <th className={th} colSpan={KG_KEYS.length}>
                 Causal de decomiso / kg
               </th>
               <th className={th} colSpan={2}>
@@ -170,10 +177,11 @@ export default function DecomisosRepeater({ options, value, onChange, disabled }
               {showActions && <th className={`${th} w-8`} rowSpan={2} />}
             </tr>
             <tr className="bg-[#e8f5e3]">
-              <th className={th}>Hematoma</th>
-              <th className={th}>Absceso</th>
-              <th className={th}>Fibrosis</th>
-              <th className={th}>Residuos de vacuna</th>
+              {KG_KEYS.map((key) => (
+                <th key={key} className={th}>
+                  {KG_LABELS[key]}
+                </th>
+              ))}
               <th className={`${th} w-14`}>Parcial</th>
               <th className={`${th} w-14`}>Total</th>
             </tr>
@@ -252,10 +260,11 @@ export default function DecomisosRepeater({ options, value, onChange, disabled }
                 Totales
               </td>
               <td className={`${td} text-center`}>{totals.unidades || '0'}</td>
-              <td className={`${td} text-center`}>{totals.hematoma_kg || '0'}</td>
-              <td className={`${td} text-center`}>{totals.absceso_kg || '0'}</td>
-              <td className={`${td} text-center`}>{totals.fibrosis_kg || '0'}</td>
-              <td className={`${td} text-center`}>{totals.vacuna_kg || '0'}</td>
+              {KG_KEYS.map((key) => (
+                <td key={key} className={`${td} text-center`}>
+                  {totals[key] || '0'}
+                </td>
+              ))}
               <td className={`${td} text-center text-[9px] leading-tight`} colSpan={2}>
                 Peso total de decomisos
                 <div className="text-sm normal-case mt-0.5 text-primary-800">{totals.peso_total.toFixed(2)} kg</div>

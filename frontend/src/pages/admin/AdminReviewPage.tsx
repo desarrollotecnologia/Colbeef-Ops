@@ -244,7 +244,9 @@ export default function AdminReviewPage() {
         </div>
       )}
 
-      <ActivityTimeline activities={submission.activities} compact />
+      {(user?.role === 'ADMIN' || user?.role === 'OPERARIO') && (
+        <ActivityTimeline activities={submission.activities} compact includeSaves />
+      )}
 
       <FormatSubmissionViewer
 

@@ -15,7 +15,7 @@ import { formatWorkDateShort, getWorkDateString, toWorkDateString } from '@/lib/
 import { downloadSubmissionPdf } from '@/lib/downloadPdf';
 import { getIncompleteFields, isSheetComplete } from '@/lib/sheetCompletion';
 import { ENFORCE_REQUIRED_FIELDS } from '@/lib/formUtils';
-import type { Format, FormSubmission, FormatField, MissingField, SubmissionFieldLock } from '@/types';
+import type { Format, FormSubmission, FormatField, MissingField } from '@/types';
 
 /** Borrador solo en memoria: no existe en BD hasta "Guardar hoja". */
 function buildLocalDraft(format: Format, workDate: string): FormSubmission {
@@ -49,7 +49,6 @@ export default function FillFormPage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfFullLoading, setPdfFullLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [fieldLocks, setFieldLocks] = useState<SubmissionFieldLock[]>([]);
 
   const getEffectiveWorkDate = useCallback((sub: FormSubmission | null, editable: boolean) => {
     if (editable || !sub?.workDate) return getWorkDateString();
@@ -112,7 +111,6 @@ export default function FillFormPage() {
 
         setSubmission(data);
         persistedIdRef.current = data.id;
-        setFieldLocks(data.fieldLocks ?? []);
 
         const editable = data.status === 'DRAFT' || data.status === 'REJECTED';
         const dateStr = getEffectiveWorkDate(data, editable);
@@ -191,18 +189,8 @@ export default function FillFormPage() {
     user?.fullName ||
     '';
 
-  const locksForCurrentSheet = fieldLocks.filter((l) => l.sheetId === currentSheet?.id);
-  const lockedByOthers = locksForCurrentSheet.filter((l) => l.filledById !== user?.id);
-
   const updateField = (fieldKey: string, value: unknown) => {
     if (!currentSheet || !canEdit) return;
-    const lock = locksForCurrentSheet.find((l) => l.fieldKey === fieldKey);
-    if (lock && lock.filledById !== user?.id) {
-      setSaveMessage(
-        `El campo "${fieldKey}" lo llenó ${lock.filledBy.fullName} y no puede modificarlo.`
-      );
-      return;
-    }
     setFormData((prev) => {
       let updated = { ...prev[currentSheet.id], [fieldKey]: value };
       updated = recalcDependentFields(
@@ -248,24 +236,13 @@ export default function FillFormPage() {
   const saveSheet = async (sheetId: string, sheetFields: FormatField[]) => {
     const sub = await ensurePersistedSubmission();
     const existing = formData[sheetId] || {};
-    let dataToSave = initSheetData(sheetFields, existing, effectiveWorkDate);
-    // No enviar cambios en campos bloqueados por otros (p. ej. auto-fill CURRENT_USER)
-    for (const lock of fieldLocks.filter((l) => l.sheetId === sheetId && l.filledById !== user?.id)) {
-      dataToSave[lock.fieldKey] = existing[lock.fieldKey];
-    }
+    const dataToSave = initSheetData(sheetFields, existing, effectiveWorkDate);
     try {
       const { data } = await api.put(`/submissions/${sub.id}/sheets/${sheetId}`, { data: dataToSave });
       setFormData((prev) => ({ ...prev, [sheetId]: (data.data as Record<string, unknown>) || dataToSave }));
-      if (Array.isArray(data.fieldLocks)) {
-        setFieldLocks((prev) => {
-          const others = prev.filter((l) => l.sheetId !== sheetId);
-          return [...others, ...data.fieldLocks];
-        });
-      } else {
-        const { data: fresh } = await api.get<FormSubmission>(`/submissions/${sub.id}`);
-        setFieldLocks(fresh.fieldLocks ?? []);
-        setSubmission((prev) => (prev ? { ...prev, ...fresh, format: fresh.format ?? prev.format } : fresh));
-      }
+      // Refrescar actividades para trazabilidad en UI (quién guardó/editó)
+      const { data: fresh } = await api.get<FormSubmission>(`/submissions/${sub.id}`);
+      setSubmission((prev) => (prev ? { ...prev, ...fresh, format: fresh.format ?? prev.format } : fresh));
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
@@ -406,20 +383,12 @@ export default function FillFormPage() {
           }
           onUpdated={(updated) => {
             setSubmission(updated);
-            setFieldLocks(updated.fieldLocks ?? []);
           }}
         />
       )}
 
-      {isPersisted && <ActivityTimeline activities={submission.activities} compact />}
-
-      {canEdit && lockedByOthers.length > 0 && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
-          <strong>Campos de otros colaboradores (solo lectura):</strong>{' '}
-          {lockedByOthers
-            .map((l) => `${l.fieldKey} (${l.filledBy.fullName})`)
-            .join(', ')}
-        </div>
+      {isPersisted && (user?.role === 'OPERARIO' || user?.role === 'ADMIN') && (
+        <ActivityTimeline activities={submission.activities} compact includeSaves />
       )}
 
       {missingFields.length > 0 && (

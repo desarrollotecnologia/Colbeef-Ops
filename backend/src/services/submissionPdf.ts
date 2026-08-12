@@ -8,7 +8,6 @@ import {
   drawSectionBanner,
   drawSheetBoundaryEnd,
   drawSignatures,
-  drawActivityTrail,
   drawTextOrClosed,
   drawClosedBlank,
   ensurePageSpace,
@@ -28,7 +27,16 @@ type FieldOptions = {
   layout?: string;
   tableType?: string;
   mode?: string;
-  items?: { key: string; label: string; section?: string; naTemp?: boolean; naPresion?: boolean; slotCount?: number }[];
+  revCncNa?: boolean;
+  items?: {
+    key: string;
+    label: string;
+    section?: string;
+    fr?: string;
+    naTemp?: boolean;
+    naPresion?: boolean;
+    slotCount?: number;
+  }[];
   columns?: string[] | { key: string; label: string }[];
   columnDefs?: { key: string; mode?: string }[];
   cavaColumns?: string[];
@@ -54,6 +62,7 @@ type ChecklistItemData = {
   final_cnc?: string;
   observation?: string;
   corrective?: string;
+  responsible?: string;
   observations?: Record<string, string>;
   correctives?: Record<string, string>;
   platforms?: Record<string, string>;
@@ -86,6 +95,7 @@ export type SubmissionForPdf = FormSubmission & {
     notes?: string | null;
     actor?: Pick<User, 'fullName'> | null;
     targetUser?: Pick<User, 'fullName'> | null;
+    metadata?: unknown;
   }[];
   sheets: { sheetId: string; data: unknown }[];
 };
@@ -170,8 +180,33 @@ function drawTableRowBorder(doc: PdfDoc, y: number, h: number, fill?: string) {
 function normalizeCnc(value: unknown): string {
   const s = String(value ?? '')
     .trim()
-    .toUpperCase();
-  return s === 'C' || s === 'NC' || s === 'NA' ? s : '';
+    .toUpperCase()
+    .replace(/\./g, '');
+  if (s === 'C' || s === 'NC' || s === 'NA') return s;
+  return '';
+}
+
+/** Etiqueta legible en PDF (NA → N.A.). */
+function formatCncPdfLabel(cnc: string): string {
+  if (cnc === 'NA') return 'N.A.';
+  return cnc;
+}
+
+function drawCncValueOrClosed(
+  doc: PdfDoc,
+  raw: unknown,
+  x: number,
+  textY: number,
+  opts: { width: number; rowH?: number; cellY?: number }
+): void {
+  const cnc = normalizeCnc(raw);
+  if (!cnc) {
+    drawClosedBlank(doc, x, opts.cellY ?? Math.max(0, textY - 1), opts.width, opts.rowH ?? 11);
+    return;
+  }
+  doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(formatCncPdfLabel(cnc), x, textY, {
+    width: opts.width,
+  });
 }
 
 function fieldBannerTitle(field: FormatField): { title: string; subtitle?: string } {
@@ -239,10 +274,18 @@ function checklistColumnFlags(opts: FieldOptions) {
     Array.isArray(raw) && raw.length > 0 && typeof raw[0] === 'string'
       ? (raw as string[])
       : ['cnc', 'observation', 'corrective'];
+  const showRev = cols.includes('rev_cnc');
+  const showFinal = cols.includes('final_cnc');
+  const showSimpleCnc = cols.includes('cnc') || (!showRev && !showFinal && !cols.includes('platforms'));
   return {
-    showCnc: cols.includes('cnc'),
+    cols,
+    showFr: cols.includes('fr'),
+    showCnc: showSimpleCnc && !showRev && !showFinal,
+    showRev,
+    showFinal,
     showObs: cols.includes('observation'),
     showCorr: cols.includes('corrective'),
+    showResponsible: cols.includes('responsible'),
   };
 }
 
@@ -262,34 +305,71 @@ function renderSimpleChecklist(
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
   const items = opts.items ?? [];
-  const { showCnc, showObs, showCorr } = checklistColumnFlags(opts);
-  const showNa = hasNa(opts);
+  const flags = checklistColumnFlags(opts);
+  const { showCnc, showRev, showFinal, showObs, showCorr, showFr, showResponsible } = flags;
+  const showNaSimple = hasNa(opts);
+  const showNaRev = Boolean(opts.revCncNa) || opts.mode === 'cnc_na' || showNaSimple;
+  const showNaFinal = opts.mode === 'cnc_na';
   const tableW = pageWidth(doc) - MARGIN * 2;
   let y = startY;
 
   y = drawSectionBanner(doc, y, field.label, field.helpText ?? 'C / NC — marque con X', true);
 
-  const cW = 16;
-  const cCols = showNa ? 3 : 2;
-  const obsW = showObs ? 88 : 0;
-  const corrW = showCorr ? 76 : 0;
-  const cncBlockW = showCnc ? cW * cCols : 0;
-  const labelW = Math.max(100, tableW - cncBlockW - obsW - corrW - 6);
-  const headerH = 12;
+  const cW = showRev || showFinal ? 12 : 16;
+  const frW = showFr ? 18 : 0;
+  const revCols = showRev ? (showNaRev ? 3 : 2) : 0;
+  const finalCols = showFinal ? (showNaFinal ? 3 : 2) : 0;
+  const simpleCols = showCnc ? (showNaSimple ? 3 : 2) : 0;
+  const obsW = showObs ? (showRev || showFinal ? 70 : 88) : 0;
+  const corrW = showCorr ? (showRev || showFinal ? 60 : 76) : 0;
+  const respW = showResponsible ? 52 : 0;
+  const cncBlockW = cW * (simpleCols + revCols + finalCols);
+  const labelW = Math.max(72, tableW - frW - cncBlockW - obsW - corrW - respW - 6);
+  const headerH = showRev || showFinal ? 18 : 12;
 
   const drawChecklistHeader = (atY: number): number => {
-    doc.fontSize(6).font('Helvetica-Bold').fillColor('#333');
+    doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
     drawTableRowBorder(doc, atY, headerH, '#f3f4f6');
-    doc.text('Equipo / superficie', MARGIN + 3, atY + 2, { width: labelW });
-    let hx = MARGIN + labelW;
+    let hx = MARGIN;
+    doc.text('Equipo / superficie', hx + 3, atY + (headerH > 12 ? 6 : 2), { width: labelW });
+    hx += labelW;
+    if (showFr) {
+      doc.text('FR', hx, atY + (headerH > 12 ? 6 : 2), { width: frW, align: 'center' });
+      hx += frW;
+    }
     if (showCnc) {
       doc.text('C', hx, atY + 2, { width: cW, align: 'center' });
       doc.text('NC', hx + cW, atY + 2, { width: cW, align: 'center' });
-      if (showNa) doc.text('NA', hx + cW * 2, atY + 2, { width: cW, align: 'center' });
-      hx += cW * cCols;
+      if (showNaSimple) doc.text('NA', hx + cW * 2, atY + 2, { width: cW, align: 'center' });
+      hx += cW * simpleCols;
     }
-    if (showObs) doc.text('Observaciones', hx, atY + 2, { width: obsW });
-    if (showCorr) doc.text('Acción correctiva', hx + obsW, atY + 2, { width: corrW });
+    if (showRev) {
+      const revW = cW * revCols;
+      doc.text('REV.', hx, atY + 1, { width: revW, align: 'center' });
+      doc.text('C', hx, atY + 9, { width: cW, align: 'center' });
+      doc.text('NC', hx + cW, atY + 9, { width: cW, align: 'center' });
+      if (showNaRev) doc.text('NA', hx + cW * 2, atY + 9, { width: cW, align: 'center' });
+      hx += revW;
+    }
+    if (showObs) {
+      doc.text('Obs.', hx, atY + (headerH > 12 ? 6 : 2), { width: obsW });
+      hx += obsW;
+    }
+    if (showCorr) {
+      doc.text('AC', hx, atY + (headerH > 12 ? 6 : 2), { width: corrW });
+      hx += corrW;
+    }
+    if (showFinal) {
+      const finW = cW * finalCols;
+      doc.text('VERIF.', hx, atY + 1, { width: finW, align: 'center' });
+      doc.text('C', hx, atY + 9, { width: cW, align: 'center' });
+      doc.text('NC', hx + cW, atY + 9, { width: cW, align: 'center' });
+      if (showNaFinal) doc.text('NA', hx + cW * 2, atY + 9, { width: cW, align: 'center' });
+      hx += finW;
+    }
+    if (showResponsible) {
+      doc.text('Resp.', hx, atY + (headerH > 12 ? 6 : 2), { width: respW });
+    }
     return atY + headerH;
   };
 
@@ -312,13 +392,19 @@ function renderSimpleChecklist(
     }
 
     const data = value[item.key] ?? {};
-    const cnc = readItemCnc(data);
     const obsText = showObs ? readScopedText(data, undefined, 'observation') : '';
     const corrText = showCorr ? readScopedText(data, undefined, 'corrective') : '';
+    const respText = showResponsible ? str(data.responsible) : '';
     const labelH = measureTextHeight(doc, item.label, labelW - 4, 5.5);
     const obsH = showObs && !isBlankPdfValue(obsText) ? measureTextHeight(doc, obsText, obsW - 2, 5.5) : showObs ? 7 : 0;
     const corrH = showCorr && !isBlankPdfValue(corrText) ? measureTextHeight(doc, corrText, corrW - 2, 5.5) : showCorr ? 7 : 0;
-    const rowH = Math.min(64, Math.max(11, Math.max(labelH, obsH, corrH) + 4));
+    const respH =
+      showResponsible && !isBlankPdfValue(data.responsible)
+        ? measureTextHeight(doc, respText, respW - 2, 5.5)
+        : showResponsible
+          ? 7
+          : 0;
+    const rowH = Math.min(64, Math.max(11, Math.max(labelH, obsH, corrH, respH) + 4));
 
     if (y + rowH > contentBottom(doc)) {
       y = startSheetPage(doc, ctx, true);
@@ -331,14 +417,32 @@ function renderSimpleChecklist(
       lineGap: 0,
     });
     let x = MARGIN + labelW;
+    if (showFr) {
+      doc.fontSize(5).font('Helvetica').fillColor('#111').text(item.fr ?? '—', x, y + 2, {
+        width: frW,
+        align: 'center',
+      });
+      x += frW;
+    }
     if (showCnc) {
-      x = drawCncCells(doc, x, y + 1, cnc, cW, showNa);
+      x = drawCncCells(doc, x, y + 1, readItemCnc(data), cW, showNaSimple);
+    }
+    if (showRev) {
+      x = drawCncCells(doc, x, y + 1, normalizeCnc(data.rev_cnc), cW, showNaRev);
     }
     if (showObs) {
       drawTextOrClosed(doc, obsText, x, y + 2, { width: obsW - 2, rowH, cellY: y, closeIfEmpty: false });
+      x += obsW;
     }
     if (showCorr) {
-      drawTextOrClosed(doc, corrText, x + (showObs ? obsW : 0), y + 2, { width: corrW - 2, rowH, cellY: y });
+      drawTextOrClosed(doc, corrText, x, y + 2, { width: corrW - 2, rowH, cellY: y });
+      x += corrW;
+    }
+    if (showFinal) {
+      x = drawCncCells(doc, x, y + 1, normalizeCnc(data.final_cnc), cW, showNaFinal);
+    }
+    if (showResponsible) {
+      drawTextOrClosed(doc, data.responsible, x, y + 2, { width: respW - 2, rowH, cellY: y });
     }
     y += rowH;
   }
@@ -1022,7 +1126,7 @@ function renderCardRepeater(
       const isWide = col.type === 'TEXTAREA' || col.type === 'MULTI_SELECT';
       const isCnc = col.type === 'CHECKLIST';
       const raw = row[col.key];
-      const valueText = isCnc ? normalizeCnc(raw) : isBlankPdfValue(raw) ? '' : str(raw);
+      const valueText = isCnc ? formatCncPdfLabel(normalizeCnc(raw)) : isBlankPdfValue(raw) ? '' : str(raw);
 
       if (isWide) {
         flushRow();
@@ -1032,8 +1136,13 @@ function renderCardRepeater(
         });
         y += 8;
         if (isCnc) {
-          doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
-          y += 12;
+          if (!normalizeCnc(raw)) {
+            drawClosedBlank(doc, MARGIN, y, maxW, 12);
+            y += 16;
+          } else {
+            doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, MARGIN, y, { width: maxW });
+            y += 12;
+          }
         } else if (isBlankPdfValue(raw)) {
           if (!isObservationPdfField(col.key) && !isObservationPdfField(col.label)) {
             drawClosedBlank(doc, MARGIN, y, maxW, 12);
@@ -1061,8 +1170,10 @@ function renderCardRepeater(
         width: half - 4,
       });
       if (isCnc) {
-        doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(valueText, x + 1, rowTop + 7, {
+        drawCncValueOrClosed(doc, raw, x + 1, rowTop + 7, {
           width: half - 6,
+          rowH: 11,
+          cellY: rowTop + 6,
         });
       } else {
         drawTextOrClosed(doc, raw, x + 1, rowTop + 7, {
@@ -1435,22 +1546,26 @@ function renderRepeaterTable(
         return;
       }
       if (col.key === 'decomiso_parcial') {
-        const mark = String(row[col.key] ?? '') === 'Parcial' ? 'X' : '';
-        if (mark) {
-          doc.fontSize(fontSize).font('Helvetica').fillColor('#111').text(mark, x, y + padY, {
+        const marked = String(row[col.key] ?? '') === 'Parcial';
+        if (marked) {
+          doc.fontSize(fontSize).font('Helvetica-Bold').fillColor('#111').text('X', x, y + padY, {
             width: cellW,
             align: 'center',
           });
+        } else {
+          drawClosedBlank(doc, x, y, cellW, rowH);
         }
         return;
       }
       if (col.key === 'decomiso_total') {
-        const mark = String(row[col.key] ?? '') === 'Total' ? 'X' : '';
-        if (mark) {
-          doc.fontSize(fontSize).font('Helvetica').fillColor('#111').text(mark, x, y + padY, {
+        const marked = String(row[col.key] ?? '') === 'Total';
+        if (marked) {
+          doc.fontSize(fontSize).font('Helvetica-Bold').fillColor('#111').text('X', x, y + padY, {
             width: cellW,
             align: 'center',
           });
+        } else {
+          drawClosedBlank(doc, x, y, cellW, rowH);
         }
         return;
       }
@@ -2173,8 +2288,7 @@ function drawCollaborationSummaryPage(doc: PDFKit.PDFDocument, submission: Submi
     doc.text(`Revisó: ${submission.reviewedBy.fullName}`, MARGIN, y);
     y += 14;
   }
-  y += 8;
-  y = drawActivityTrail(doc, y, submission.activities ?? []);
+  // Movimientos/trazabilidad de edición: solo en UI (operario/admin), no en PDF
   return y;
 }
 

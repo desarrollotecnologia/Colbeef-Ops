@@ -604,7 +604,12 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
     submissionId,
     type: SubmissionActivityType.SHEET_SAVED,
     actorId: req.user!.userId,
-    metadata: { sheetId, sheetName: updated.sheet.name },
+    metadata: {
+      sheetId,
+      sheetName: updated.sheet.name,
+      changedFieldKeys: mergeResult.changedFieldKeys,
+      changedCount: mergeResult.changedFieldKeys.length,
+    },
   });
 
   logUsageEvent({

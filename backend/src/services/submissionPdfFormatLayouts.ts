@@ -23,10 +23,6 @@ type FieldOptions = {
   columns_def?: { key: string; label: string }[];
 };
 
-function markCell(value: unknown, expected: string): string {
-  return String(value ?? '') === expected ? 'X' : '';
-}
-
 function drawFieldGrid(
   doc: PdfDoc,
   y: number,
@@ -183,20 +179,24 @@ function drawRepeaterTable(
     let cx = MARGIN;
     columns.forEach((col, i) => {
       if (col.key === 'decomiso_parcial') {
-        const mark = markCell(row[col.key], 'Parcial');
-        if (mark) {
-          doc.fontSize(compact ? 6 : 7).font('Helvetica').fillColor('#111').text(mark, cx + 2, cy + padY, {
+        const marked = String(row[col.key] ?? '') === 'Parcial';
+        if (marked) {
+          doc.fontSize(compact ? 6 : 7).font('Helvetica-Bold').fillColor('#111').text('X', cx + 2, cy + padY, {
             width: colWidths[i] - 4,
             align: 'center',
           });
+        } else {
+          drawClosedBlank(doc, cx + 2, cy, colWidths[i] - 4, rowH);
         }
       } else if (col.key === 'decomiso_total') {
-        const mark = markCell(row[col.key], 'Total');
-        if (mark) {
-          doc.fontSize(compact ? 6 : 7).font('Helvetica').fillColor('#111').text(mark, cx + 2, cy + padY, {
+        const marked = String(row[col.key] ?? '') === 'Total';
+        if (marked) {
+          doc.fontSize(compact ? 6 : 7).font('Helvetica-Bold').fillColor('#111').text('X', cx + 2, cy + padY, {
             width: colWidths[i] - 4,
             align: 'center',
           });
+        } else {
+          drawClosedBlank(doc, cx + 2, cy, colWidths[i] - 4, rowH);
         }
       } else {
         drawTextOrClosed(doc, row[col.key], cx + 2, cy + padY, {
@@ -284,45 +284,82 @@ function drawChecklistTwoColumn(
   return Math.max(yLeft, yRight) + 4;
 }
 
+const DECOMISO_KG_KEYS = [
+  'hematoma_kg',
+  'absceso_kg',
+  'fibrosis_kg',
+  'vacuna_kg',
+  'contaminacion_kg',
+] as const;
+
+type DecomisoCol = { key: string; label: string; width: number };
+
+function decomisosTableCols(): DecomisoCol[] {
+  return [
+    { key: '_idx', label: '#', width: 0.04 },
+    { key: 'nombre_corte', label: 'Nombre del corte', width: 0.23 },
+    { key: 'unidades', label: 'Unid.', width: 0.07 },
+    { key: 'hematoma_kg', label: 'Hematoma', width: 0.09 },
+    { key: 'absceso_kg', label: 'Absceso', width: 0.09 },
+    { key: 'fibrosis_kg', label: 'Fibrosis', width: 0.09 },
+    { key: 'vacuna_kg', label: 'Vacuna', width: 0.09 },
+    { key: 'contaminacion_kg', label: 'Contaminación', width: 0.12 },
+    { key: 'decomiso_parcial', label: 'Parcial', width: 0.09 },
+    { key: 'decomiso_total', label: 'Total', width: 0.09 },
+  ];
+}
+
+function drawDecomisoTipoMark(
+  doc: PdfDoc,
+  x: number,
+  cellY: number,
+  width: number,
+  rowH: number,
+  marked: boolean
+): void {
+  if (marked) {
+    doc.fontSize(6).font('Helvetica-Bold').fillColor('#111').text('X', x, cellY + rowH / 2 - 3.5, {
+      width,
+      align: 'center',
+    });
+    return;
+  }
+  drawClosedBlank(doc, x, cellY, width, rowH);
+}
+
+function drawDecomisosTableHeader(doc: PdfDoc, y: number, cols: DecomisoCol[], widths: number[], tableW: number): number {
+  const headerH = 20;
+  doc.rect(MARGIN, y, tableW, headerH).fill('#d9ead3').strokeColor('#888').lineWidth(0.4).stroke();
+  doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
+
+  let x = MARGIN;
+  for (let i = 0; i < 3; i++) {
+    doc.text(cols[i].label, x + 1, y + 7, { width: widths[i] - 2, align: 'center' });
+    x += widths[i];
+  }
+
+  const causalStart = 3;
+  const causalEnd = 3 + DECOMISO_KG_KEYS.length;
+  const causalW = widths.slice(causalStart, causalEnd).reduce((a, b) => a + b, 0);
+  doc.text('CAUSAL DE DECOMISO / KG', x + 1, y + 2, { width: causalW - 2, align: 'center' });
+  x += causalW;
+
+  const tipoW = widths[causalEnd] + widths[causalEnd + 1];
+  doc.text('TIPO DE DECOMISO', x + 1, y + 2, { width: tipoW - 2, align: 'center' });
+
+  x = MARGIN + widths[0] + widths[1] + widths[2];
+  for (let i = causalStart; i < cols.length; i++) {
+    doc.text(cols[i].label, x + 1, y + 11, { width: widths[i] - 2, align: 'center' });
+    x += widths[i];
+  }
+  return y + headerH;
+}
+
 function drawDecomisosTable(doc: PdfDoc, y: number, rows: Record<string, unknown>[]): number {
   const w = pageWidth(doc) - MARGIN * 2;
-  const cols = [
-    { key: '_idx', label: '#', width: 0.05 },
-    { key: 'nombre_corte', label: 'Nombre del corte', width: 0.2 },
-    { key: 'unidades', label: 'Unid.', width: 0.08 },
-    { key: 'hematoma_kg', label: 'Hematoma', width: 0.11 },
-    { key: 'absceso_kg', label: 'Absceso', width: 0.1 },
-    { key: 'fibrosis_kg', label: 'Fibrosis', width: 0.1 },
-    { key: 'vacuna_kg', label: 'Vacuna', width: 0.12 },
-    { key: 'decomiso_parcial', label: 'Parcial', width: 0.12 },
-    { key: 'decomiso_total', label: 'Total', width: 0.12 },
-  ];
+  const cols = decomisosTableCols();
   const widths = cols.map((c) => c.width * w);
-  const headerH = 18;
-  let cy = y;
-
-  doc.rect(MARGIN, cy, w, headerH).fill('#d9ead3').strokeColor('#888').lineWidth(0.4).stroke();
-  doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
-  // Fila 1: bandas
-  let x = MARGIN;
-  // #, corte, unid — labels in top
-  for (let i = 0; i < 3; i++) {
-    doc.text(cols[i].label, x + 1, cy + 5, { width: widths[i] - 2, align: 'center' });
-    x += widths[i];
-  }
-  const causalW = widths[3] + widths[4] + widths[5] + widths[6];
-  doc.text('CAUSAL DE DECOMISO / KG', x + 1, cy + 1, { width: causalW - 2, align: 'center' });
-  x += causalW;
-  const tipoW = widths[7] + widths[8];
-  doc.text('TIPO DE DECOMISO', x + 1, cy + 1, { width: tipoW - 2, align: 'center' });
-
-  // Fila 2 sublabels for causal + tipo
-  x = MARGIN + widths[0] + widths[1] + widths[2];
-  for (let i = 3; i < cols.length; i++) {
-    doc.text(cols[i].label, x + 1, cy + 10, { width: widths[i] - 2, align: 'center' });
-    x += widths[i];
-  }
-  cy += headerH;
+  let cy = drawDecomisosTableHeader(doc, y, cols, widths, w);
 
   const dataRows = rows.length > 0 ? rows : [{}];
   dataRows.forEach((row, ri) => {
@@ -336,59 +373,34 @@ function drawDecomisosTable(doc: PdfDoc, y: number, rows: Record<string, unknown
         Math.max(7, doc.heightOfString(str(row[col.key]), { width: Math.max(8, widths[i] - 2), lineGap: 0 }))
       );
     });
-    const dynRowH = Math.min(64, Math.max(10, contentH + 4));
+    const dynRowH = Math.min(64, Math.max(11, contentH + 4));
 
     if (cy + dynRowH > contentBottom(doc)) {
       doc.addPage({ size: 'A4', layout: 'portrait', margin: MARGIN });
-      cy = MARGIN;
-      doc.rect(MARGIN, cy, w, headerH).fill('#d9ead3').strokeColor('#888').lineWidth(0.4).stroke();
-      doc.fontSize(5).font('Helvetica-Bold').fillColor('#333');
-      let hx = MARGIN;
-      for (let i = 0; i < 3; i++) {
-        doc.text(cols[i].label, hx + 1, cy + 5, { width: widths[i] - 2, align: 'center' });
-        hx += widths[i];
-      }
-      const causalW2 = widths[3] + widths[4] + widths[5] + widths[6];
-      doc.text('CAUSAL DE DECOMISO / KG', hx + 1, cy + 1, { width: causalW2 - 2, align: 'center' });
-      hx += causalW2;
-      const tipoW2 = widths[7] + widths[8];
-      doc.text('TIPO DE DECOMISO', hx + 1, cy + 1, { width: tipoW2 - 2, align: 'center' });
-      hx = MARGIN + widths[0] + widths[1] + widths[2];
-      for (let i = 3; i < cols.length; i++) {
-        doc.text(cols[i].label, hx + 1, cy + 10, { width: widths[i] - 2, align: 'center' });
-        hx += widths[i];
-      }
-      cy += headerH;
+      cy = drawDecomisosTableHeader(doc, MARGIN, cols, widths, w);
     }
 
     if (ri % 2 === 1) doc.rect(MARGIN, cy, w, dynRowH).fill('#f9fafb');
     doc.rect(MARGIN, cy, w, dynRowH).strokeColor('#888').lineWidth(0.4).stroke();
+
+    const isParcial = String(row.decomiso_parcial ?? '') === 'Parcial';
+    const isTotal = String(row.decomiso_total ?? '') === 'Total';
+
     let cx = MARGIN;
     cols.forEach((col, i) => {
+      const cellW = widths[i] - 2;
       if (col.key === '_idx') {
         doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#111').text(String(ri + 1), cx + 1, cy + 2, {
-          width: widths[i] - 2,
+          width: cellW,
           align: 'center',
         });
       } else if (col.key === 'decomiso_parcial') {
-        const mark = String(row[col.key] ?? '') === 'Parcial' ? 'X' : '';
-        if (mark) {
-          doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(mark, cx + 1, cy + 2, {
-            width: widths[i] - 2,
-            align: 'center',
-          });
-        }
+        drawDecomisoTipoMark(doc, cx + 1, cy, cellW, dynRowH, isParcial);
       } else if (col.key === 'decomiso_total') {
-        const mark = String(row[col.key] ?? '') === 'Total' ? 'X' : '';
-        if (mark) {
-          doc.fontSize(5.5).font('Helvetica').fillColor('#111').text(mark, cx + 1, cy + 2, {
-            width: widths[i] - 2,
-            align: 'center',
-          });
-        }
+        drawDecomisoTipoMark(doc, cx + 1, cy, cellW, dynRowH, isTotal);
       } else {
         drawTextOrClosed(doc, row[col.key], cx + 1, cy + 2, {
-          width: widths[i] - 2,
+          width: cellW,
           rowH: dynRowH,
           cellY: cy,
           align: col.key === 'nombre_corte' ? 'left' : 'center',
@@ -404,20 +416,17 @@ function drawDecomisosTable(doc: PdfDoc, y: number, rows: Record<string, unknown
 }
 
 function decomisoTotals(rows: Record<string, unknown>[]) {
-  const kgKeys = ['hematoma_kg', 'absceso_kg', 'fibrosis_kg', 'vacuna_kg'] as const;
   const parseNum = (v: unknown) => {
     const n = parseFloat(String(v ?? '').replace(',', '.'));
     return Number.isFinite(n) ? n : 0;
   };
   const totals: Record<string, number> = {
     unidades: rows.reduce((acc, row) => acc + parseNum(row.unidades), 0),
-    parcial: rows.filter((row) => String(row.decomiso_parcial ?? '') === 'Parcial').length,
-    total: rows.filter((row) => String(row.decomiso_total ?? '') === 'Total').length,
   };
-  for (const key of kgKeys) {
+  for (const key of DECOMISO_KG_KEYS) {
     totals[key] = rows.reduce((acc, row) => acc + parseNum(row[key]), 0);
   }
-  const pesoTotal = kgKeys.reduce((acc, k) => acc + totals[k], 0);
+  const pesoTotal = DECOMISO_KG_KEYS.reduce((acc, k) => acc + totals[k], 0);
   return { totals, pesoTotal };
 }
 
@@ -521,20 +530,31 @@ export function renderDecomisosSheet(
     y = drawDecomisosTable(doc, y, rows);
 
     const { totals, pesoTotal } = decomisoTotals(rows);
+    const cols = decomisosTableCols();
     const w = pageWidth(doc) - MARGIN * 2;
-    doc.rect(MARGIN, y, w, 12).fill('#f3f4f6').strokeColor('#888').lineWidth(0.4).stroke();
-    doc.fontSize(6).font('Helvetica-Bold').fillColor('#111');
-    doc.text('TOTALES', MARGIN + 4, y + 3, { width: 90 });
-    doc.text(String(totals.unidades || '0'), MARGIN + 100, y + 3, { width: 36, align: 'center' });
-    let x = MARGIN + 140;
-    const tw = (w - 220) / 4;
-    [totals.hematoma_kg, totals.absceso_kg, totals.fibrosis_kg, totals.vacuna_kg].forEach((v) => {
-      doc.text(v ? String(v) : '0', x, y + 3, { width: tw - 2, align: 'center' });
-      x += tw;
-    });
-    doc.text('PESO TOTAL', x, y + 3, { width: 50, align: 'right' });
-    doc.text(`${pesoTotal.toFixed(2)}`, x + 52, y + 3, { width: 36, align: 'center' });
-    y += 16;
+    const widths = cols.map((c) => c.width * w);
+    const totalsH = 14;
+    if (y + totalsH > contentBottom(doc)) {
+      doc.addPage({ size: 'A4', layout: 'portrait', margin: MARGIN });
+      y = MARGIN;
+    }
+    doc.rect(MARGIN, y, w, totalsH).fill('#f3f4f6').strokeColor('#888').lineWidth(0.4).stroke();
+    doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#111');
+
+    const labelW = widths[0] + widths[1];
+    doc.text('TOTALES', MARGIN + 2, y + 4, { width: labelW - 4, align: 'center' });
+    let x = MARGIN + labelW;
+    doc.text(String(totals.unidades || '0'), x, y + 4, { width: widths[2] - 2, align: 'center' });
+    x += widths[2];
+    for (let i = 3; i < 3 + DECOMISO_KG_KEYS.length; i++) {
+      const key = cols[i].key;
+      doc.text(totals[key] ? String(totals[key]) : '0', x, y + 4, { width: widths[i] - 2, align: 'center' });
+      x += widths[i];
+    }
+    const tipoW = widths[widths.length - 2] + widths[widths.length - 1];
+    doc.fontSize(5).text('PESO TOTAL', x + 1, y + 1, { width: tipoW - 2, align: 'center' });
+    doc.fontSize(6).text(`${pesoTotal.toFixed(2)} kg`, x + 1, y + 7, { width: tipoW - 2, align: 'center' });
+    y += totalsH + 4;
   }
 
   y = drawSectionBanner(doc, y, 'Añadir fotos / Observaciones');

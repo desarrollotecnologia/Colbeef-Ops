@@ -211,7 +211,7 @@ model SubmissionCollaborator {
   @@map("submission_collaborators")
 }
 
-/** Campo (por hoja) ya llenado por un usuario; otros no pueden modificarlo. */
+/** Campo (por hoja): último editor; dueño/colaboradores pueden sobrescribir. */
 model SubmissionFieldLock {
   id           String   @id @default(uuid())
   submissionId String   @map("submission_id")
