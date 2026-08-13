@@ -15,8 +15,8 @@ function isCardRepeater(field: FormatField) {
   return field.fieldType === 'REPEATER' && field.options?.layout === 'card_repeater';
 }
 
-/** Asegura N.A. en checklists C/NC de POES 4h (también borradores con schema viejo). */
-function withPoes4hNaOptions(options: FieldOptions): FieldOptions {
+/** Asegura N.A. en checklists C/NC de POES (también borradores con schema viejo). */
+function withPoesNaOptions(options: FieldOptions): FieldOptions {
   const columns = getCardRepeaterColumns(options).map((col): RepeaterColumn => {
     if (col.type !== 'CHECKLIST') return col;
     const choices = [...(col.options?.choices ?? ['C', 'NC'])];
@@ -54,7 +54,7 @@ export default function Format4Diario3({ fields, sheetData, onUpdate, disabled }
       {poes4h && isCardRepeater(poes4h) && (
         <Section title="POES equipos — cada 4 horas" subtitle="Tablas · Sierra · Bandas · Delantales · C / NC / N.A.">
           <CardRepeater
-            options={withPoes4hNaOptions(poes4h.options ?? {})}
+            options={withPoesNaOptions(poes4h.options ?? {})}
             value={Array.isArray(sheetData[poes4h.fieldKey]) ? (sheetData[poes4h.fieldKey] as Record<string, unknown>[]) : []}
             onChange={(v) => onUpdate(poes4h.fieldKey, v)}
             disabled={disabled}
@@ -63,9 +63,9 @@ export default function Format4Diario3({ fields, sheetData, onUpdate, disabled }
       )}
 
       {poes1h && isCardRepeater(poes1h) && (
-        <Section title="POES operativos — cada hora" subtitle="Molino · Grameras">
+        <Section title="POES operativos — cada hora" subtitle="Molino · Grameras · C / NC / N.A.">
           <CardRepeater
-            options={poes1h.options ?? {}}
+            options={withPoesNaOptions(poes1h.options ?? {})}
             value={Array.isArray(sheetData[poes1h.fieldKey]) ? (sheetData[poes1h.fieldKey] as Record<string, unknown>[]) : []}
             onChange={(v) => onUpdate(poes1h.fieldKey, v)}
             disabled={disabled}

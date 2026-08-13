@@ -76,8 +76,8 @@ const POES_4H_COLS: FieldDef[] = [
 
 const POES_1H_COLS: FieldDef[] = [
   { fieldKey: 'hora', label: 'Hora — POES cada hora', fieldType: 'TIME' as const, sortOrder: 0, manualOnly: true, required: true },
-  { fieldKey: 'molino', label: 'Molino (cada hora)', fieldType: 'CHECKLIST' as const, sortOrder: 1, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
-  { fieldKey: 'grameras', label: 'Grameras (cada hora)', fieldType: 'CHECKLIST' as const, sortOrder: 2, manualOnly: true, options: { mode: 'cnc', choices: ['C', 'NC'] }, required: true },
+  { fieldKey: 'molino', label: 'Molino (cada hora)', fieldType: 'CHECKLIST' as const, sortOrder: 1, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
+  { fieldKey: 'grameras', label: 'Grameras (cada hora)', fieldType: 'CHECKLIST' as const, sortOrder: 2, manualOnly: true, options: { mode: 'cnc_na', choices: ['C', 'NC', 'NA'] }, required: true },
   { fieldKey: 'observaciones', label: 'Observaciones POES 1h', fieldType: 'TEXTAREA' as const, sortOrder: 3, manualOnly: true },
   { fieldKey: 'correccion', label: 'Corrección POES 1h', fieldType: 'TEXTAREA' as const, sortOrder: 4, manualOnly: true, config: { requiredIf: 'nc_or_observation' } },
 ];
