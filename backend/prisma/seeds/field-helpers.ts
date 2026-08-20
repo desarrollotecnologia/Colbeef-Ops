@@ -668,10 +668,10 @@ export const DAY_SCHEDULE_PUNTOS_INSPECCIONADOS: Record<string, string[]> = {
 
 export const DAY_SCHEDULE_PUNTOS_ESTERILIZADORES: Record<string, string[]> = {
   monday: ['Sierra canal', 'Sierra pecho', 'Clipado de esófago', 'Corte de grandes vasos'],
-  tuesday: ['Víscera roja', 'Limpieza inferior', 'Desolladora', 'Vuelta'],
+  tuesday: ['Víscera roja', 'Limpieza inferior', 'Desolladora', 'Desuello de brazos'],
   wednesday: ['Sierra pecho', 'Clipado de esófago', 'Víscera blanca', 'Tobogán de víscera blanca'],
   thursday: ['Sierra canal', 'Sierra pecho', 'Limpieza inferior', 'Desolladora'],
-  friday: ['Clipado de esófago', 'Corte de grandes vasos', 'Víscera roja', 'Vuelta'],
+  friday: ['Clipado de esófago', 'Corte de grandes vasos', 'Víscera roja', 'Desuello de brazos'],
   saturday: ['Sierra canal', 'Sierra pecho', 'Corte de grandes vasos', 'Desolladora'],
 };
 

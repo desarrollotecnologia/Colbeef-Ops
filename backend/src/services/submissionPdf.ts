@@ -2307,6 +2307,32 @@ type RenderSheetOptions = {
   isLastInPdf?: boolean;
 };
 
+/** Inspección de Hábitos: área (y OPL) una sola vez; luego personal. */
+function renderHabitosSheet(
+  doc: PdfDoc,
+  ctx: SheetPageContext,
+  fields: FormatField[],
+  sheetData: Record<string, unknown>,
+  startY: number
+): number {
+  let y = startY;
+  const area = String(sheetData.area_evaluada ?? '').trim();
+  const opl = String(sheetData.opl_externo ?? '').trim();
+
+  if (area) {
+    const subtitle =
+      area === 'Externos OPL' && opl ? `${area} · OPL externo: ${opl}` : area;
+    y = drawSectionBanner(doc, y, 'Área evaluada', subtitle, true);
+  }
+
+  for (const field of fields) {
+    if (field.fieldKey === 'area_evaluada' || field.fieldKey === 'opl_externo') continue;
+    y = renderField(doc, ctx, field, sheetData[field.fieldKey], y, sheetData);
+    y += 4;
+  }
+  return y;
+}
+
 function renderSheetPage(
   doc: PdfDoc,
   submission: SubmissionForPdf,
@@ -2344,6 +2370,8 @@ function renderSheetPage(
     y = renderVehiculosSheet(doc, fields, sheetData, y);
   } else if (code === 'DECOMISOS') {
     y = renderDecomisosSheet(doc, fields, sheetData, y);
+  } else if (code === 'HABITOS_HIGIENICOS') {
+    y = renderHabitosSheet(doc, ctx, fields, sheetData, y);
   } else {
     for (const field of fields) {
       y = renderField(doc, ctx, field, sheetData[field.fieldKey], y, sheetData);

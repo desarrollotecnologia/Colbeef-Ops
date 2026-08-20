@@ -171,7 +171,17 @@ export function isSheetComplete(
   workDate: string
 ): boolean {
   const contentFields = fields.filter((f) => f.fieldKey !== 'empresa');
-  return contentFields.every((field) => isFieldComplete(field, sheetData[field.fieldKey], workDate));
+  if (!contentFields.every((field) => isFieldComplete(field, sheetData[field.fieldKey], workDate))) {
+    return false;
+  }
+  // Hábitos: OPL externo obligatorio solo si el área es Externos OPL
+  if (contentFields.some((f) => f.fieldKey === 'area_evaluada')) {
+    const area = String(sheetData.area_evaluada ?? '').trim();
+    if (area === 'Externos OPL' && !String(sheetData.opl_externo ?? '').trim()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function getIncompleteFields(
@@ -184,8 +194,16 @@ export function getIncompleteFields(
   const contentFields = fields.filter((f) => f.fieldKey !== 'empresa');
 
   for (const field of contentFields) {
+    if (field.fieldKey === 'opl_externo') continue;
     if (!isFieldComplete(field, sheetData[field.fieldKey], workDate)) {
       missing.push({ sheet: sheetName, field: field.fieldKey, label: field.label });
+    }
+  }
+
+  if (contentFields.some((f) => f.fieldKey === 'area_evaluada')) {
+    const area = String(sheetData.area_evaluada ?? '').trim();
+    if (area === 'Externos OPL' && !String(sheetData.opl_externo ?? '').trim()) {
+      missing.push({ sheet: sheetName, field: 'opl_externo', label: 'OPL externo' });
     }
   }
 
