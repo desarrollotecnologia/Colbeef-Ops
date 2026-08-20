@@ -1,9 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Users, Plus, KeyRound, Pencil, X } from 'lucide-react';
+import { Users, Plus, KeyRound, Pencil, X, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
 import Button from '@/components/Button';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { useAuth } from '@/context/AuthContext';
 
 interface FormatCatalogItem {
   id: string;
@@ -36,16 +38,19 @@ const emptyForm = {
 };
 
 export default function AdminUsersPage() {
+  const { user: me } = useAuth();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [catalog, setCatalog] = useState<FormatCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [mode, setMode] = useState<EditorMode>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [passwordUser, setPasswordUser] = useState<ManagedUser | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [deleteUser, setDeleteUser] = useState<ManagedUser | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -70,6 +75,7 @@ export default function AdminUsersPage() {
     setEditingId(null);
     setForm({ ...emptyForm, formatIds: catalog.map((f) => f.id) });
     setError('');
+    setSuccess('');
   };
 
   const openEdit = (u: ManagedUser) => {
@@ -85,6 +91,7 @@ export default function AdminUsersPage() {
       formatIds: [...u.formatIds],
     });
     setError('');
+    setSuccess('');
   };
 
   const closeEditor = () => {
@@ -166,6 +173,31 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteUser) return;
+    const target = deleteUser;
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await api.delete(`/admin/users/${target.id}`);
+      const msg =
+        (res.data as { message?: string })?.message ||
+        `Se eliminó el usuario ${target.fullName}`;
+      setSuccess(msg);
+      setDeleteUser(null);
+      await load();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        `No fue posible borrar el usuario ${target.fullName}`;
+      setError(msg);
+      setDeleteUser(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -192,6 +224,9 @@ export default function AdminUsersPage() {
         </Button>
       </div>
 
+      {success && !mode && !passwordUser && (
+        <div className="mb-4 rounded-lg bg-green-50 text-green-800 px-4 py-3 text-sm">{success}</div>
+      )}
       {error && !mode && !passwordUser && (
         <div className="mb-4 rounded-lg bg-red-50 text-red-700 px-4 py-3 text-sm">{error}</div>
       )}
@@ -240,15 +275,48 @@ export default function AdminUsersPage() {
                     setPasswordUser(u);
                     setNewPassword('');
                     setError('');
+                    setSuccess('');
                   }}
                 >
                   <KeyRound size={16} /> Clave
                 </Button>
+                {me?.id !== u.id && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => {
+                      setDeleteUser(u);
+                      setError('');
+                      setSuccess('');
+                    }}
+                  >
+                    <Trash2 size={16} /> Eliminar
+                  </Button>
+                )}
               </div>
             </CardBody>
           </Card>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteUser)}
+        title="Eliminar usuario"
+        message={
+          deleteUser
+            ? `¿Está seguro de eliminar a ${deleteUser.fullName} (@${deleteUser.username})? Esta acción no se puede deshacer y la cuenta dejará de existir en el sistema.`
+            : ''
+        }
+        confirmLabel={saving ? 'Eliminando…' : 'Sí, eliminar'}
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => {
+          if (!saving) void handleDeleteConfirm();
+        }}
+        onCancel={() => {
+          if (!saving) setDeleteUser(null);
+        }}
+      />
 
       {mode && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">

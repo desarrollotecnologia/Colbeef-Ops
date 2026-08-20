@@ -19,10 +19,42 @@ import {
   LogIn,
   RefreshCw,
   Clock,
+  Eye,
+  X,
+  Shield,
 } from 'lucide-react';
 import api from '@/lib/api';
 import PanelLayout from '@/components/PanelLayout';
 import Button from '@/components/Button';
+
+interface PanelUserRow {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  role: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  formatCount: number;
+  formats: { id: string; code: string; name: string }[];
+  submissionsCreated: number;
+  submissionsReviewed: number;
+}
+
+interface PanelUserDetail extends PanelUserRow {
+  password: {
+    stored: boolean;
+    readable: boolean;
+    note: string;
+  };
+  formats: { id: string; code: string; name: string; documentCode?: string | null }[];
+  stats: {
+    submissionsCreated: number;
+    submissionsSubmitted: number;
+    submissionsReviewed: number;
+  };
+}
 
 interface DashboardData {
   periodDays: number;
@@ -124,14 +156,22 @@ function ChartCard({
 
 export default function UsabilityDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [users, setUsers] = useState<PanelUserRow[]>([]);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<PanelUserDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
-    api
-      .get(`/analytics/dashboard?days=${days}`)
-      .then(({ data: d }) => setData(d))
+    Promise.all([
+      api.get(`/analytics/dashboard?days=${days}`),
+      api.get('/analytics/users'),
+    ])
+      .then(([dash, usersRes]) => {
+        setData(dash.data);
+        setUsers(usersRes.data);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -144,6 +184,24 @@ export default function UsabilityDashboard() {
     if (role === 'OPERARIO') return 'Operario';
     return role ?? '—';
   };
+
+  const openDetail = (userId: string) => {
+    setDetailLoading(true);
+    setDetail(null);
+    api
+      .get(`/analytics/users/${userId}`)
+      .then(({ data: d }) => setDetail(d))
+      .finally(() => setDetailLoading(false));
+  };
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleString('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
   return (
     <PanelLayout>
@@ -406,8 +464,8 @@ export default function UsabilityDashboard() {
 
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-900">Usuarios del sistema</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Cuentas operativas</p>
+                <h3 className="font-semibold text-slate-900">Resumen rápido</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Usuarios con actividad reciente</p>
               </div>
               <div className="divide-y divide-slate-100 max-h-[420px] overflow-y-auto">
                 {data.users.map((u) => (
@@ -430,9 +488,208 @@ export default function UsabilityDashboard() {
               </div>
             </div>
           </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <h3 className="font-semibold text-slate-900">Usuarios creados</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Solo consulta — sin crear ni eliminar. Incluye admin y operarios.
+                </p>
+              </div>
+              <span className="text-xs text-slate-500">{users.length} cuentas</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs text-slate-500 uppercase tracking-wide">
+                    <th className="px-5 py-3 font-medium">Nombre</th>
+                    <th className="px-5 py-3 font-medium">Usuario</th>
+                    <th className="px-5 py-3 font-medium">Correo</th>
+                    <th className="px-5 py-3 font-medium">Rol</th>
+                    <th className="px-5 py-3 font-medium">Estado</th>
+                    <th className="px-5 py-3 font-medium">Formatos</th>
+                    <th className="px-5 py-3 font-medium text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-8 text-center text-slate-500">
+                        No hay usuarios registrados
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((u) => (
+                      <tr key={u.id} className="hover:bg-slate-50/80">
+                        <td className="px-5 py-3 font-medium text-slate-900">{u.fullName}</td>
+                        <td className="px-5 py-3 text-slate-600">@{u.username}</td>
+                        <td className="px-5 py-3 text-slate-600">{u.email}</td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`text-[10px] font-semibold uppercase px-2 py-1 rounded-full ${
+                              u.role === 'ADMIN'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-emerald-100 text-emerald-700'
+                            }`}
+                          >
+                            {roleLabel(u.role)}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`text-xs font-medium ${
+                              u.active ? 'text-emerald-600' : 'text-slate-400'
+                            }`}
+                          >
+                            {u.active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-slate-600">{u.formatCount}</td>
+                        <td className="px-5 py-3 text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDetail(u.id)}
+                          >
+                            <Eye size={14} /> Detalle
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       ) : (
         <p className="text-center text-slate-500 py-12">No se pudieron cargar los datos</p>
+      )}
+
+      {(detailLoading || detail) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+          <div
+            className="absolute inset-0"
+            onClick={() => {
+              setDetail(null);
+              setDetailLoading(false);
+            }}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-900">Detalle del usuario</h3>
+              <button
+                type="button"
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+                onClick={() => {
+                  setDetail(null);
+                  setDetailLoading(false);
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {detailLoading && !detail ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin h-8 w-8 border-4 border-emerald-600 border-t-transparent rounded-full" />
+              </div>
+            ) : detail ? (
+              <div className="p-5 space-y-5">
+                <div>
+                  <p className="text-lg font-semibold text-slate-900">{detail.fullName}</p>
+                  <p className="text-sm text-slate-500">@{detail.username}</p>
+                </div>
+
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-slate-500">Correo</dt>
+                    <dd className="font-medium text-slate-900 break-all">{detail.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Rol</dt>
+                    <dd className="font-medium text-slate-900">{roleLabel(detail.role)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Estado</dt>
+                    <dd className={`font-medium ${detail.active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {detail.active ? 'Activo' : 'Inactivo'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">Creado</dt>
+                    <dd className="font-medium text-slate-900">{formatDate(detail.createdAt)}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs text-slate-500">Última actualización</dt>
+                    <dd className="font-medium text-slate-900">{formatDate(detail.updatedAt)}</dd>
+                  </div>
+                </dl>
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex gap-3">
+                  <Shield size={18} className="text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-900">Contraseña</p>
+                    <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                      {detail.password.note}
+                      {detail.password.stored
+                        ? ' Hay una contraseña registrada (solo hash cifrado).'
+                        : ' No hay contraseña registrada.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                    Actividad en formatos
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-lg bg-slate-50 px-2 py-3">
+                      <p className="text-lg font-semibold text-slate-900">
+                        {detail.stats.submissionsCreated}
+                      </p>
+                      <p className="text-[11px] text-slate-500">Creados</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 px-2 py-3">
+                      <p className="text-lg font-semibold text-slate-900">
+                        {detail.stats.submissionsSubmitted}
+                      </p>
+                      <p className="text-[11px] text-slate-500">Entregados</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 px-2 py-3">
+                      <p className="text-lg font-semibold text-slate-900">
+                        {detail.stats.submissionsReviewed}
+                      </p>
+                      <p className="text-[11px] text-slate-500">Revisados</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                    Formatos asignados ({detail.formats.length})
+                  </p>
+                  {detail.formats.length === 0 ? (
+                    <p className="text-sm text-slate-500">Sin formatos asignados</p>
+                  ) : (
+                    <ul className="space-y-1.5 max-h-40 overflow-y-auto">
+                      {detail.formats.map((f) => (
+                        <li
+                          key={f.id}
+                          className="text-sm text-slate-700 flex items-baseline gap-2"
+                        >
+                          <span className="text-xs font-mono text-slate-400 shrink-0">{f.code}</span>
+                          <span className="truncate">{f.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
       )}
     </PanelLayout>
   );

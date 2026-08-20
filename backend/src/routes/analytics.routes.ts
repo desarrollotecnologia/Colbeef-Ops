@@ -1,8 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { UsageEventType, UserRole } from '@prisma/client';
 import { authenticate, requireRole } from '../middleware/auth';
-import { getAnalyticsDashboard } from '../services/analyticsService';
+import {
+  getAnalyticsDashboard,
+  getUserDetailForPanel,
+  listUsersForPanel,
+} from '../services/analyticsService';
 import { logUsageEvent } from '../services/usageLogger';
+import { paramId } from '../utils/params';
 
 const router = Router();
 
@@ -12,6 +17,21 @@ router.get('/dashboard', requireRole(UserRole.PANEL), async (req: Request, res: 
   const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
   const data = await getAnalyticsDashboard(days);
   res.json(data);
+});
+
+/** Listado de usuarios operativos (solo lectura, rol PANEL). */
+router.get('/users', requireRole(UserRole.PANEL), async (_req: Request, res: Response) => {
+  const users = await listUsersForPanel();
+  res.json(users);
+});
+
+/** Detalle de un usuario (sin contraseña en texto plano). */
+router.get('/users/:id', requireRole(UserRole.PANEL), async (req: Request, res: Response) => {
+  const detail = await getUserDetailForPanel(paramId(req.params.id));
+  if (!detail) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+  res.json(detail);
 });
 
 router.post('/events', async (req: Request, res: Response) => {

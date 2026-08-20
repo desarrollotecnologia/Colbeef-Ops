@@ -254,3 +254,99 @@ function submissionStatusLabel(status: SubmissionStatus): string {
   };
   return map[status];
 }
+
+/** Directorio de usuarios para el panel de monitoreo (solo lectura; sin contraseñas). */
+export async function listUsersForPanel() {
+  const users = await prisma.user.findMany({
+    where: { role: { in: [UserRole.ADMIN, UserRole.OPERARIO] } },
+    orderBy: [{ role: 'asc' }, { fullName: 'asc' }],
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      fullName: true,
+      role: true,
+      active: true,
+      createdAt: true,
+      updatedAt: true,
+      formatAccess: {
+        select: { format: { select: { id: true, code: true, name: true } } },
+        orderBy: { format: { sortOrder: 'asc' } },
+      },
+      _count: {
+        select: {
+          submissionsCreated: true,
+          submissionsReviewed: true,
+        },
+      },
+    },
+  });
+
+  return users.map((u) => ({
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    fullName: u.fullName,
+    role: u.role,
+    active: u.active,
+    createdAt: u.createdAt.toISOString(),
+    updatedAt: u.updatedAt.toISOString(),
+    formatCount: u.formatAccess.length,
+    formats: u.formatAccess.map((a) => a.format),
+    submissionsCreated: u._count.submissionsCreated,
+    submissionsReviewed: u._count.submissionsReviewed,
+  }));
+}
+
+export async function getUserDetailForPanel(userId: string) {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      fullName: true,
+      role: true,
+      active: true,
+      createdAt: true,
+      updatedAt: true,
+      passwordHash: true,
+      formatAccess: {
+        select: { format: { select: { id: true, code: true, name: true, documentCode: true } } },
+        orderBy: { format: { sortOrder: 'asc' } },
+      },
+      _count: {
+        select: {
+          submissionsCreated: true,
+          submissionsReviewed: true,
+          submissionsSubmitted: true,
+        },
+      },
+    },
+  });
+
+  if (!u || u.role === UserRole.PANEL) return null;
+
+  return {
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    fullName: u.fullName,
+    role: u.role,
+    active: u.active,
+    createdAt: u.createdAt.toISOString(),
+    updatedAt: u.updatedAt.toISOString(),
+    /** Las contraseñas no se pueden recuperar: solo se guarda un hash irreversible. */
+    password: {
+      stored: Boolean(u.passwordHash),
+      readable: false,
+      note: 'La contraseña está cifrada en el sistema y no se puede visualizar ni recuperar en texto plano.',
+    },
+    formats: u.formatAccess.map((a) => a.format),
+    stats: {
+      submissionsCreated: u._count.submissionsCreated,
+      submissionsSubmitted: u._count.submissionsSubmitted,
+      submissionsReviewed: u._count.submissionsReviewed,
+    },
+  };
+}

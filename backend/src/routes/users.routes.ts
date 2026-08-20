@@ -240,4 +240,73 @@ router.patch('/:id/password', async (req: Request, res: Response) => {
   res.json({ ok: true, message: 'Contraseña actualizada' });
 });
 
+/** Elimina el usuario de la BD (libera usuario/contraseña). */
+router.delete('/:id', async (req: Request, res: Response) => {
+  const id = paramId(req.params.id);
+  const actorId = req.user?.userId;
+
+  const existing = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, username: true, fullName: true, role: true },
+  });
+  if (!existing || existing.role === UserRole.PANEL) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+  if (actorId && existing.id === actorId) {
+    return res.status(400).json({ error: 'No puede eliminar su propia cuenta' });
+  }
+
+  const [asOperator, asSigner, adminCount] = await Promise.all([
+    prisma.formSubmission.count({ where: { operatorId: id } }),
+    prisma.signature.count({ where: { adminId: id } }),
+    existing.role === UserRole.ADMIN
+      ? prisma.user.count({ where: { role: UserRole.ADMIN, active: true, NOT: { id } } })
+      : Promise.resolve(1),
+  ]);
+
+  if (asOperator > 0) {
+    return res.status(409).json({
+      error: `No fue posible borrar el usuario ${existing.fullName}: tiene formatos/historial asociados como operario`,
+    });
+  }
+  if (asSigner > 0) {
+    return res.status(409).json({
+      error: `No fue posible borrar el usuario ${existing.fullName}: firmó envíos como administrador`,
+    });
+  }
+  if (existing.role === UserRole.ADMIN && adminCount < 1) {
+    return res.status(409).json({
+      error: `No fue posible borrar el usuario ${existing.fullName}: es el único administrador activo`,
+    });
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.formSubmission.updateMany({
+        where: { submittedById: id },
+        data: { submittedById: null },
+      });
+      await tx.formSubmission.updateMany({
+        where: { reviewedById: id },
+        data: { reviewedById: null },
+      });
+      await tx.submissionFieldLock.deleteMany({ where: { filledById: id } });
+      await tx.submissionCollaborator.deleteMany({ where: { addedById: id } });
+      await tx.userFormatAccess.deleteMany({ where: { userId: id } });
+      await tx.usageEvent.updateMany({ where: { userId: id }, data: { userId: null } });
+      await tx.user.delete({ where: { id } });
+    });
+  } catch {
+    return res.status(409).json({
+      error: `No fue posible borrar el usuario ${existing.fullName}`,
+    });
+  }
+
+  res.json({
+    ok: true,
+    message: `Se eliminó el usuario ${existing.fullName}`,
+    deleted: { id: existing.id, username: existing.username, fullName: existing.fullName },
+  });
+});
+
 export default router;
