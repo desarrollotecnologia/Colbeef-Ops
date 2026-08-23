@@ -15,6 +15,7 @@ import { getFormat13Fields } from './format13-linea-operativo';
 import { getFormat14Fields } from './format14-pc-comestible-operativo';
 import { getFormat15Fields } from './format15-poes-operativo';
 import { getFormat16Fields } from './format16-pc-comestibles-inocuidad';
+import { getFormat17Fields } from './format17-pediluvios-cambios';
 
 type FieldResolver = (slug: string) => FieldDef[];
 
@@ -35,6 +36,7 @@ const RESOLVERS: Record<string, FieldResolver> = {
   PC_COMESTIBLE_OPERATIVO: getFormat14Fields,
   POES_OPERATIVO: getFormat15Fields,
   PC_COMESTIBLES_INOCUIDAD: getFormat16Fields,
+  REGISTRO_PEDILUVIOS: getFormat17Fields,
 };
 
 export function getFieldsForSheet(formatCode: string, sheetSlug: string): FieldDef[] {

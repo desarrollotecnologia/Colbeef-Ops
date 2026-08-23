@@ -1,7 +1,7 @@
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { getDayKey, slugifyPoint } from '../utils/dayKey';
-import { renderDecomisosSheet, renderVehiculosSheet } from './submissionPdfFormatLayouts';
+import { renderDecomisosSheet, renderPediluviosCambiosSheet, renderVehiculosSheet } from './submissionPdfFormatLayouts';
 import {
   MARGIN,
   contentBottom,
@@ -112,6 +112,7 @@ const LANDSCAPE_FORMAT_CODES = new Set([
   'PC_COMESTIBLE_OPERATIVO',
   'PC_COMESTIBLES_INOCUIDAD',
   'LINEA_OPERATIVO',
+  'REGISTRO_PEDILUVIOS',
 ]);
 
 function needsLandscape(fields: FormatField[]): boolean {
@@ -2372,6 +2373,12 @@ function renderSheetPage(
     y = renderDecomisosSheet(doc, fields, sheetData, y);
   } else if (code === 'HABITOS_HIGIENICOS') {
     y = renderHabitosSheet(doc, ctx, fields, sheetData, y);
+  } else if (code === 'REGISTRO_PEDILUVIOS') {
+    y = renderPediluviosCambiosSheet(doc, sheetData, y, {
+      ensureSpace: (yy, needed) => ensurePageSpace(doc, ctx, yy, needed),
+      fechaInicio: submission.workDate,
+      fechaCierre: submission.submittedAt,
+    });
   } else {
     for (const field of fields) {
       y = renderField(doc, ctx, field, sheetData[field.fieldKey], y, sheetData);
@@ -2385,10 +2392,17 @@ function renderSheetPage(
   if (y + sigH > contentBottom(doc)) {
     y = startContentPage(doc, ctx);
   }
-  drawSignatures(doc, submission.operator.fullName, y, {
-    submittedByName: submission.submittedBy?.fullName,
-    collaboratorNames: (submission.collaborators ?? []).map((c) => c.user.fullName),
-  });
+  if (code === 'REGISTRO_PEDILUVIOS') {
+    drawSignatures(doc, submission.operator.fullName, y, {
+      verificoOnly: true,
+      verificoName: submission.reviewedBy?.fullName,
+    });
+  } else {
+    drawSignatures(doc, submission.operator.fullName, y, {
+      submittedByName: submission.submittedBy?.fullName,
+      collaboratorNames: (submission.collaborators ?? []).map((c) => c.user.fullName),
+    });
+  }
 
   if (renderOpts?.showBoundaries && !renderOpts.isLastInPdf) {
     drawSheetBoundaryEnd(doc, ctx.sheetIndex, ctx.totalSheets, ctx.sheetName);

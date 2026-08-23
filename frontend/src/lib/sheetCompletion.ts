@@ -132,6 +132,36 @@ export function isFieldComplete(
 
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
+    const optsLayout = options.layout;
+    const isOwned = optsLayout === 'pediluvios_cambios_repeater' || options.ownedRows;
+
+    if (isOwned) {
+      const filled = rows.filter((row) => {
+        const r = row as Record<string, unknown>;
+        return Boolean(
+          String(r.fecha ?? '').trim() ||
+            String(r.hora ?? '').trim() ||
+            String(r.desinfectante ?? '').trim() ||
+            String(r.concentracion_ppm ?? '').trim() ||
+            String(r.observaciones ?? '').trim()
+        );
+      });
+      const minFilled = options.minFilledRows ?? (field.required ? 1 : 0);
+      if (filled.length < minFilled) return false;
+      const cols = options.columns ?? options.columns_def ?? [];
+      return filled.every((row) =>
+        cols
+          .filter((c) => typeof c === 'object' && c.required)
+          .every((c) => {
+            const col = c as { key: string };
+            // Campos auto no se validan como vacíos del usuario
+            if (col.key === 'num_pediluvios' || col.key === 'responsable') return true;
+            const cell = (row as Record<string, unknown>)[col.key];
+            return cell !== undefined && cell !== null && String(cell).trim() !== '';
+          })
+      );
+    }
+
     const minRows = options.minRows ?? (field.required ? 1 : 0);
     if (rows.length < minRows) return false;
     const cols = options.columns ?? options.columns_def ?? [];

@@ -26,6 +26,7 @@ import Format15PoesSheet from './Format15PoesSheet';
 import GroupedFormalSheet from './GroupedFormalSheet';
 import Format14PcOperativoSheet from './Format14PcOperativoSheet';
 import Format16InocuidadSheet from './Format16InocuidadSheet';
+import Format17PediluviosSheet from './Format17PediluviosSheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const LEGEND_FOOTER = (
@@ -44,11 +45,39 @@ interface Props {
   onUpdate: (key: string, value: unknown) => void;
   workDate: string;
   disabled?: boolean;
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
-export default function SheetFields({ fields, sheetData, onUpdate, workDate, disabled }: Props) {
+export default function SheetFields({
+  fields,
+  sheetData,
+  onUpdate,
+  workDate,
+  disabled,
+  currentUserId,
+  currentUserName,
+}: Props) {
   const visible = fields.filter((f) => !HEADER_ONLY_KEYS.has(f.fieldKey));
   const has = (key: string) => fields.some((f) => f.fieldKey === key);
+
+  if (
+    has('registros') &&
+    fields.some((f) => f.fieldKey === 'registros' && f.options?.layout === 'pediluvios_cambios_repeater')
+  ) {
+    return (
+      <div className="space-y-6">
+        <Format17PediluviosSheet
+          fields={visible}
+          sheetData={sheetData}
+          onUpdate={onUpdate}
+          disabled={disabled}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+        />
+      </div>
+    );
+  }
 
   if (has('pc_comestibles') && has('area_refri')) {
     return (

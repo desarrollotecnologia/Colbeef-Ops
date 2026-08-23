@@ -51,6 +51,10 @@ export default function FillFormPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const getEffectiveWorkDate = useCallback((sub: FormSubmission | null, editable: boolean) => {
+    // Formatos multi-día (semanales): conservar fecha de inicio del borrador
+    if (sub?.format?.code === 'REGISTRO_PEDILUVIOS' && sub.workDate) {
+      return toWorkDateString(sub.workDate);
+    }
     if (editable || !sub?.workDate) return getWorkDateString();
     return toWorkDateString(sub.workDate);
   }, []);
@@ -348,7 +352,19 @@ export default function FillFormPage() {
         <p className="text-gray-500 text-sm">
           Hoja {currentSheetIndex + 1} de {sheets.length}: {currentSheet?.name}
           {' · '}
-          Fecha: {formatWorkDateShort(effectiveWorkDate)}
+          {submission.format?.code === 'REGISTRO_PEDILUVIOS' ? (
+            <>
+              Fecha inicio: {formatWorkDateShort(effectiveWorkDate)}
+              {submission.submittedAt && (
+                <>
+                  {' · '}
+                  Fecha cierre: {formatWorkDateShort(toWorkDateString(submission.submittedAt))}
+                </>
+              )}
+            </>
+          ) : (
+            <>Fecha: {formatWorkDateShort(effectiveWorkDate)}</>
+          )}
           {!isPersisted && canEdit && (
             <span className="text-amber-700"> · Sin guardar (aún no está en borradores)</span>
           )}
@@ -419,6 +435,8 @@ export default function FillFormPage() {
         showSignaturesPerSheet={isLastSheet}
         verificoName={submission.reviewedBy?.fullName}
         status={submission.status}
+        currentUserId={user?.id}
+        currentUserName={user?.fullName}
         sheetTabExtra={(sheet) => {
           const complete = isSheetComplete(
             sheet.fields ?? [],

@@ -6,6 +6,8 @@ interface Props {
   status: SubmissionStatus;
   /** En revisión admin: muestra el nombre del jefe que firmará al aprobar */
   pendingVerifierName?: string;
+  /** Solo Verificó (sin Elaboró), p. ej. pediluvios con responsable por fila */
+  hideElaboro?: boolean;
 }
 
 export default function FormatSignatures({
@@ -13,6 +15,7 @@ export default function FormatSignatures({
   verificoName,
   status,
   pendingVerifierName,
+  hideElaboro = false,
 }: Props) {
   const verificoDisplay =
     verificoName ??
@@ -20,6 +23,23 @@ export default function FormatSignatures({
 
   const showPendingVerifier =
     status === 'PENDING_REVIEW' && pendingVerifierName && !verificoName;
+
+  if (hideElaboro) {
+    return (
+      <div className="border-2 border-gray-800 rounded-sm overflow-hidden mt-6 bg-white">
+        <div className="px-4 py-4">
+          <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Verificó</p>
+          <p
+            className={`text-sm font-semibold border-b border-gray-400 pb-2 min-h-[2rem] ${
+              showPendingVerifier ? 'text-primary-800' : 'text-gray-900'
+            }`}
+          >
+            {verificoDisplay}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-2 border-gray-800 rounded-sm overflow-hidden mt-6 bg-white">

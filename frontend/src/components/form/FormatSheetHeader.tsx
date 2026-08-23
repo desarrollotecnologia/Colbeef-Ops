@@ -17,6 +17,7 @@ const VERSION_BY_CODE: Record<string, string> = {
   'AC-FR-009': '03',
   'AC-FR-010': '02',
   'AC-FR-018': '02',
+  'LD-FR-004': '03',
 };
 
 interface Props {
@@ -28,6 +29,13 @@ interface Props {
   workDate: string;
   operatorName: string;
   empresa?: string;
+  /** Fecha de inicio (formatos multi-día). Por defecto = workDate. */
+  fechaInicio?: string;
+  /** Fecha de cierre/envío; se muestra cuando existe. */
+  fechaCierre?: string | null;
+  /** Oculta la fila de operario (el responsable va por fila). */
+  hideOperator?: boolean;
+  dateMode?: 'default' | 'inicio_cierre';
 }
 
 export default function FormatSheetHeader({
@@ -39,8 +47,14 @@ export default function FormatSheetHeader({
   workDate,
   operatorName,
   empresa = 'COLBEEF S.A.S',
+  fechaInicio,
+  fechaCierre,
+  hideOperator = false,
+  dateMode = 'default',
 }: Props) {
-  const fecha = formatSpanishDateLong(workDate);
+  const inicio = fechaInicio || workDate;
+  const fecha = formatSpanishDateLong(inicio);
+  const cierreLabel = fechaCierre ? formatSpanishDateLong(fechaCierre.slice(0, 10)) : null;
   const sistemaLabel = documentCode && CALIDAD_CODES.has(documentCode)
     ? 'Sistema de Aseguramiento de la Calidad'
     : 'Sistema de Aseguramiento de la Inocuidad';
@@ -64,20 +78,39 @@ export default function FormatSheetHeader({
           <p><span className="font-bold">Versión:</span> {(documentCode && VERSION_BY_CODE[documentCode]) ?? '2.0.0'}</p>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 bg-[#e8edf2] border-b border-gray-800 text-sm">
-        <div className="px-4 py-2.5 border-b sm:border-b-0 sm:border-r border-gray-800">
-          <span className="font-bold text-gray-900 uppercase">Fecha: </span>
-          <span className="capitalize">{fecha}</span>
+      {dateMode === 'inicio_cierre' ? (
+        <div className={`grid grid-cols-1 ${hideOperator ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} bg-[#e8edf2] border-b border-gray-800 text-sm`}>
+          <div className="px-4 py-2.5 border-b sm:border-b-0 sm:border-r border-gray-800">
+            <span className="font-bold text-gray-900 uppercase">Fecha inicio: </span>
+            <span className="capitalize">{fecha}</span>
+          </div>
+          <div className="px-4 py-2.5 border-b sm:border-b-0 sm:border-r border-gray-800">
+            <span className="font-bold text-gray-900 uppercase">Fecha cierre: </span>
+            <span className="capitalize">{cierreLabel ?? '—'}</span>
+          </div>
+          {!hideOperator && (
+            <div className="px-4 py-2.5">
+              <span className="font-bold text-gray-900 uppercase">Inició: </span>
+              {operatorName}
+            </div>
+          )}
         </div>
-        <div className="px-4 py-2.5 border-b sm:border-b-0 sm:border-r border-gray-800">
-          <span className="font-bold text-gray-900 uppercase">Operario: </span>
-          {operatorName}
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 bg-[#e8edf2] border-b border-gray-800 text-sm">
+          <div className="px-4 py-2.5 border-b sm:border-b-0 sm:border-r border-gray-800">
+            <span className="font-bold text-gray-900 uppercase">Fecha: </span>
+            <span className="capitalize">{fecha}</span>
+          </div>
+          <div className="px-4 py-2.5 border-b sm:border-b-0 sm:border-r border-gray-800">
+            <span className="font-bold text-gray-900 uppercase">Operario: </span>
+            {operatorName}
+          </div>
+          <div className="px-4 py-2.5">
+            <span className="font-bold text-gray-900 uppercase">Hoja: </span>
+            {sheetName}
+          </div>
         </div>
-        <div className="px-4 py-2.5">
-          <span className="font-bold text-gray-900 uppercase">Hoja: </span>
-          {sheetName}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

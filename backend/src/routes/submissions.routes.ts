@@ -25,6 +25,7 @@ import { assertOperatorCanAccessFormat } from '../utils/formatAccess';
 import { getSubmissionAccess, assertCanEditSubmission } from '../utils/submissionAccess';
 import { mergeSheetDataWithLocks } from '../utils/fieldLocks';
 import { logSubmissionActivity } from '../utils/submissionActivity';
+import { isMultiDayFormat } from '../utils/multiDayFormats';
 
 const router = Router();
 
@@ -482,7 +483,15 @@ router.get('/:id', async (req: Request, res: Response) => {
     submission.status === SubmissionStatus.DRAFT ||
     submission.status === SubmissionStatus.REJECTED;
 
-  if (isEditable && !isAdmin && access.isEditor && !isSameWorkDate(submission.workDate, getTodayWorkDate())) {
+  // Formatos diarios: la fecha de trabajo sigue el día actual.
+  // Formatos multi-día (semanales): conservar fecha de inicio.
+  if (
+    isEditable &&
+    !isAdmin &&
+    access.isEditor &&
+    !isMultiDayFormat(submission.format.code) &&
+    !isSameWorkDate(submission.workDate, getTodayWorkDate())
+  ) {
     submission = await prisma.formSubmission.update({
       where: { id: submission.id },
       data: { workDate: getTodayWorkDate() },
@@ -531,6 +540,19 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
 
   const submission = await prisma.formSubmission.findUnique({
     where: { id: submissionId },
+    include: {
+      format: {
+        select: {
+          code: true,
+          name: true,
+          sheets: {
+            where: { id: sheetId },
+            include: { fields: { select: { fieldKey: true, options: true } } },
+          },
+        },
+      },
+      operator: { select: { fullName: true } },
+    },
   });
   if (!submission) return res.status(404).json({ error: 'Envío no encontrado' });
 
@@ -550,12 +572,25 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
   const existingData = (existingSheet.data ?? {}) as Record<string, unknown>;
   const incomingData = (data ?? {}) as Record<string, unknown>;
 
+  const sheetFields = submission.format.sheets[0]?.fields ?? [];
+  const fieldOptionsByKey: Record<string, unknown> = {};
+  for (const f of sheetFields) {
+    fieldOptionsByKey[f.fieldKey] = f.options ?? undefined;
+  }
+
+  const actor = await prisma.user.findUnique({
+    where: { id: req.user!.userId },
+    select: { fullName: true },
+  });
+
   const mergeResult = await mergeSheetDataWithLocks({
     submissionId,
     sheetId,
     userId: req.user!.userId,
+    userName: actor?.fullName ?? req.user!.username,
     existingData,
     incomingData,
+    fieldOptionsByKey,
   });
 
   if (!mergeResult.ok) {
@@ -565,9 +600,13 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
     });
   }
 
-  const draftPatch: { workDate: Date; schemaSnapshot?: ReturnType<typeof buildFormatSchemaSnapshot> } = {
-    workDate: getTodayWorkDate(),
-  };
+  const draftPatch: {
+    workDate?: Date;
+    schemaSnapshot?: ReturnType<typeof buildFormatSchemaSnapshot>;
+  } = {};
+  if (!isMultiDayFormat(submission.format.code)) {
+    draftPatch.workDate = getTodayWorkDate();
+  }
   if (!submission.schemaSnapshot) {
     const full = await prisma.formSubmission.findUnique({
       where: { id: submission.id },
@@ -587,10 +626,12 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
     }
   }
 
-  await prisma.formSubmission.update({
-    where: { id: submission.id },
-    data: draftPatch,
-  });
+  if (Object.keys(draftPatch).length > 0) {
+    await prisma.formSubmission.update({
+      where: { id: submission.id },
+      data: draftPatch,
+    });
+  }
 
   const updated = await prisma.formSubmissionSheet.update({
     where: {
@@ -663,13 +704,15 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
     return res.status(400).json({ error: 'Este envío ya fue entregado' });
   }
 
-  const today = getTodayWorkDate();
-  if (!isSameWorkDate(submission.workDate, today)) {
-    await prisma.formSubmission.update({
-      where: { id: submission.id },
-      data: { workDate: today },
-    });
-    submission.workDate = today;
+  if (!isMultiDayFormat(submission.format.code)) {
+    const today = getTodayWorkDate();
+    if (!isSameWorkDate(submission.workDate, today)) {
+      await prisma.formSubmission.update({
+        where: { id: submission.id },
+        data: { workDate: today },
+      });
+      submission.workDate = today;
+    }
   }
 
   const forValidation = withFrozenSchema(submission);

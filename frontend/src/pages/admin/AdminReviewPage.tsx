@@ -282,6 +282,10 @@ export default function AdminReviewPage() {
 
         status={submission.status}
 
+        currentUserId={user?.id}
+
+        currentUserName={user?.fullName}
+
       />
 
 

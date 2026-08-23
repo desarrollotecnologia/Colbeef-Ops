@@ -171,6 +171,15 @@ export const FORMAT_CATALOG = [
     noSunday: true,
     sheets: [{ sheetOrder: 1, name: 'Verificación PC', slug: 'principal' }],
   },
+  {
+    code: 'REGISTRO_PEDILUVIOS',
+    name: 'Registro y Control de Desinfectantes en Pediluvio',
+    documentCode: 'LD-FR-004',
+    sheetCount: 1,
+    sortOrder: 17,
+    noSunday: true,
+    sheets: [{ sheetOrder: 1, name: 'Registro pediluvios', slug: 'principal' }],
+  },
 ] as const;
 
 export type FormatCode = (typeof FORMAT_CATALOG)[number]['code'];

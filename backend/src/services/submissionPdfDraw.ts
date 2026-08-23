@@ -26,7 +26,7 @@ const VERSION_BY_CODE: Record<string, string> = {
   'AC-FR-010': '02',
   'AC-FR-018': '02',
   'SAI-CAL-F010': '01',
-  'AC-FR-00': '01',
+  'LD-FR-004': '03',
 };
 
 export function pageWidth(doc: PdfDoc) {
@@ -364,13 +364,40 @@ export function drawSignatures(
   doc: PdfDoc,
   operatorName: string,
   y: number,
-  opts?: { submittedByName?: string | null; collaboratorNames?: string[] }
+  opts?: {
+    submittedByName?: string | null;
+    collaboratorNames?: string[];
+    /** Solo Verificó (sin Elaboró / Entregó) */
+    verificoOnly?: boolean;
+    verificoName?: string | null;
+  }
 ): number {
   const bottom = contentBottom(doc);
   const sigH = 40;
-  // Si no cabe en la página actual, no empujar al borde (PDFKit crea páginas fantasma)
   if (y + sigH > bottom) {
     y = Math.max(MARGIN, bottom - sigH);
+  }
+
+  const fullW = pageWidth(doc) - MARGIN * 2 - 16;
+
+  if (opts?.verificoOnly) {
+    const name = opts.verificoName?.trim() || '—';
+    doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('VERIFICÓ', MARGIN, y, {
+      width: fullW,
+      lineBreak: false,
+    });
+    doc.fontSize(8).font('Helvetica').fillColor('#111').text(name, MARGIN, y + 10, {
+      width: fullW,
+      height: 12,
+      ellipsis: true,
+      lineBreak: false,
+    });
+    doc
+      .moveTo(MARGIN, y + 24)
+      .lineTo(MARGIN + fullW, y + 24)
+      .strokeColor('#666')
+      .stroke();
+    return y + 32;
   }
 
   const hasCollaborators = (opts?.collaboratorNames?.length ?? 0) > 0;
@@ -378,7 +405,6 @@ export function drawSignatures(
     ? [operatorName, ...(opts?.collaboratorNames ?? [])].filter((n, i, arr) => arr.indexOf(n) === i).join(', ')
     : operatorName;
   const halfW = (pageWidth(doc) - MARGIN * 2) / 2 - 10;
-  const fullW = pageWidth(doc) - MARGIN * 2 - 16;
 
   doc.fontSize(7).font('Helvetica-Bold').fillColor('#555').text('ELABORÓ', MARGIN, y, {
     width: hasCollaborators ? halfW : fullW,

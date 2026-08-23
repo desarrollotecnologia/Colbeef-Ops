@@ -24,6 +24,8 @@ type FieldOptions = {
   platformCount?: number;
   minRows?: number;
   minRegistros?: number;
+  minFilledRows?: number;
+  ownedRows?: boolean;
   allowAddRows?: boolean;
   matrix?: boolean;
   columns_def?: { key: string; required?: boolean; label?: string; type?: string }[];
@@ -176,6 +178,30 @@ export function isFieldComplete(
 
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
+
+    if (options.layout === 'pediluvios_cambios_repeater' || options.ownedRows) {
+      const filled = rows.filter((row) => {
+        const r = row as Record<string, unknown>;
+        return ['fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones'].some(
+          (k) => String(r[k] ?? '').trim() !== ''
+        );
+      });
+      const minFilled = (options as { minFilledRows?: number }).minFilledRows ?? (field.required ? 1 : 0);
+      if (filled.length < minFilled) return false;
+      const cols = options.columns ?? options.columns_def ?? [];
+      return filled.every((row) =>
+        cols
+          .filter(
+            (c): c is { key: string; required?: boolean } =>
+              typeof c === 'object' && c !== null && 'key' in c && Boolean((c as { required?: boolean }).required)
+          )
+          .every((col) => {
+            if (col.key === 'num_pediluvios' || col.key === 'responsable') return true;
+            const cell = (row as Record<string, unknown>)[col.key];
+            return cell !== undefined && cell !== null && String(cell).trim() !== '';
+          })
+      );
+    }
 
     // 4 lotes fijos; dentro de cada uno, N registros
     if (options.layout === 'producto_terminado_lotes') {

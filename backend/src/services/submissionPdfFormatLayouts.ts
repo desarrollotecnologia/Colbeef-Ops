@@ -636,6 +636,138 @@ export function renderDecomisosSheet(
   return y;
 }
 
+type PediluvioRow = Record<string, unknown>;
+
+function pediluvioRowFilled(row: PediluvioRow): boolean {
+  return ['fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones'].some(
+    (k) => String(row[k] ?? '').trim() !== ''
+  );
+}
+
+/** LD-FR-004 — tabla de cambios de pediluvios (multi-página, landscape). */
+export function renderPediluviosCambiosSheet(
+  doc: PdfDoc,
+  sheetData: Record<string, unknown>,
+  startY: number,
+  opts: {
+    ensureSpace: (y: number, needed: number) => number;
+    fechaInicio: Date;
+    fechaCierre?: Date | null;
+  }
+): number {
+  let y = startY;
+  const w = pageWidth(doc) - MARGIN * 2;
+
+  const inicio = formatWorkDateSafe(opts.fechaInicio);
+  const cierre = opts.fechaCierre ? formatWorkDateSafe(opts.fechaCierre) : '—';
+
+  doc.fontSize(7).font('Helvetica-Bold').fillColor('#111');
+  doc.text(`Fecha inicio: ${inicio}`, MARGIN, y, { width: w / 2 - 4, height: 10, lineBreak: false });
+  doc.text(`Fecha cierre: ${cierre}`, MARGIN + w / 2, y, { width: w / 2 - 4, height: 10, lineBreak: false });
+  y += 14;
+
+  const cols: { key: string; label: string; width: number }[] = [
+    { key: 'fecha', label: 'Fecha', width: 0.12 },
+    { key: 'hora', label: 'Hora', width: 0.08 },
+    { key: 'desinfectante', label: 'Desinfectante', width: 0.2 },
+    { key: 'concentracion_ppm', label: 'Conc. (ppm)', width: 0.1 },
+    { key: 'num_pediluvios', label: 'N°', width: 0.06 },
+    { key: 'responsable', label: 'Responsable', width: 0.22 },
+    { key: 'observaciones', label: 'Observaciones', width: 0.22 },
+  ];
+
+  const allRows = Array.isArray(sheetData.registros) ? (sheetData.registros as PediluvioRow[]) : [];
+  const rows = allRows.filter(pediluvioRowFilled);
+  const dataRows = rows.length > 0 ? rows : [{}];
+
+  const drawHeader = (yy: number) => {
+    const headerH = 16;
+    doc.rect(MARGIN, yy, w, headerH).fill('#d9ead3');
+    doc.strokeColor('#666').lineWidth(0.4).rect(MARGIN, yy, w, headerH).stroke();
+    let x = MARGIN;
+    for (const col of cols) {
+      const cw = w * col.width;
+      doc
+        .fontSize(6)
+        .font('Helvetica-Bold')
+        .fillColor('#222')
+        .text(col.label, x + 2, yy + 4, { width: cw - 4, height: 10, lineBreak: false, ellipsis: true });
+      x += cw;
+    }
+    return yy + headerH;
+  };
+
+  y = opts.ensureSpace(y, 40);
+  y = drawHeader(y);
+
+  for (const row of dataRows) {
+    const cellTexts = cols.map((col) => {
+      if (col.key === 'num_pediluvios') return '2';
+      const v = row[col.key];
+      if (col.key === 'responsable') {
+        return str(v || row.ownerName || '');
+      }
+      return str(v);
+    });
+
+    let rowH = 12;
+    for (let i = 0; i < cols.length; i++) {
+      const cw = w * cols[i].width;
+      const h = doc
+        .fontSize(6.5)
+        .font('Helvetica')
+        .heightOfString(cellTexts[i] === '—' ? ' ' : cellTexts[i], { width: cw - 4 });
+      rowH = Math.max(rowH, Math.min(36, h + 6));
+    }
+
+    const nextY = opts.ensureSpace(y, rowH + 4);
+    if (nextY !== y) {
+      y = drawHeader(nextY);
+    }
+
+    doc.strokeColor('#999').lineWidth(0.3).rect(MARGIN, y, w, rowH).stroke();
+    let x = MARGIN;
+    for (let i = 0; i < cols.length; i++) {
+      const cw = w * cols[i].width;
+      const text = cellTexts[i];
+      if (isBlankPdfValue(text) || text === '—') {
+        drawClosedBlank(doc, x + 2, y + 3, cw - 4, rowH - 6);
+      } else {
+        doc
+          .fontSize(6.5)
+          .font('Helvetica')
+          .fillColor('#111')
+          .text(text, x + 2, y + 3, {
+            width: cw - 4,
+            height: rowH - 5,
+            ellipsis: true,
+            lineGap: 0,
+          });
+      }
+      x += cw;
+    }
+    y += rowH;
+  }
+
+  return y + 6;
+}
+
+function formatWorkDateSafe(date: Date): string {
+  try {
+    const iso = date instanceof Date ? date.toISOString().slice(0, 10) : String(date).slice(0, 10);
+    const [y, m, d] = iso.split('-').map(Number);
+    const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    return noonUtc.toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  } catch {
+    return String(date);
+  }
+}
+
 export function drawCompactSheetHeader(
   doc: PdfDoc,
   submission: { format: { name: string; documentCode: string | null }; workDate: Date; operator: { fullName: string } },

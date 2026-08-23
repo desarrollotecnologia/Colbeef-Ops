@@ -21,6 +21,8 @@ interface Props {
   pendingVerifierName?: string;
   status: SubmissionStatus;
   sheetTabExtra?: (sheet: FormatSheet, index: number) => React.ReactNode;
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
 export default function FormatSubmissionViewer({
@@ -39,10 +41,14 @@ export default function FormatSubmissionViewer({
   pendingVerifierName,
   status,
   sheetTabExtra,
+  currentUserId,
+  currentUserName,
 }: Props) {
   const currentSheet = sheets[currentSheetIndex];
   const fields = currentSheet?.fields ?? [];
   const sheetData = sheetDataById[currentSheet?.id ?? ''] ?? {};
+  const formatCode = submission.format?.code;
+  const isPediluvios = formatCode === 'REGISTRO_PEDILUVIOS';
 
   const changeSheet = async (index: number) => {
     if (onBeforeSheetChange) await onBeforeSheetChange();
@@ -79,6 +85,10 @@ export default function FormatSubmissionViewer({
         documentCode={submission.format?.documentCode}
         workDate={workDate}
         operatorName={operatorName}
+        dateMode={isPediluvios ? 'inicio_cierre' : 'default'}
+        fechaInicio={workDate}
+        fechaCierre={submission.submittedAt ?? null}
+        hideOperator={isPediluvios}
       />
 
       <Card>
@@ -92,6 +102,8 @@ export default function FormatSubmissionViewer({
               onUpdate={onFieldUpdate ?? (() => {})}
               workDate={workDate}
               disabled={readOnly}
+              currentUserId={currentUserId}
+              currentUserName={currentUserName}
             />
           )}
           {showSignaturesPerSheet && (
@@ -100,6 +112,7 @@ export default function FormatSubmissionViewer({
               verificoName={verificoName}
               status={status}
               pendingVerifierName={pendingVerifierName}
+              hideElaboro={isPediluvios}
             />
           )}
         </CardBody>
