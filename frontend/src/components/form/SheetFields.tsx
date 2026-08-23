@@ -27,6 +27,7 @@ import GroupedFormalSheet from './GroupedFormalSheet';
 import Format14PcOperativoSheet from './Format14PcOperativoSheet';
 import Format16InocuidadSheet from './Format16InocuidadSheet';
 import Format17PediluviosSheet from './Format17PediluviosSheet';
+import Format18AcidoLacticoSheet from './Format18AcidoLacticoSheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const LEGEND_FOOTER = (
@@ -47,6 +48,8 @@ interface Props {
   disabled?: boolean;
   currentUserId?: string;
   currentUserName?: string;
+  isSubmissionOwner?: boolean;
+  ownerName?: string;
 }
 
 export default function SheetFields({
@@ -57,14 +60,33 @@ export default function SheetFields({
   disabled,
   currentUserId,
   currentUserName,
+  isSubmissionOwner,
+  ownerName,
 }: Props) {
   const visible = fields.filter((f) => !HEADER_ONLY_KEYS.has(f.fieldKey));
   const has = (key: string) => fields.some((f) => f.fieldKey === key);
 
-  if (
-    has('registros') &&
-    fields.some((f) => f.fieldKey === 'registros' && f.options?.layout === 'pediluvios_cambios_repeater')
-  ) {
+  const registrosLayout = fields.find((f) => f.fieldKey === 'registros')?.options?.layout;
+
+  if (registrosLayout === 'lactico_titulacion_formato' || registrosLayout === 'lactico_monitoreo_formato') {
+    return (
+      <div className="space-y-6">
+        <Format18AcidoLacticoSheet
+          fields={visible}
+          sheetData={sheetData}
+          onUpdate={onUpdate}
+          disabled={disabled}
+          variant={registrosLayout === 'lactico_monitoreo_formato' ? 'monitoreo' : 'titulacion'}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          isSubmissionOwner={isSubmissionOwner}
+          ownerName={ownerName}
+        />
+      </div>
+    );
+  }
+
+  if (registrosLayout === 'pediluvios_cambios_repeater') {
     return (
       <div className="space-y-6">
         <Format17PediluviosSheet

@@ -16,6 +16,7 @@ const CALIDAD_CODES = new Set([
   'AC-FR-007',
   'AC-FR-009',
   'AC-FR-010',
+  'AC-FR-033',
 ]);
 
 const VERSION_BY_CODE: Record<string, string> = {
@@ -27,6 +28,7 @@ const VERSION_BY_CODE: Record<string, string> = {
   'AC-FR-018': '02',
   'SAI-CAL-F010': '01',
   'LD-FR-004': '03',
+  'AC-FR-033': '02',
 };
 
 export function pageWidth(doc: PdfDoc) {

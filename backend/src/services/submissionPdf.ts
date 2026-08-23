@@ -1,7 +1,7 @@
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { getDayKey, slugifyPoint } from '../utils/dayKey';
-import { renderDecomisosSheet, renderPediluviosCambiosSheet, renderVehiculosSheet } from './submissionPdfFormatLayouts';
+import { renderDecomisosSheet, renderLacticoFormatoSheet, renderPediluviosCambiosSheet, renderVehiculosSheet } from './submissionPdfFormatLayouts';
 import {
   MARGIN,
   contentBottom,
@@ -113,6 +113,7 @@ const LANDSCAPE_FORMAT_CODES = new Set([
   'PC_COMESTIBLES_INOCUIDAD',
   'LINEA_OPERATIVO',
   'REGISTRO_PEDILUVIOS',
+  'TITULACION_ACIDO_LACTICO',
 ]);
 
 function needsLandscape(fields: FormatField[]): boolean {
@@ -2379,6 +2380,11 @@ function renderSheetPage(
       fechaInicio: submission.workDate,
       fechaCierre: submission.submittedAt,
     });
+  } else if (code === 'TITULACION_ACIDO_LACTICO') {
+    y = renderLacticoFormatoSheet(doc, sheetData, y, {
+      ensureSpace: (yy, needed) => ensurePageSpace(doc, ctx, yy, needed),
+      variant: sheet.slug === 'monitoreo' ? 'monitoreo' : 'titulacion',
+    });
   } else {
     for (const field of fields) {
       y = renderField(doc, ctx, field, sheetData[field.fieldKey], y, sheetData);
@@ -2392,7 +2398,7 @@ function renderSheetPage(
   if (y + sigH > contentBottom(doc)) {
     y = startContentPage(doc, ctx);
   }
-  if (code === 'REGISTRO_PEDILUVIOS') {
+  if (code === 'REGISTRO_PEDILUVIOS' || code === 'TITULACION_ACIDO_LACTICO') {
     drawSignatures(doc, submission.operator.fullName, y, {
       verificoOnly: true,
       verificoName: submission.reviewedBy?.fullName,

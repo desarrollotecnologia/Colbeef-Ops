@@ -133,7 +133,11 @@ export function isFieldComplete(
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
     const optsLayout = options.layout;
-    const isOwned = optsLayout === 'pediluvios_cambios_repeater' || options.ownedRows;
+    const isOwned =
+      optsLayout === 'pediluvios_cambios_repeater' ||
+      optsLayout === 'lactico_titulacion_formato' ||
+      optsLayout === 'lactico_monitoreo_formato' ||
+      options.ownedRows;
 
     if (isOwned) {
       const filled = rows.filter((row) => {
@@ -143,23 +147,48 @@ export function isFieldComplete(
             String(r.hora ?? '').trim() ||
             String(r.desinfectante ?? '').trim() ||
             String(r.concentracion_ppm ?? '').trim() ||
-            String(r.observaciones ?? '').trim()
+            String(r.observaciones ?? '').trim() ||
+            String(r.volumen_naoh ?? '').trim() ||
+            String(r.cumple ?? '').trim() ||
+            String(r.no_cumple ?? '').trim() ||
+            String(r.actividad ?? '').trim() ||
+            String(r.monitoreo_pcc ?? '').trim()
         );
       });
       const minFilled = options.minFilledRows ?? (field.required ? 1 : 0);
       if (filled.length < minFilled) return false;
-      const cols = options.columns ?? options.columns_def ?? [];
-      return filled.every((row) =>
-        cols
-          .filter((c) => typeof c === 'object' && c.required)
-          .every((c) => {
-            const col = c as { key: string };
-            // Campos auto no se validan como vacíos del usuario
-            if (col.key === 'num_pediluvios' || col.key === 'responsable') return true;
-            const cell = (row as Record<string, unknown>)[col.key];
-            return cell !== undefined && cell !== null && String(cell).trim() !== '';
-          })
-      );
+      const layout = options.layout;
+      return filled.every((row) => {
+        const r = row as Record<string, unknown>;
+        if (layout === 'pediluvios_cambios_repeater') {
+          return (
+            String(r.fecha ?? '').trim() &&
+            String(r.hora ?? '').trim() &&
+            String(r.desinfectante ?? '').trim() &&
+            String(r.concentracion_ppm ?? '').trim() &&
+            String(r.observaciones ?? '').trim()
+          );
+        }
+        // ácido láctico
+        const cncOk = String(r.cumple ?? '') === 'C' || String(r.no_cumple ?? '') === 'NC';
+        const baseOk =
+          String(r.fecha ?? '').trim() &&
+          String(r.hora ?? '').trim() &&
+          String(r.volumen_naoh ?? '').trim() &&
+          cncOk;
+        if (!baseOk) return false;
+        if (String(r.no_cumple ?? '') === 'NC' && !String(r.correccion ?? '').trim()) return false;
+        if (layout === 'lactico_titulacion_formato') {
+          return Boolean(String(r.actividad ?? '').trim());
+        }
+        if (layout === 'lactico_monitoreo_formato') {
+          return (
+            String(r.monitoreo_pcc ?? '') === 'X' &&
+            (String(r.verifico_mark ?? '') === 'OK' || String(r.verifico_mark ?? '') === 'X')
+          );
+        }
+        return true;
+      });
     }
 
     const minRows = options.minRows ?? (field.required ? 1 : 0);

@@ -180,6 +180,18 @@ export const FORMAT_CATALOG = [
     noSunday: true,
     sheets: [{ sheetOrder: 1, name: 'Registro pediluvios', slug: 'principal' }],
   },
+  {
+    code: 'TITULACION_ACIDO_LACTICO',
+    name: 'Titulación y Monitoreo de Ácido Láctico',
+    documentCode: 'AC-FR-033',
+    sheetCount: 2,
+    sortOrder: 18,
+    noSunday: true,
+    sheets: [
+      { sheetOrder: 1, name: 'Titulación ácido láctico', slug: 'titulacion' },
+      { sheetOrder: 2, name: 'Monitoreo titulación ácido láctico', slug: 'monitoreo' },
+    ],
+  },
 ] as const;
 
 export type FormatCode = (typeof FORMAT_CATALOG)[number]['code'];

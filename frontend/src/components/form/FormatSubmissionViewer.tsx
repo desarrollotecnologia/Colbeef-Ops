@@ -49,6 +49,11 @@ export default function FormatSubmissionViewer({
   const sheetData = sheetDataById[currentSheet?.id ?? ''] ?? {};
   const formatCode = submission.format?.code;
   const isPediluvios = formatCode === 'REGISTRO_PEDILUVIOS';
+  const isLactico = formatCode === 'TITULACION_ACIDO_LACTICO';
+  const hideElaboro = isPediluvios || isLactico;
+  const isOwner =
+    submission.myRole === 'OWNER' ||
+    submission.operatorId === currentUserId;
 
   const changeSheet = async (index: number) => {
     if (onBeforeSheetChange) await onBeforeSheetChange();
@@ -104,6 +109,8 @@ export default function FormatSubmissionViewer({
               disabled={readOnly}
               currentUserId={currentUserId}
               currentUserName={currentUserName}
+              isSubmissionOwner={isOwner}
+              ownerName={submission.operator?.fullName}
             />
           )}
           {showSignaturesPerSheet && (
@@ -112,7 +119,7 @@ export default function FormatSubmissionViewer({
               verificoName={verificoName}
               status={status}
               pendingVerifierName={pendingVerifierName}
-              hideElaboro={isPediluvios}
+              hideElaboro={hideElaboro}
             />
           )}
         </CardBody>

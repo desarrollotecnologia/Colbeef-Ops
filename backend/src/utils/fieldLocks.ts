@@ -1,6 +1,9 @@
 import { randomUUID } from 'crypto';
 import prisma from '../lib/prisma';
-import { OWNED_ROW_REPEATER_LAYOUT } from './multiDayFormats';
+import {
+  OWNER_VERIFICO_ROW_KEYS,
+  OWNED_ROW_REPEATER_LAYOUTS,
+} from './multiDayFormats';
 
 export function isFieldValueEmpty(value: unknown): boolean {
   if (value === null || value === undefined) return true;
@@ -32,31 +35,70 @@ type OwnedRow = Record<string, unknown> & {
 function isOwnedRowLayout(fieldOptions: unknown): boolean {
   if (!fieldOptions || typeof fieldOptions !== 'object') return false;
   const opts = fieldOptions as { layout?: string; ownedRows?: boolean };
-  return opts.layout === OWNED_ROW_REPEATER_LAYOUT || opts.ownedRows === true;
+  return Boolean(
+    (opts.layout && OWNED_ROW_REPEATER_LAYOUTS.has(opts.layout)) || opts.ownedRows === true
+  );
 }
 
 function rowHasContent(row: OwnedRow): boolean {
-  const keys = ['fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones'];
+  const keys = [
+    'fecha',
+    'hora',
+    'desinfectante',
+    'concentracion_ppm',
+    'observaciones',
+    'volumen_naoh',
+    'concentracion',
+    'cumple',
+    'no_cumple',
+    'actividad',
+    'monitoreo_pcc',
+    'correccion',
+  ];
   return keys.some((k) => {
     const v = row[k];
     return v !== undefined && v !== null && String(v).trim() !== '';
   });
 }
 
+function applyOwnerVerifico(
+  base: OwnedRow,
+  incoming: OwnedRow,
+  ownerName: string
+): OwnedRow {
+  const mark = String(incoming.verifico_mark ?? '').trim();
+  const next = { ...base };
+  if (mark === 'OK' || mark === '✓' || mark === 'C') {
+    next.verifico_mark = 'OK';
+    next.verifico_nombre = ownerName;
+  } else if (mark === 'X' || mark === 'NC') {
+    next.verifico_mark = 'X';
+    next.verifico_nombre = '';
+  } else {
+    next.verifico_mark = '';
+    next.verifico_nombre = '';
+  }
+  return next;
+}
+
 /**
  * Fusiona filas con dueño: cada usuario solo puede crear/editar/borrar las suyas.
- * Las filas de otros se conservan desde existing.
+ * El dueño del envío puede marcar verifico_* en filas ajenas (hoja monitoreo).
  */
 export function mergeOwnedRepeaterRows(params: {
   existing: unknown;
   incoming: unknown;
   userId: string;
   userName: string;
+  isSubmissionOwner?: boolean;
+  ownerName?: string;
 }):
   | { ok: true; merged: OwnedRow[]; changed: boolean }
   | { ok: false; error: string } {
   const existingRows = Array.isArray(params.existing) ? (params.existing as OwnedRow[]) : [];
   const incomingRows = Array.isArray(params.incoming) ? (params.incoming as OwnedRow[]) : [];
+  const isOwner = Boolean(params.isSubmissionOwner);
+  const ownerDisplayName = params.ownerName || params.userName;
 
   const existingById = new Map<string, OwnedRow>();
   for (const row of existingRows) {
@@ -74,12 +116,17 @@ export function mergeOwnedRepeaterRows(params: {
     const id = row.id ? String(row.id) : undefined;
     const prev = id ? existingById.get(id) : undefined;
 
+    // Fila de otro usuario
     if (prev?.ownerUserId && prev.ownerUserId !== params.userId) {
-      merged.push(prev);
+      let kept = { ...prev };
+      if (isOwner) {
+        kept = applyOwnerVerifico(kept, row, ownerDisplayName);
+      }
+      merged.push(kept);
       seenOtherIds.add(String(prev.id));
       continue;
     }
-    if (row.ownerUserId && row.ownerUserId !== params.userId) {
+    if (row.ownerUserId && row.ownerUserId !== params.userId && !isOwner) {
       return {
         ok: false,
         error: 'No puede editar filas de otro usuario',
@@ -93,17 +140,30 @@ export function mergeOwnedRepeaterRows(params: {
       claimed.ownerUserId = params.userId;
       claimed.ownerName = params.userName;
       claimed.responsable = params.userName;
-      claimed.num_pediluvios =
-        claimed.num_pediluvios === undefined ||
-        claimed.num_pediluvios === null ||
-        claimed.num_pediluvios === ''
-          ? 2
-          : claimed.num_pediluvios;
+      if ('num_pediluvios' in claimed || claimed.num_pediluvios !== undefined) {
+        claimed.num_pediluvios =
+          claimed.num_pediluvios === undefined ||
+          claimed.num_pediluvios === null ||
+          claimed.num_pediluvios === ''
+            ? 2
+            : claimed.num_pediluvios;
+      }
+      // Colaborador no puede fijar verificó; dueño sí sobre su propia fila
+      if (!isOwner) {
+        for (const k of OWNER_VERIFICO_ROW_KEYS) {
+          if (prev && k in prev) claimed[k] = prev[k];
+          else delete claimed[k];
+        }
+      } else if ('verifico_mark' in claimed || 'verifico_nombre' in claimed) {
+        Object.assign(claimed, applyOwnerVerifico(claimed, claimed, ownerDisplayName));
+      }
     } else {
       claimed.ownerUserId = null;
       claimed.ownerName = null;
       claimed.responsable = '';
-      claimed.num_pediluvios = 2;
+      if ('num_pediluvios' in claimed) claimed.num_pediluvios = 2;
+      claimed.verifico_mark = '';
+      claimed.verifico_nombre = '';
     }
 
     merged.push(claimed);
@@ -132,6 +192,8 @@ export async function mergeSheetDataWithLocks(params: {
   existingData: Record<string, unknown>;
   incomingData: Record<string, unknown>;
   fieldOptionsByKey?: Record<string, unknown>;
+  isSubmissionOwner?: boolean;
+  ownerName?: string;
 }): Promise<
   | {
       ok: true;
@@ -148,6 +210,8 @@ export async function mergeSheetDataWithLocks(params: {
     existingData,
     incomingData,
     fieldOptionsByKey = {},
+    isSubmissionOwner,
+    ownerName,
   } = params;
 
   const locks = await prisma.submissionFieldLock.findMany({
@@ -176,6 +240,8 @@ export async function mergeSheetDataWithLocks(params: {
         incoming,
         userId,
         userName,
+        isSubmissionOwner,
+        ownerName,
       });
       if (!rowMerge.ok) {
         return { ok: false, error: rowMerge.error, conflicts: [] };

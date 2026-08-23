@@ -177,6 +177,10 @@ export default function FillFormPage() {
   const fields = currentSheet?.fields || [];
   const isPersisted = Boolean(submission.id || persistedIdRef.current);
   const canEdit = submission.status === 'DRAFT' || submission.status === 'REJECTED';
+  const isSubmissionOwner =
+    submission.myRole === 'OWNER' || submission.operatorId === user?.id;
+  const ownerOnlySubmit = submission.format?.code === 'TITULACION_ACIDO_LACTICO';
+  const canSubmit = canEdit && (!ownerOnlySubmit || isSubmissionOwner);
   const effectiveWorkDate = getEffectiveWorkDate(submission, canEdit);
   const isLastSheet = currentSheetIndex === sheets.length - 1;
   const elaboroNames = [
@@ -485,10 +489,15 @@ export default function FillFormPage() {
               <Button variant="secondary" onClick={saveCurrentSheet} loading={saving}>
                 <Save size={18} /> Guardar hoja
               </Button>
-              {isLastSheet && (
+              {isLastSheet && canSubmit && (
                 <Button onClick={() => setShowSubmitConfirm(true)}>
                   <Send size={18} /> Entregar formato completo
                 </Button>
+              )}
+              {isLastSheet && ownerOnlySubmit && !isSubmissionOwner && (
+                <p className="text-xs text-amber-700 max-w-xs">
+                  Solo quien inició el formato puede entregarlo tras verificar las filas.
+                </p>
               )}
             </>
           )}

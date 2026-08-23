@@ -81,11 +81,11 @@ export interface FieldConfig {
 }
 
 export interface FieldOptions {
-  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'producto_terminado_lotes' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater' | 'pc_operativo_table' | 'pediluvios_cambios_repeater';
+  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'producto_terminado_lotes' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater' | 'pc_operativo_table' | 'pediluvios_cambios_repeater' | 'lactico_titulacion_formato' | 'lactico_monitoreo_formato';
   tableType?: 'cloro' | 'esterilizadores' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios' | 'monitoreo';
   pediluviosLayout?: 'operativo' | 'simple';
   schedule?: Record<string, string[]>;
-  mode?: 'cnc' | 'cnc_na';
+  mode?: 'cnc' | 'cnc_na' | 'mark';
   choices?: string[];
   multi?: boolean;
   items?: { key: string; label: string; fr?: string; section?: string; slotCount?: number; naTemp?: boolean; naPresion?: boolean }[];
@@ -103,6 +103,7 @@ export interface FieldOptions {
   maxRows?: number;
   minFilledRows?: number;
   ownedRows?: boolean;
+  formulaFooter?: string;
   entryLabel?: string;
   addButtonLabel?: string;
   note?: string;

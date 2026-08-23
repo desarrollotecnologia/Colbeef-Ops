@@ -768,6 +768,138 @@ function formatWorkDateSafe(date: Date): string {
   }
 }
 
+function lacticoRowFilled(row: Record<string, unknown>): boolean {
+  return ['fecha', 'hora', 'volumen_naoh', 'cumple', 'no_cumple', 'actividad', 'monitoreo_pcc'].some(
+    (k) => String(row[k] ?? '').trim() !== ''
+  );
+}
+
+/** AC-FR-033 — titulación / monitoreo ácido láctico. */
+export function renderLacticoFormatoSheet(
+  doc: PdfDoc,
+  sheetData: Record<string, unknown>,
+  startY: number,
+  opts: {
+    ensureSpace: (y: number, needed: number) => number;
+    variant: 'titulacion' | 'monitoreo';
+  }
+): number {
+  let y = startY;
+  const w = pageWidth(doc) - MARGIN * 2;
+  const isMon = opts.variant === 'monitoreo';
+
+  const cols: { key: string; label: string; width: number }[] = isMon
+    ? [
+        { key: 'fecha', label: 'Fecha', width: 0.1 },
+        { key: 'hora', label: 'Hora', width: 0.07 },
+        { key: 'volumen_naoh', label: 'Vol. NaOH', width: 0.09 },
+        { key: 'concentracion', label: 'Conc.', width: 0.08 },
+        { key: 'cumple', label: 'C', width: 0.05 },
+        { key: 'no_cumple', label: 'NC', width: 0.05 },
+        { key: 'correccion', label: 'Corrección', width: 0.14 },
+        { key: 'monitoreo_pcc', label: 'PCC', width: 0.06 },
+        { key: 'responsable', label: 'Responsable', width: 0.16 },
+        { key: 'verifico', label: 'Verificó', width: 0.2 },
+      ]
+    : [
+        { key: 'fecha', label: 'Fecha', width: 0.1 },
+        { key: 'hora', label: 'Hora', width: 0.07 },
+        { key: 'volumen_naoh', label: 'Vol. NaOH', width: 0.1 },
+        { key: 'concentracion', label: 'Conc.', width: 0.09 },
+        { key: 'cumple', label: 'C', width: 0.05 },
+        { key: 'no_cumple', label: 'NC', width: 0.05 },
+        { key: 'correccion', label: 'Corrección', width: 0.14 },
+        { key: 'actividad', label: 'Actividad', width: 0.14 },
+        { key: 'responsable', label: 'Responsable', width: 0.26 },
+      ];
+
+  const allRows = Array.isArray(sheetData.registros) ? (sheetData.registros as Record<string, unknown>[]) : [];
+  const dataRows = allRows.filter(lacticoRowFilled);
+  const rows = dataRows.length > 0 ? dataRows : [{}];
+
+  const drawHeader = (yy: number) => {
+    const headerH = 14;
+    doc.rect(MARGIN, yy, w, headerH).fill('#d9ead3');
+    doc.strokeColor('#666').lineWidth(0.4).rect(MARGIN, yy, w, headerH).stroke();
+    let x = MARGIN;
+    for (const col of cols) {
+      const cw = w * col.width;
+      doc
+        .fontSize(5.5)
+        .font('Helvetica-Bold')
+        .fillColor('#222')
+        .text(col.label, x + 1, yy + 3, { width: cw - 2, height: 9, lineBreak: false, ellipsis: true });
+      x += cw;
+    }
+    return yy + headerH;
+  };
+
+  y = opts.ensureSpace(y, 36);
+  y = drawHeader(y);
+
+  for (const row of rows) {
+    const cellTexts = cols.map((col) => {
+      if (col.key === 'cumple') return String(row.cumple ?? '') === 'C' ? 'C' : '';
+      if (col.key === 'no_cumple') return String(row.no_cumple ?? '') === 'NC' ? 'NC' : '';
+      if (col.key === 'monitoreo_pcc') return String(row.monitoreo_pcc ?? '') === 'X' ? 'X' : '';
+      if (col.key === 'verifico') {
+        const mark = String(row.verifico_mark ?? '');
+        const name = String(row.verifico_nombre ?? row.ownerName ?? '');
+        if (mark === 'OK') return name ? `✓ ${name}` : '✓';
+        if (mark === 'X') return '✗';
+        return '';
+      }
+      if (col.key === 'responsable') return str(row.responsable || row.ownerName || '');
+      return str(row[col.key]);
+    });
+
+    let rowH = 11;
+    for (let i = 0; i < cols.length; i++) {
+      const cw = w * cols[i].width;
+      const h = doc.fontSize(6).font('Helvetica').heightOfString(cellTexts[i] || ' ', { width: cw - 2 });
+      rowH = Math.max(rowH, Math.min(28, h + 5));
+    }
+
+    const nextY = opts.ensureSpace(y, rowH + 4);
+    if (nextY !== y) y = drawHeader(nextY);
+
+    doc.strokeColor('#999').lineWidth(0.3).rect(MARGIN, y, w, rowH).stroke();
+    let x = MARGIN;
+    for (let i = 0; i < cols.length; i++) {
+      const cw = w * cols[i].width;
+      const text = cellTexts[i];
+      if (!text) {
+        drawClosedBlank(doc, x + 1, y + 2, cw - 2, Math.max(6, rowH - 4));
+      } else {
+        doc
+          .fontSize(6)
+          .font('Helvetica')
+          .fillColor('#111')
+          .text(text, x + 1, y + 2, { width: cw - 2, height: rowH - 3, ellipsis: true, lineGap: 0 });
+      }
+      x += cw;
+    }
+    y += rowH;
+  }
+
+  y = opts.ensureSpace(y + 6, 28);
+  doc.fontSize(6.5).font('Helvetica').fillColor('#333');
+  const formula =
+    'Fórmula: % Ácido láctico = V × N × #eq × 100.  Constantes: N = 0,1 y #eq = 0,09.';
+  doc.text(formula, MARGIN, y, { width: w, height: 10, lineBreak: false });
+  y += 11;
+  if (isMon) {
+    doc.text('Rango aceptable de concentración: 1,9% a 2,1%.', MARGIN, y, {
+      width: w,
+      height: 10,
+      lineBreak: false,
+    });
+    y += 11;
+  }
+  doc.text('C: Cumple    NC: No cumple', MARGIN, y, { width: w, height: 10, lineBreak: false });
+  return y + 8;
+}
+
 export function drawCompactSheetHeader(
   doc: PdfDoc,
   submission: { format: { name: string; documentCode: string | null }; workDate: Date; operator: { fullName: string } },

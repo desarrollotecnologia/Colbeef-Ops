@@ -179,28 +179,38 @@ export function isFieldComplete(
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
 
-    if (options.layout === 'pediluvios_cambios_repeater' || options.ownedRows) {
+    if (options.layout === 'pediluvios_cambios_repeater' || options.layout === 'lactico_titulacion_formato' || options.layout === 'lactico_monitoreo_formato' || options.ownedRows) {
       const filled = rows.filter((row) => {
         const r = row as Record<string, unknown>;
-        return ['fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones'].some(
+        return ['fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones', 'volumen_naoh', 'cumple', 'no_cumple', 'actividad', 'monitoreo_pcc'].some(
           (k) => String(r[k] ?? '').trim() !== ''
         );
       });
       const minFilled = (options as { minFilledRows?: number }).minFilledRows ?? (field.required ? 1 : 0);
       if (filled.length < minFilled) return false;
-      const cols = options.columns ?? options.columns_def ?? [];
-      return filled.every((row) =>
-        cols
-          .filter(
-            (c): c is { key: string; required?: boolean } =>
-              typeof c === 'object' && c !== null && 'key' in c && Boolean((c as { required?: boolean }).required)
-          )
-          .every((col) => {
-            if (col.key === 'num_pediluvios' || col.key === 'responsable') return true;
-            const cell = (row as Record<string, unknown>)[col.key];
-            return cell !== undefined && cell !== null && String(cell).trim() !== '';
-          })
-      );
+      return filled.every((row) => {
+        const r = row as Record<string, unknown>;
+        if (options.layout === 'pediluvios_cambios_repeater') {
+          return ['fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones'].every(
+            (k) => String(r[k] ?? '').trim() !== ''
+          );
+        }
+        const cncOk = String(r.cumple ?? '') === 'C' || String(r.no_cumple ?? '') === 'NC';
+        if (!(String(r.fecha ?? '').trim() && String(r.hora ?? '').trim() && String(r.volumen_naoh ?? '').trim() && cncOk)) {
+          return false;
+        }
+        if (String(r.no_cumple ?? '') === 'NC' && !String(r.correccion ?? '').trim()) return false;
+        if (options.layout === 'lactico_titulacion_formato') {
+          return Boolean(String(r.actividad ?? '').trim());
+        }
+        if (options.layout === 'lactico_monitoreo_formato') {
+          return (
+            String(r.monitoreo_pcc ?? '') === 'X' &&
+            (String(r.verifico_mark ?? '') === 'OK' || String(r.verifico_mark ?? '') === 'X')
+          );
+        }
+        return true;
+      });
     }
 
     // 4 lotes fijos; dentro de cada uno, N registros

@@ -25,7 +25,7 @@ import { assertOperatorCanAccessFormat } from '../utils/formatAccess';
 import { getSubmissionAccess, assertCanEditSubmission } from '../utils/submissionAccess';
 import { mergeSheetDataWithLocks } from '../utils/fieldLocks';
 import { logSubmissionActivity } from '../utils/submissionActivity';
-import { isMultiDayFormat } from '../utils/multiDayFormats';
+import { isMultiDayFormat, isOwnerOnlySubmitFormat } from '../utils/multiDayFormats';
 
 const router = Router();
 
@@ -591,6 +591,11 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
     existingData,
     incomingData,
     fieldOptionsByKey,
+    isSubmissionOwner: submission.operatorId === req.user!.userId,
+    ownerName:
+      submission.operatorId === req.user!.userId
+        ? actor?.fullName ?? req.user!.username
+        : submission.operator?.fullName,
   });
 
   if (!mergeResult.ok) {
@@ -702,6 +707,16 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
 
   if (submission.status !== SubmissionStatus.DRAFT && submission.status !== SubmissionStatus.REJECTED) {
     return res.status(400).json({ error: 'Este envío ya fue entregado' });
+  }
+
+  if (
+    isOwnerOnlySubmitFormat(submission.format.code) &&
+    submission.operatorId !== req.user!.userId
+  ) {
+    return res.status(403).json({
+      error:
+        'Solo quien inició el formato (y verifica las filas) puede entregarlo a revisión del administrador.',
+    });
   }
 
   if (!isMultiDayFormat(submission.format.code)) {
