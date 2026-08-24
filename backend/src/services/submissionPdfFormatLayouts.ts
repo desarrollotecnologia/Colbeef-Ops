@@ -442,7 +442,6 @@ export function renderVehiculosSheet(
     'temp_vehiculo', 'temp_producto', 'desinfeccion_vehiculo',
   ];
   const firmaResp = ['resp_revision_nombre', 'resp_revision_cargo', 'resp_revision_firma'];
-  const firmaCond = ['conductor_firma_nombre', 'conductor_firma_doc', 'conductor_firma'];
 
   y = drawSectionBanner(doc, y, 'Datos del vehículo', 'T° canales < 7 °C · P.C. < 5 °C · Refrig. 0–4 °C · Cong. > -18 °C', true);
   const headerPairs = headerKeys
@@ -489,20 +488,24 @@ export function renderVehiculosSheet(
     );
   }
 
-  y = drawSectionBanner(doc, y, 'Firmas', undefined, true);
   const respPairs = firmaResp
-    .map((key) => fields.find((f) => f.fieldKey === key))
-    .filter(Boolean)
-    .map((f) => ({ label: f!.label, value: str(sheetData[f!.fieldKey]) }));
-  const condPairs = firmaCond
-    .map((key) => fields.find((f) => f.fieldKey === key))
-    .filter(Boolean)
-    .map((f) => ({ label: f!.label, value: str(sheetData[f!.fieldKey]) }));
+    .map((key) => {
+      const f = fields.find((x) => x.fieldKey === key);
+      if (!f) return null;
+      const shortLabel =
+        key === 'resp_revision_nombre'
+          ? 'Nombre'
+          : key === 'resp_revision_cargo'
+            ? 'Cargo'
+            : 'Firma / rúbrica';
+      return { label: shortLabel, value: str(sheetData[f.fieldKey]) };
+    })
+    .filter(Boolean) as { label: string; value: string }[];
 
-  doc.fontSize(6).font('Helvetica-Bold').fillColor('#444').text('Responsable revisión', MARGIN, y);
-  y = drawFieldGrid(doc, y + 8, respPairs, 3, true);
-  doc.fontSize(6).font('Helvetica-Bold').fillColor('#444').text('Conductor', MARGIN, y);
-  y = drawFieldGrid(doc, y + 8, condPairs, 3, true);
+  if (respPairs.length > 0) {
+    y = drawSectionBanner(doc, y, 'Responsable de la revisión', undefined, true);
+    y = drawFieldGrid(doc, y, respPairs, 3, true);
+  }
 
   return y;
 }

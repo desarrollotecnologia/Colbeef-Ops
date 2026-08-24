@@ -17,16 +17,15 @@ const HEADER_KEYS = new Set([
   'temp_vehiculo', 'temp_producto', 'desinfeccion_vehiculo',
 ]);
 
-const FIRMA_KEYS = new Set([
-  'resp_revision_nombre', 'resp_revision_cargo', 'resp_revision_firma',
-  'conductor_firma_nombre', 'conductor_firma_doc', 'conductor_firma',
-]);
+const RESP_KEYS = ['resp_revision_nombre', 'resp_revision_cargo', 'resp_revision_firma'] as const;
 
 export default function Format8VehiculosSheet({ fields, sheetData, onUpdate, disabled }: Props) {
   const headerFields = fields.filter((f) => HEADER_KEYS.has(f.fieldKey));
   const carga = fields.find((f) => f.fieldKey === 'carga_productos');
   const checklist = fields.find((f) => f.fieldKey === 'inspeccion_items');
-  const firmaFields = fields.filter((f) => FIRMA_KEYS.has(f.fieldKey));
+  const respFields = RESP_KEYS.map((k) => fields.find((f) => f.fieldKey === k)).filter(
+    (f): f is FormatField => Boolean(f)
+  );
 
   const cargaOpts = carga?.options ?? {};
   const cargaHasAlimentoCol =
@@ -82,21 +81,32 @@ export default function Format8VehiculosSheet({ fields, sheetData, onUpdate, dis
         </Section>
       )}
 
-      {firmaFields.length > 0 && (
-        <Section title="Firmas">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-            <div className="space-y-3 border border-gray-200 rounded-lg p-4">
-              <h4 className="text-xs font-bold uppercase text-gray-700">Responsable de la revisión</h4>
-              {firmaFields.filter((f) => f.fieldKey.startsWith('resp_revision')).map((f) => (
-                <FormField key={f.fieldKey} field={f} value={sheetData[f.fieldKey]} onChange={(v) => onUpdate(f.fieldKey, v)} disabled={disabled} />
+      {respFields.length > 0 && (
+        <Section title="Responsable de la revisión" subtitle="Quien realiza la inspección del vehículo">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {respFields
+              .filter((f) => f.fieldKey !== 'resp_revision_firma')
+              .map((f) => (
+                <FormField
+                  key={f.fieldKey}
+                  field={f}
+                  value={sheetData[f.fieldKey]}
+                  onChange={(v) => onUpdate(f.fieldKey, v)}
+                  disabled={disabled}
+                />
               ))}
-            </div>
-            <div className="space-y-3 border border-gray-200 rounded-lg p-4">
-              <h4 className="text-xs font-bold uppercase text-gray-700">Conductor del vehículo</h4>
-              {firmaFields.filter((f) => f.fieldKey.startsWith('conductor_firma')).map((f) => (
-                <FormField key={f.fieldKey} field={f} value={sheetData[f.fieldKey]} onChange={(v) => onUpdate(f.fieldKey, v)} disabled={disabled} />
+            {respFields
+              .filter((f) => f.fieldKey === 'resp_revision_firma')
+              .map((f) => (
+                <div key={f.fieldKey} className="sm:col-span-2">
+                  <FormField
+                    field={f}
+                    value={sheetData[f.fieldKey]}
+                    onChange={(v) => onUpdate(f.fieldKey, v)}
+                    disabled={disabled}
+                  />
+                </div>
               ))}
-            </div>
           </div>
         </Section>
       )}

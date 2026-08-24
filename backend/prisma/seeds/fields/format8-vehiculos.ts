@@ -61,11 +61,17 @@ export function getFormat8Fields(_slug: string): FieldDef[] {
       columns: ['cnc', 'observation'],
       required: true,
     }),
-    textField('resp_revision_nombre', 'Responsable revisión — Nombre', 30, { groupName: 'Firmas' }),
-    textField('resp_revision_cargo', 'Responsable revisión — Cargo', 31, { groupName: 'Firmas' }),
-    textareaField('resp_revision_firma', 'Responsable revisión — Firma', 32, { groupName: 'Firmas', placeholder: 'Firma' }),
-    textField('conductor_firma_nombre', 'Conductor — Nombre', 33, { groupName: 'Firmas' }),
-    textField('conductor_firma_doc', 'Conductor — Doc. identificación', 34, { groupName: 'Firmas' }),
-    textareaField('conductor_firma', 'Conductor — Firma', 35, { groupName: 'Firmas', placeholder: 'Firma' }),
+    textField('resp_revision_nombre', 'Nombre', 30, {
+      groupName: 'Responsable de la revisión',
+      required: true,
+    }),
+    textField('resp_revision_cargo', 'Cargo', 31, {
+      groupName: 'Responsable de la revisión',
+      required: true,
+    }),
+    textareaField('resp_revision_firma', 'Firma / rúbrica', 32, {
+      groupName: 'Responsable de la revisión',
+      placeholder: 'Firma',
+    }),
   ];
 }
