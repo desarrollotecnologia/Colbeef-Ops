@@ -49,7 +49,9 @@ export default function FormatSubmissionViewer({
   const sheetData = sheetDataById[currentSheet?.id ?? ''] ?? {};
   const formatCode = submission.format?.code;
   const isPediluvios = formatCode === 'REGISTRO_PEDILUVIOS';
-  const isLactico = formatCode === 'TITULACION_ACIDO_LACTICO';
+  const isLactico =
+    formatCode === 'TITULACION_ACIDO_LACTICO' ||
+    formatCode === 'MONITOREO_TITULACION_ACIDO_LACTICO';
   const hideElaboro = isPediluvios || isLactico;
   const isOwner =
     submission.myRole === 'OWNER' ||

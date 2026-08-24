@@ -6,7 +6,6 @@ import {
   repeaterField,
   textField,
   timeField,
-  textareaField,
 } from '../field-helpers';
 
 const VEHICLE_ITEMS: { key: string; label: string; section: string }[] = [
@@ -68,10 +67,6 @@ export function getFormat8Fields(_slug: string): FieldDef[] {
     textField('resp_revision_cargo', 'Cargo', 31, {
       groupName: 'Responsable de la revisión',
       required: true,
-    }),
-    textareaField('resp_revision_firma', 'Firma / rúbrica', 32, {
-      groupName: 'Responsable de la revisión',
-      placeholder: 'Firma',
     }),
   ];
 }

@@ -182,15 +182,21 @@ export const FORMAT_CATALOG = [
   },
   {
     code: 'TITULACION_ACIDO_LACTICO',
-    name: 'Titulación y Monitoreo de Ácido Láctico',
+    name: 'Titulación ácido láctico',
     documentCode: 'AC-FR-033',
-    sheetCount: 2,
+    sheetCount: 1,
     sortOrder: 18,
     noSunday: true,
-    sheets: [
-      { sheetOrder: 1, name: 'Titulación ácido láctico', slug: 'titulacion' },
-      { sheetOrder: 2, name: 'Monitoreo titulación ácido láctico', slug: 'monitoreo' },
-    ],
+    sheets: [{ sheetOrder: 1, name: 'Titulación ácido láctico', slug: 'principal' }],
+  },
+  {
+    code: 'MONITOREO_TITULACION_ACIDO_LACTICO',
+    name: 'Monitoreo titulación ácido láctico',
+    documentCode: 'AC-FR-010',
+    sheetCount: 1,
+    sortOrder: 19,
+    noSunday: true,
+    sheets: [{ sheetOrder: 1, name: 'Monitoreo titulación ácido láctico', slug: 'principal' }],
   },
 ] as const;
 

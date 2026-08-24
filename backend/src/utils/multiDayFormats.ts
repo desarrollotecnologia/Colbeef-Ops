@@ -6,7 +6,7 @@ export function isMultiDayFormat(formatCode: string | null | undefined): boolean
 }
 
 /** Solo el dueño (quien inició) puede entregar a revisión. */
-export const OWNER_ONLY_SUBMIT_CODES = new Set(['TITULACION_ACIDO_LACTICO']);
+export const OWNER_ONLY_SUBMIT_CODES = new Set(['MONITOREO_TITULACION_ACIDO_LACTICO']);
 
 export function isOwnerOnlySubmitFormat(formatCode: string | null | undefined): boolean {
   return Boolean(formatCode && OWNER_ONLY_SUBMIT_CODES.has(formatCode));

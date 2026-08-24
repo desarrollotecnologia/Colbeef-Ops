@@ -179,7 +179,7 @@ export default function FillFormPage() {
   const canEdit = submission.status === 'DRAFT' || submission.status === 'REJECTED';
   const isSubmissionOwner =
     submission.myRole === 'OWNER' || submission.operatorId === user?.id;
-  const ownerOnlySubmit = submission.format?.code === 'TITULACION_ACIDO_LACTICO';
+  const ownerOnlySubmit = submission.format?.code === 'MONITOREO_TITULACION_ACIDO_LACTICO';
   const canSubmit = canEdit && (!ownerOnlySubmit || isSubmissionOwner);
   const effectiveWorkDate = getEffectiveWorkDate(submission, canEdit);
   const isLastSheet = currentSheetIndex === sheets.length - 1;

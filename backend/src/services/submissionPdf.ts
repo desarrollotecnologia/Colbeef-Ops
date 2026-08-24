@@ -114,6 +114,7 @@ const LANDSCAPE_FORMAT_CODES = new Set([
   'LINEA_OPERATIVO',
   'REGISTRO_PEDILUVIOS',
   'TITULACION_ACIDO_LACTICO',
+  'MONITOREO_TITULACION_ACIDO_LACTICO',
 ]);
 
 function needsLandscape(fields: FormatField[]): boolean {
@@ -2380,10 +2381,10 @@ function renderSheetPage(
       fechaInicio: submission.workDate,
       fechaCierre: submission.submittedAt,
     });
-  } else if (code === 'TITULACION_ACIDO_LACTICO') {
+  } else if (code === 'TITULACION_ACIDO_LACTICO' || code === 'MONITOREO_TITULACION_ACIDO_LACTICO') {
     y = renderLacticoFormatoSheet(doc, sheetData, y, {
       ensureSpace: (yy, needed) => ensurePageSpace(doc, ctx, yy, needed),
-      variant: sheet.slug === 'monitoreo' ? 'monitoreo' : 'titulacion',
+      variant: code === 'MONITOREO_TITULACION_ACIDO_LACTICO' ? 'monitoreo' : 'titulacion',
     });
   } else {
     for (const field of fields) {
@@ -2398,7 +2399,11 @@ function renderSheetPage(
   if (y + sigH > contentBottom(doc)) {
     y = startContentPage(doc, ctx);
   }
-  if (code === 'REGISTRO_PEDILUVIOS' || code === 'TITULACION_ACIDO_LACTICO') {
+  if (
+    code === 'REGISTRO_PEDILUVIOS' ||
+    code === 'TITULACION_ACIDO_LACTICO' ||
+    code === 'MONITOREO_TITULACION_ACIDO_LACTICO'
+  ) {
     drawSignatures(doc, submission.operator.fullName, y, {
       verificoOnly: true,
       verificoName: submission.reviewedBy?.fullName,

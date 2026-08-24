@@ -17,7 +17,7 @@ const HEADER_KEYS = new Set([
   'temp_vehiculo', 'temp_producto', 'desinfeccion_vehiculo',
 ]);
 
-const RESP_KEYS = ['resp_revision_nombre', 'resp_revision_cargo', 'resp_revision_firma'] as const;
+const RESP_KEYS = ['resp_revision_nombre', 'resp_revision_cargo'] as const;
 
 export default function Format8VehiculosSheet({ fields, sheetData, onUpdate, disabled }: Props) {
   const headerFields = fields.filter((f) => HEADER_KEYS.has(f.fieldKey));
@@ -84,29 +84,15 @@ export default function Format8VehiculosSheet({ fields, sheetData, onUpdate, dis
       {respFields.length > 0 && (
         <Section title="Responsable de la revisión" subtitle="Quien realiza la inspección del vehículo">
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {respFields
-              .filter((f) => f.fieldKey !== 'resp_revision_firma')
-              .map((f) => (
-                <FormField
-                  key={f.fieldKey}
-                  field={f}
-                  value={sheetData[f.fieldKey]}
-                  onChange={(v) => onUpdate(f.fieldKey, v)}
-                  disabled={disabled}
-                />
-              ))}
-            {respFields
-              .filter((f) => f.fieldKey === 'resp_revision_firma')
-              .map((f) => (
-                <div key={f.fieldKey} className="sm:col-span-2">
-                  <FormField
-                    field={f}
-                    value={sheetData[f.fieldKey]}
-                    onChange={(v) => onUpdate(f.fieldKey, v)}
-                    disabled={disabled}
-                  />
-                </div>
-              ))}
+            {respFields.map((f) => (
+              <FormField
+                key={f.fieldKey}
+                field={f}
+                value={sheetData[f.fieldKey]}
+                onChange={(v) => onUpdate(f.fieldKey, v)}
+                disabled={disabled}
+              />
+            ))}
           </div>
         </Section>
       )}

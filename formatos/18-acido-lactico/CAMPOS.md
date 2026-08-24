@@ -1,21 +1,11 @@
-# Titulación y Monitoreo de Ácido Láctico (AC-FR-033)
+# Titulación y Monitoreo de Ácido Láctico
 
-Código en sistema: `TITULACION_ACIDO_LACTICO` — 2 hojas.
+Son **dos formatos independientes** en el sistema:
 
-## Hoja 1 — Titulación
-
-Fecha | Hora | Vol. NaOH | Concentración (auto) | Cumple | No cumple | Corrección | Actividad (Operativo/Preoperativo) | Responsable (quien llena)
-
-## Hoja 2 — Monitoreo
-
-Igual + Monitoreo PCC (X) + Verificó por fila (✓ nombre del dueño / ✗).
-
-## Reglas
-
-- Colaboración con filas propias.
-- Solo el dueño marca Verificó por fila y entrega a admin.
-- Admin da el Verificó final del pie (sin Elaboró).
-- Fórmula: `% = V × N × #eq × 100` (N=0,1; #eq=0,09). Rango monitoreo: 1,9%–2,1%.
+| Formato | Código | Documento |
+|---------|--------|-----------|
+| Titulación ácido láctico | `TITULACION_ACIDO_LACTICO` | AC-FR-033 |
+| Monitoreo titulación ácido láctico | `MONITOREO_TITULACION_ACIDO_LACTICO` | AC-FR-010 |
 
 ## Activar
 
@@ -24,4 +14,4 @@ cd backend
 npm run db:seed
 ```
 
-Asignar el formato a operarios en Admin → Usuarios.
+Asignar cada formato a los operarios que correspondan en Admin → Usuarios.

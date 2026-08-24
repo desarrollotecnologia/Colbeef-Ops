@@ -16,7 +16,8 @@ import { getFormat14Fields } from './format14-pc-comestible-operativo';
 import { getFormat15Fields } from './format15-poes-operativo';
 import { getFormat16Fields } from './format16-pc-comestibles-inocuidad';
 import { getFormat17Fields } from './format17-pediluvios-cambios';
-import { getFormat18Fields } from './format18-acido-lactico';
+import { getFormat18Fields } from './format18-titulacion-acido-lactico';
+import { getFormat19Fields } from './format19-monitoreo-titulacion-acido-lactico';
 
 type FieldResolver = (slug: string) => FieldDef[];
 
@@ -39,6 +40,7 @@ const RESOLVERS: Record<string, FieldResolver> = {
   PC_COMESTIBLES_INOCUIDAD: getFormat16Fields,
   REGISTRO_PEDILUVIOS: getFormat17Fields,
   TITULACION_ACIDO_LACTICO: getFormat18Fields,
+  MONITOREO_TITULACION_ACIDO_LACTICO: getFormat19Fields,
 };
 
 export function getFieldsForSheet(formatCode: string, sheetSlug: string): FieldDef[] {
