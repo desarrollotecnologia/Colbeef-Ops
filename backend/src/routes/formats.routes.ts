@@ -4,6 +4,7 @@ import prisma from '../lib/prisma';
 import { authenticate, denyPanel } from '../middleware/auth';
 import { paramId } from '../utils/params';
 import { assertOperatorCanAccessFormat, getAllowedFormatIds } from '../utils/formatAccess';
+import { clipSheetsToFormatCount } from '../utils/formatSheets';
 
 const router = Router();
 
@@ -24,7 +25,12 @@ router.get('/', authenticate, denyPanel, async (req: Request, res: Response) => 
       _count: { select: { sheets: true } },
     },
   });
-  res.json(formats);
+  res.json(
+    formats.map((f) => {
+      const sheets = clipSheetsToFormatCount(f.sheetCount, f.sheets);
+      return { ...f, sheets, _count: { ...f._count, sheets: sheets.length } };
+    })
+  );
 });
 
 router.get('/:id', authenticate, denyPanel, async (req: Request, res: Response) => {
@@ -50,7 +56,10 @@ router.get('/:id', authenticate, denyPanel, async (req: Request, res: Response) 
     return res.status(404).json({ error: 'Formato no encontrado' });
   }
 
-  res.json(format);
+  res.json({
+    ...format,
+    sheets: clipSheetsToFormatCount(format.sheetCount, format.sheets),
+  });
 });
 
 export default router;

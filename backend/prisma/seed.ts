@@ -74,6 +74,8 @@ async function seedFormats() {
       },
     });
 
+    const keepSheetOrders = new Set(formatDef.sheets.map((s) => s.sheetOrder));
+
     for (const sheetDef of formatDef.sheets) {
       const sheet = await prisma.formatSheet.upsert({
         where: {
@@ -142,6 +144,24 @@ async function seedFormats() {
         });
         totalFields += 1;
       }
+    }
+
+    // Quitar hojas que ya no están en el catálogo (ej. formato de 2 hojas → 1 hoja).
+    const orphanSheets = await prisma.formatSheet.findMany({
+      where: {
+        formatId: format.id,
+        sheetOrder: { notIn: [...keepSheetOrders] },
+      },
+      select: { id: true },
+    });
+    if (orphanSheets.length > 0) {
+      const orphanIds = orphanSheets.map((s) => s.id);
+      await prisma.formSubmissionSheet.deleteMany({
+        where: { sheetId: { in: orphanIds } },
+      });
+      await prisma.formatSheet.deleteMany({
+        where: { id: { in: orphanIds } },
+      });
     }
   }
 

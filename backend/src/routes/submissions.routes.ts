@@ -26,6 +26,7 @@ import { getSubmissionAccess, assertCanEditSubmission } from '../utils/submissio
 import { mergeSheetDataWithLocks } from '../utils/fieldLocks';
 import { logSubmissionActivity } from '../utils/submissionActivity';
 import { isMultiDayFormat, isOwnerOnlySubmitFormat } from '../utils/multiDayFormats';
+import { clipSheetsToFormatCount } from '../utils/formatSheets';
 
 const router = Router();
 
@@ -71,8 +72,28 @@ const submissionInclude = {
   ...collaborationInclude,
 };
 
-function withFrozenSchema<T extends Parameters<typeof applySchemaSnapshotToFormat>[0]>(submission: T) {
-  return applySchemaSnapshotToFormat(submission);
+function withFrozenSchema<T extends Parameters<typeof applySchemaSnapshotToFormat>[0] & {
+  sheets?: { sheetId: string }[];
+  format?: { sheetCount?: number; sheets?: { id: string; sheetOrder: number }[] } | null;
+}>(submission: T) {
+  const frozen = applySchemaSnapshotToFormat(submission);
+  // Borradores: respetar sheetCount actual (ej. formato partido de 2 hojas → 1).
+  if (
+    (frozen.status === 'DRAFT' || frozen.status === 'REJECTED') &&
+    frozen.format &&
+    typeof frozen.format.sheetCount === 'number'
+  ) {
+    const sheets = clipSheetsToFormatCount(frozen.format.sheetCount, frozen.format.sheets ?? []);
+    const keepIds = new Set(sheets.map((s) => s.id));
+    return {
+      ...frozen,
+      format: { ...frozen.format, sheets },
+      sheets: Array.isArray(frozen.sheets)
+        ? frozen.sheets.filter((s) => keepIds.has(s.sheetId))
+        : frozen.sheets,
+    };
+  }
+  return frozen;
 }
 
 function enrichForViewer<
@@ -205,7 +226,8 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
     return res.status(400).json({ error: dateCheck.error });
   }
 
-  const schemaSnapshot = buildFormatSchemaSnapshot(format.sheets);
+  const activeSheets = clipSheetsToFormatCount(format.sheetCount, format.sheets);
+  const schemaSnapshot = buildFormatSchemaSnapshot(activeSheets);
 
   const submission = await prisma.formSubmission.create({
     data: {
@@ -214,7 +236,7 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
       workDate: parsedDate,
       schemaSnapshot,
       sheets: {
-        create: format.sheets.map((sheet) => ({
+        create: activeSheets.map((sheet) => ({
           sheetId: sheet.id,
           data: {},
         })),
@@ -503,7 +525,9 @@ router.get('/:id', async (req: Request, res: Response) => {
     (submission.status === SubmissionStatus.DRAFT || submission.status === SubmissionStatus.REJECTED) &&
     !submission.schemaSnapshot
   ) {
-    const schemaSnapshot = buildFormatSchemaSnapshot(submission.format.sheets);
+    const schemaSnapshot = buildFormatSchemaSnapshot(
+      clipSheetsToFormatCount(submission.format.sheetCount, submission.format.sheets)
+    );
     submission = await prisma.formSubmission.update({
       where: { id: submission.id },
       data: { schemaSnapshot },
@@ -627,7 +651,9 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
       },
     });
     if (full?.format?.sheets) {
-      draftPatch.schemaSnapshot = buildFormatSchemaSnapshot(full.format.sheets);
+      draftPatch.schemaSnapshot = buildFormatSchemaSnapshot(
+        clipSheetsToFormatCount(full.format.sheetCount, full.format.sheets)
+      );
     }
   }
 
