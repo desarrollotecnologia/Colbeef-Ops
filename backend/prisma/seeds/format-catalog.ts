@@ -207,7 +207,7 @@ export const FORMAT_CATALOG = [
     noSunday: true,
     sheets: [
       { sheetOrder: 1, name: 'Vísceras rojas', slug: 'visceras-rojas' },
-      { sheetOrder: 2, name: 'Víscera blanca', slug: 'viscera-blanca' },
+      { sheetOrder: 2, name: 'Vísceras blancas', slug: 'visceras-blancas' },
     ],
   },
 ] as const;

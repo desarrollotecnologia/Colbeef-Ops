@@ -72,8 +72,8 @@ function buildFields(codigoLabel: string): FieldDef[] {
 }
 
 export function getFormat20Fields(slug: string): FieldDef[] {
-  if (slug === 'viscera-blanca') {
-    return buildFields('Código víscera blanca');
+  if (slug === 'visceras-blancas' || slug === 'viscera-blanca') {
+    return buildFields('Código vísceras blancas');
   }
-  return buildFields('Código víscera roja');
+  return buildFields('Código vísceras rojas');
 }

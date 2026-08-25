@@ -3,7 +3,7 @@
 Formato digital con **2 hojas** (misma estructura de campos):
 
 1. **Vísceras rojas**
-2. **Víscera blanca**
+2. **Vísceras blancas**
 
 Código sistema: `TEMP_VISCERAS_CAVA`
 
