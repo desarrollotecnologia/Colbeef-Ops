@@ -897,6 +897,149 @@ export function renderLacticoFormatoSheet(
   return y + 8;
 }
 
+function visceraRowFilled(row: Record<string, unknown>): boolean {
+  return [
+    'codigo',
+    'c1_fecha',
+    'c1_hora_inicio',
+    'c1_hora_final',
+    'c1_temp',
+    'c2_fecha',
+    'c2_temp',
+    'c3_fecha',
+    'c3_temp',
+    'observaciones',
+  ].some((k) => String(row[k] ?? '').trim() !== '');
+}
+
+/** SAI-CAL-F005 — control temperatura vísceras en cava (roja / blanca). */
+export function renderViscerasCavaSheet(
+  doc: PdfDoc,
+  sheetData: Record<string, unknown>,
+  startY: number,
+  opts: {
+    ensureSpace: (y: number, needed: number) => number;
+    sheetName: string;
+  }
+): number {
+  let y = startY;
+  const w = pageWidth(doc) - MARGIN * 2;
+
+  y = drawSectionBanner(doc, y, opts.sheetName, 'SAI-CAL-F005 · Controles de temperatura', true);
+  y = drawFieldGrid(
+    doc,
+    y,
+    [
+      { label: 'Cava de almacenamiento', value: str(sheetData.cava_almacenamiento) },
+      { label: 'Cliente / destino', value: str(sheetData.cliente_destino) },
+    ],
+    2,
+    true
+  );
+
+  const allRows = Array.isArray(sheetData.registros)
+    ? (sheetData.registros as Record<string, unknown>[])
+    : [];
+  const rows = allRows.filter(visceraRowFilled);
+  const dataRows = rows.length > 0 ? rows : [{}];
+
+  const controlW = 0.18;
+  const cols: { key: string; label: string; width: number }[] = [
+    { key: 'item', label: 'Item', width: 0.05 },
+    { key: 'codigo', label: 'Código', width: 0.12 },
+    { key: 'c1', label: 'T° Control 1\nFecha · H.ini · H.fin · T°', width: controlW },
+    { key: 'c2', label: 'T° Control 2\nFecha · H.ini · H.fin · T°', width: controlW },
+    { key: 'c3', label: 'T° Control 3\nFecha · H.ini · H.fin · T°', width: controlW },
+    { key: 'observaciones', label: 'Observaciones', width: 0.11 },
+    { key: 'responsable', label: 'Responsable', width: 0.18 },
+  ];
+
+  const formatControl = (row: Record<string, unknown>, n: 1 | 2 | 3) => {
+    const fecha = str(row[`c${n}_fecha`]);
+    const hi = str(row[`c${n}_hora_inicio`]);
+    const hf = str(row[`c${n}_hora_final`]);
+    const temp = str(row[`c${n}_temp`]);
+    if ([fecha, hi, hf, temp].every((v) => !v || v === '—')) return '—';
+    return `${fecha === '—' ? '' : fecha}  ${hi === '—' ? '' : hi}-${hf === '—' ? '' : hf}  ${temp === '—' ? '' : `${temp}°`}`.trim();
+  };
+
+  const drawHeader = (yy: number) => {
+    const headerH = 22;
+    doc.rect(MARGIN, yy, w, headerH).fill('#d9ead3');
+    doc.strokeColor('#666').lineWidth(0.4).rect(MARGIN, yy, w, headerH).stroke();
+    let x = MARGIN;
+    for (const col of cols) {
+      const cw = w * col.width;
+      doc
+        .fontSize(5.5)
+        .font('Helvetica-Bold')
+        .fillColor('#222')
+        .text(col.label, x + 2, yy + 3, {
+          width: cw - 4,
+          height: headerH - 4,
+          align: 'center',
+        });
+      x += cw;
+    }
+    return yy + headerH;
+  };
+
+  y = opts.ensureSpace(y, 50);
+  y = drawHeader(y);
+
+  dataRows.forEach((row, idx) => {
+    const cellTexts = [
+      String(idx + 1),
+      str(row.codigo),
+      formatControl(row, 1),
+      formatControl(row, 2),
+      formatControl(row, 3),
+      str(row.observaciones),
+      str(row.ownerName || ''),
+    ];
+
+    let rowH = 14;
+    for (let i = 0; i < cols.length; i++) {
+      const cw = w * cols[i].width;
+      const h = doc
+        .fontSize(6)
+        .font('Helvetica')
+        .heightOfString(cellTexts[i] === '—' ? ' ' : cellTexts[i], { width: cw - 4 });
+      rowH = Math.max(rowH, Math.min(40, h + 6));
+    }
+
+    const nextY = opts.ensureSpace(y, rowH + 4);
+    if (nextY !== y) {
+      y = drawHeader(nextY);
+    }
+
+    doc.strokeColor('#999').lineWidth(0.3).rect(MARGIN, y, w, rowH).stroke();
+    let x = MARGIN;
+    for (let i = 0; i < cols.length; i++) {
+      const cw = w * cols[i].width;
+      const text = cellTexts[i];
+      if (isBlankPdfValue(text) || text === '—') {
+        drawClosedBlank(doc, x + 2, y + 3, cw - 4, rowH - 6);
+      } else {
+        doc
+          .fontSize(6)
+          .font('Helvetica')
+          .fillColor('#111')
+          .text(text, x + 2, y + 3, {
+            width: cw - 4,
+            height: rowH - 5,
+            ellipsis: true,
+            lineGap: 0,
+          });
+      }
+      x += cw;
+    }
+    y += rowH;
+  });
+
+  return y + 6;
+}
+
 export function drawCompactSheetHeader(
   doc: PdfDoc,
   submission: { format: { name: string; documentCode: string | null }; workDate: Date; operator: { fullName: string } },

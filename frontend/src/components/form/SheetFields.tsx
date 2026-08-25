@@ -28,6 +28,7 @@ import Format14PcOperativoSheet from './Format14PcOperativoSheet';
 import Format16InocuidadSheet from './Format16InocuidadSheet';
 import Format17PediluviosSheet from './Format17PediluviosSheet';
 import Format18AcidoLacticoSheet from './Format18AcidoLacticoSheet';
+import Format20ViscerasCavaSheet from './Format20ViscerasCavaSheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const LEGEND_FOOTER = (
@@ -81,6 +82,21 @@ export default function SheetFields({
           currentUserName={currentUserName}
           isSubmissionOwner={isSubmissionOwner}
           ownerName={ownerName}
+        />
+      </div>
+    );
+  }
+
+  if (registrosLayout === 'visceras_cava_formato') {
+    return (
+      <div className="space-y-6">
+        <Format20ViscerasCavaSheet
+          fields={visible}
+          sheetData={sheetData}
+          onUpdate={onUpdate}
+          disabled={disabled}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
         />
       </div>
     );

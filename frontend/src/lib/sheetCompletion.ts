@@ -137,6 +137,7 @@ export function isFieldComplete(
       optsLayout === 'pediluvios_cambios_repeater' ||
       optsLayout === 'lactico_titulacion_formato' ||
       optsLayout === 'lactico_monitoreo_formato' ||
+      optsLayout === 'visceras_cava_formato' ||
       options.ownedRows;
 
     if (isOwned) {
@@ -152,7 +153,16 @@ export function isFieldComplete(
             String(r.cumple ?? '').trim() ||
             String(r.no_cumple ?? '').trim() ||
             String(r.actividad ?? '').trim() ||
-            String(r.monitoreo_pcc ?? '').trim()
+            String(r.monitoreo_pcc ?? '').trim() ||
+            String(r.codigo ?? '').trim() ||
+            String(r.c1_fecha ?? '').trim() ||
+            String(r.c1_hora_inicio ?? '').trim() ||
+            String(r.c1_hora_final ?? '').trim() ||
+            String(r.c1_temp ?? '').trim() ||
+            String(r.c2_fecha ?? '').trim() ||
+            String(r.c2_temp ?? '').trim() ||
+            String(r.c3_fecha ?? '').trim() ||
+            String(r.c3_temp ?? '').trim()
         );
       });
       const minFilled = options.minFilledRows ?? (field.required ? 1 : 0);
@@ -167,6 +177,20 @@ export function isFieldComplete(
             String(r.desinfectante ?? '').trim() &&
             String(r.concentracion_ppm ?? '').trim() &&
             String(r.observaciones ?? '').trim()
+          );
+        }
+        if (layout === 'visceras_cava_formato') {
+          const controlOk = (n: 1 | 2 | 3, required: boolean) => {
+            const keys = [`c${n}_fecha`, `c${n}_hora_inicio`, `c${n}_hora_final`, `c${n}_temp`];
+            const any = keys.some((k) => String(r[k] ?? '').trim() !== '');
+            if (!any) return !required;
+            return keys.every((k) => String(r[k] ?? '').trim() !== '');
+          };
+          return (
+            Boolean(String(r.codigo ?? '').trim()) &&
+            controlOk(1, true) &&
+            controlOk(2, false) &&
+            controlOk(3, false)
           );
         }
         // ácido láctico

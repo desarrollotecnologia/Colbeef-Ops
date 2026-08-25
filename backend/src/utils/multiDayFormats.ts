@@ -17,6 +17,7 @@ export const OWNED_ROW_REPEATER_LAYOUTS = new Set([
   'pediluvios_cambios_repeater',
   'lactico_titulacion_formato',
   'lactico_monitoreo_formato',
+  'visceras_cava_formato',
 ]);
 
 /** Campo repetidor con filas de dueño (solo el autor edita su fila). */

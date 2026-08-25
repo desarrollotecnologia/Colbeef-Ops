@@ -18,6 +18,7 @@ import { getFormat16Fields } from './format16-pc-comestibles-inocuidad';
 import { getFormat17Fields } from './format17-pediluvios-cambios';
 import { getFormat18Fields } from './format18-titulacion-acido-lactico';
 import { getFormat19Fields } from './format19-monitoreo-titulacion-acido-lactico';
+import { getFormat20Fields } from './format20-temp-visceras-cava';
 
 type FieldResolver = (slug: string) => FieldDef[];
 
@@ -41,6 +42,7 @@ const RESOLVERS: Record<string, FieldResolver> = {
   REGISTRO_PEDILUVIOS: getFormat17Fields,
   TITULACION_ACIDO_LACTICO: getFormat18Fields,
   MONITOREO_TITULACION_ACIDO_LACTICO: getFormat19Fields,
+  TEMP_VISCERAS_CAVA: getFormat20Fields,
 };
 
 export function getFieldsForSheet(formatCode: string, sheetSlug: string): FieldDef[] {

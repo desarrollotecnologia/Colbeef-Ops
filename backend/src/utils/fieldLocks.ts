@@ -54,6 +54,19 @@ function rowHasContent(row: OwnedRow): boolean {
     'actividad',
     'monitoreo_pcc',
     'correccion',
+    'codigo',
+    'c1_fecha',
+    'c1_hora_inicio',
+    'c1_hora_final',
+    'c1_temp',
+    'c2_fecha',
+    'c2_hora_inicio',
+    'c2_hora_final',
+    'c2_temp',
+    'c3_fecha',
+    'c3_hora_inicio',
+    'c3_hora_final',
+    'c3_temp',
   ];
   return keys.some((k) => {
     const v = row[k];

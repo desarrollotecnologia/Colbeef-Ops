@@ -198,6 +198,18 @@ export const FORMAT_CATALOG = [
     noSunday: true,
     sheets: [{ sheetOrder: 1, name: 'Monitoreo titulación ácido láctico', slug: 'principal' }],
   },
+  {
+    code: 'TEMP_VISCERAS_CAVA',
+    name: 'Control de temperatura de víscera en cava',
+    documentCode: 'SAI-CAL-F005',
+    sheetCount: 2,
+    sortOrder: 20,
+    noSunday: true,
+    sheets: [
+      { sheetOrder: 1, name: 'Vísceras rojas', slug: 'visceras-rojas' },
+      { sheetOrder: 2, name: 'Víscera blanca', slug: 'viscera-blanca' },
+    ],
+  },
 ] as const;
 
 export type FormatCode = (typeof FORMAT_CATALOG)[number]['code'];

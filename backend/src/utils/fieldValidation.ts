@@ -179,12 +179,16 @@ export function isFieldComplete(
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
 
-    if (options.layout === 'pediluvios_cambios_repeater' || options.layout === 'lactico_titulacion_formato' || options.layout === 'lactico_monitoreo_formato' || options.ownedRows) {
+    if (options.layout === 'pediluvios_cambios_repeater' || options.layout === 'lactico_titulacion_formato' || options.layout === 'lactico_monitoreo_formato' || options.layout === 'visceras_cava_formato' || options.ownedRows) {
       const filled = rows.filter((row) => {
         const r = row as Record<string, unknown>;
-        return ['fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones', 'volumen_naoh', 'cumple', 'no_cumple', 'actividad', 'monitoreo_pcc'].some(
-          (k) => String(r[k] ?? '').trim() !== ''
-        );
+        return [
+          'fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones',
+          'volumen_naoh', 'cumple', 'no_cumple', 'actividad', 'monitoreo_pcc',
+          'codigo', 'c1_fecha', 'c1_hora_inicio', 'c1_hora_final', 'c1_temp',
+          'c2_fecha', 'c2_hora_inicio', 'c2_hora_final', 'c2_temp',
+          'c3_fecha', 'c3_hora_inicio', 'c3_hora_final', 'c3_temp',
+        ].some((k) => String(r[k] ?? '').trim() !== '');
       });
       const minFilled = (options as { minFilledRows?: number }).minFilledRows ?? (field.required ? 1 : 0);
       if (filled.length < minFilled) return false;
@@ -193,6 +197,20 @@ export function isFieldComplete(
         if (options.layout === 'pediluvios_cambios_repeater') {
           return ['fecha', 'hora', 'desinfectante', 'concentracion_ppm', 'observaciones'].every(
             (k) => String(r[k] ?? '').trim() !== ''
+          );
+        }
+        if (options.layout === 'visceras_cava_formato') {
+          const controlOk = (n: 1 | 2 | 3, required: boolean) => {
+            const keys = [`c${n}_fecha`, `c${n}_hora_inicio`, `c${n}_hora_final`, `c${n}_temp`];
+            const any = keys.some((k) => String(r[k] ?? '').trim() !== '');
+            if (!any) return !required;
+            return keys.every((k) => String(r[k] ?? '').trim() !== '');
+          };
+          return (
+            Boolean(String(r.codigo ?? '').trim()) &&
+            controlOk(1, true) &&
+            controlOk(2, false) &&
+            controlOk(3, false)
           );
         }
         const cncOk = String(r.cumple ?? '') === 'C' || String(r.no_cumple ?? '') === 'NC';
