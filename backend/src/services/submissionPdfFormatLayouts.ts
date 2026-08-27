@@ -71,21 +71,21 @@ function drawVehiculosCargaTable(
   const labelW = w * 0.28;
   const cantW = w * 0.22;
   const prodW = w * 0.5;
-  const rowH = 10;
-  const headerH = 11;
+  const rowH = 12;
+  const headerH = 13;
   let cy = y;
   const dataRows = rows.length > 0 ? rows : [{}];
 
   doc.rect(MARGIN, cy, w, headerH).fill('#d9ead3').strokeColor('#888').lineWidth(0.4).stroke();
-  doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
-  doc.text('Alimentos que transporta', MARGIN + 2, cy + 2, { width: labelW - 4, align: 'center' });
-  doc.text('Cantidad', MARGIN + labelW + 2, cy + 2, { width: cantW - 4, align: 'center' });
-  doc.text('Producto', MARGIN + labelW + cantW + 2, cy + 2, { width: prodW - 4, align: 'center' });
+  doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#333');
+  doc.text('Alimentos que transporta', MARGIN + 2, cy + 3, { width: labelW - 4, align: 'center' });
+  doc.text('Cantidad', MARGIN + labelW + 2, cy + 3, { width: cantW - 4, align: 'center' });
+  doc.text('Producto', MARGIN + labelW + cantW + 2, cy + 3, { width: prodW - 4, align: 'center' });
   cy += headerH;
 
   const bodyH = Math.max(rowH, dataRows.length * rowH);
   doc.rect(MARGIN, cy, labelW, bodyH).fill('#f3f4f6').strokeColor('#888').lineWidth(0.4).stroke();
-  doc.fontSize(6).font('Helvetica-Bold').fillColor('#333').text('Alimentos que transporta', MARGIN + 3, cy + bodyH / 2 - 8, {
+  doc.fontSize(7).font('Helvetica-Bold').fillColor('#333').text('Alimentos que transporta', MARGIN + 3, cy + bodyH / 2 - 8, {
     width: labelW - 6,
     align: 'center',
   });
@@ -94,17 +94,17 @@ function drawVehiculosCargaTable(
     const ry = cy + ri * rowH;
     doc.rect(MARGIN + labelW, ry, cantW, rowH).strokeColor('#888').lineWidth(0.4).stroke();
     doc.rect(MARGIN + labelW + cantW, ry, prodW, rowH).strokeColor('#888').lineWidth(0.4).stroke();
-    drawTextOrClosed(doc, row.cantidad, MARGIN + labelW + 2, ry + 2, {
+    drawTextOrClosed(doc, row.cantidad, MARGIN + labelW + 2, ry + 2.5, {
       width: cantW - 4,
       rowH,
       cellY: ry,
-      fontSize: 6,
+      fontSize: 7,
     });
-    drawTextOrClosed(doc, row.producto, MARGIN + labelW + cantW + 2, ry + 2, {
+    drawTextOrClosed(doc, row.producto, MARGIN + labelW + cantW + 2, ry + 2.5, {
       width: prodW - 4,
       rowH,
       cellY: ry,
-      fontSize: 6,
+      fontSize: 7,
     });
   });
 
@@ -219,7 +219,8 @@ function drawChecklistTwoColumn(
   doc: PdfDoc,
   y: number,
   field: FormatField,
-  value: Record<string, ChecklistItemData>
+  value: Record<string, ChecklistItemData>,
+  larger = false
 ): number {
   const opts = (field.options ?? {}) as FieldOptions;
   const items = opts.items ?? [];
@@ -227,9 +228,14 @@ function drawChecklistTwoColumn(
   const halfW = w / 2 - 4;
   const itemW = halfW - 52;
   let cy = y;
+  const headerFs = larger ? 6.5 : 5.5;
+  const sectionFs = larger ? 6 : 5;
+  const itemFs = larger ? 6 : 5;
+  const rowStep = larger ? 8.5 : 7;
+  const sectionH = larger ? 11 : 9;
 
   const drawColumnHeader = (x: number) => {
-    doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#333');
+    doc.fontSize(headerFs).font('Helvetica-Bold').fillColor('#333');
     doc.text('Aspecto', x, cy, { width: itemW });
     doc.text('C', x + itemW + 2, cy, { width: 14, align: 'center' });
     doc.text('NC', x + itemW + 16, cy, { width: 14, align: 'center' });
@@ -238,7 +244,7 @@ function drawChecklistTwoColumn(
 
   drawColumnHeader(MARGIN);
   drawColumnHeader(MARGIN + halfW + 8);
-  cy += 8;
+  cy += larger ? 10 : 8;
 
   type Row = { item: (typeof items)[0]; section: string };
   const rows: Row[] = [];
@@ -261,20 +267,20 @@ function drawChecklistTwoColumn(
     for (const row of list) {
       if (ry > contentBottom(doc) - 8) break;
       if (row.item.key.startsWith('__sec_')) {
-        doc.rect(x, ry, halfW, 9).fill('#dcfce7');
-        doc.fontSize(5).font('Helvetica-Bold').fillColor('#111').text(row.item.label.toUpperCase(), x + 2, ry + 2, {
+        doc.rect(x, ry, halfW, sectionH).fill('#dcfce7');
+        doc.fontSize(sectionFs).font('Helvetica-Bold').fillColor('#111').text(row.item.label.toUpperCase(), x + 2, ry + 2.5, {
           width: halfW - 4,
         });
-        ry += 10;
+        ry += sectionH + 1;
         continue;
       }
       const data = value[row.item.key] ?? {};
       const cnc = data.cnc ?? '';
-      doc.fontSize(5).font('Helvetica').fillColor('#111').text(row.item.label, x + 1, ry, { width: itemW - 2 });
+      doc.fontSize(itemFs).font('Helvetica').fillColor('#111').text(row.item.label, x + 1, ry, { width: itemW - 2 });
       doc.text(cnc === 'C' ? 'X' : '', x + itemW + 2, ry, { width: 14, align: 'center' });
       doc.text(cnc === 'NC' ? 'X' : '', x + itemW + 16, ry, { width: 14, align: 'center' });
       doc.text(cnc === 'NA' ? 'X' : '', x + itemW + 30, ry, { width: 14, align: 'center' });
-      ry += 7;
+      ry += rowStep;
     }
     return ry;
   };
@@ -443,16 +449,16 @@ export function renderVehiculosSheet(
   ];
   const respRevisionKeys = ['resp_revision_nombre', 'resp_revision_cargo'];
 
-  y = drawSectionBanner(doc, y, 'Datos del vehículo', 'T° canales < 7 °C · P.C. < 5 °C · Refrig. 0–4 °C · Cong. > -18 °C', true);
+  y = drawSectionBanner(doc, y, 'Datos del vehículo', 'T° canales < 7 °C · P.C. < 5 °C · Refrig. 0–4 °C · Cong. > -18 °C');
   const headerPairs = headerKeys
     .map((key) => fields.find((f) => f.fieldKey === key))
     .filter(Boolean)
     .map((f) => ({ label: f!.label, value: str(sheetData[f!.fieldKey]) }));
-  y = drawFieldGrid(doc, y, headerPairs, 4, true);
+  y = drawFieldGrid(doc, y, headerPairs, 4);
 
   const cargaField = fields.find((f) => f.fieldKey === 'carga_productos');
   if (cargaField) {
-    y = drawSectionBanner(doc, y, 'Carga del vehículo', 'Ácido láctico al 2% (± 0,1)', true);
+    y = drawSectionBanner(doc, y, 'Carga del vehículo', 'Ácido láctico al 2% (± 0,1)');
     const rows = Array.isArray(sheetData.carga_productos)
       ? (sheetData.carga_productos as Record<string, unknown>[])
       : [];
@@ -469,8 +475,7 @@ export function renderVehiculosSheet(
           { key: 'cantidad', label: 'Cantidad' },
           { key: 'producto', label: 'Producto' },
         ],
-        rows,
-        true
+        rows
       );
     } else {
       y = drawVehiculosCargaTable(doc, y, rows);
@@ -479,12 +484,13 @@ export function renderVehiculosSheet(
 
   const checklist = fields.find((f) => f.fieldKey === 'inspeccion_items');
   if (checklist) {
-    y = drawSectionBanner(doc, y, 'Inspección de aspectos', 'C · NC · NA', true);
+    y = drawSectionBanner(doc, y, 'Inspección de aspectos', 'C · NC · NA');
     y = drawChecklistTwoColumn(
       doc,
       y,
       checklist,
-      (sheetData.inspeccion_items as Record<string, ChecklistItemData>) ?? {}
+      (sheetData.inspeccion_items as Record<string, ChecklistItemData>) ?? {},
+      true
     );
   }
 
@@ -497,8 +503,8 @@ export function renderVehiculosSheet(
     .filter(Boolean) as { label: string; value: string }[];
 
   if (respPairs.length > 0) {
-    y = drawSectionBanner(doc, y, 'Responsable de la revisión', undefined, true);
-    y = drawFieldGrid(doc, y, respPairs, 2, true);
+    y = drawSectionBanner(doc, y, 'Responsable de la revisión');
+    y = drawFieldGrid(doc, y, respPairs, 2);
   }
 
   return y;
