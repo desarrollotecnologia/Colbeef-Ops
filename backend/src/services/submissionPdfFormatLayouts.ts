@@ -1121,7 +1121,6 @@ export function renderCanalesTempPhSheet(
     { key: 'temp_c4', label: 'Ctrl 4', width: 0.1 },
     { key: 'temp_liberacion', label: 'T°C lib.', width: 0.1 },
     { key: 'ph', label: 'pH', width: 0.08 },
-    { key: 'responsable', label: 'Responsable', width: 0.24 },
   ];
 
   const allRows = Array.isArray(sheetData.registros) ? (sheetData.registros as Record<string, unknown>[]) : [];
@@ -1159,7 +1158,6 @@ export function renderCanalesTempPhSheet(
       str(row.temp_c4),
       str(row.temp_liberacion),
       str(row.ph),
-      str(row.ownerName || ''),
     ];
 
     let rowH = 12;

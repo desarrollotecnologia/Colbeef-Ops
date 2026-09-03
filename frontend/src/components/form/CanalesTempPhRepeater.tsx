@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Lock, Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
@@ -86,15 +86,21 @@ export default function CanalesTempPhRepeater({
   const minRows = options.minRows ?? 5;
   const maxRows = options.maxRows ?? 48;
   const rows = useMemo(() => (Array.isArray(value) ? value : []), [value]);
+  const hasPaddedOnceRef = useRef(false);
 
   useEffect(() => {
     if (disabled) return;
-    if (rows.length >= minRows) return;
+    // Solo inicializamos filas vacías cuando el repetidor viene vacío.
+    // Así el usuario puede eliminar filas vacías sin que el sistema las vuelva a crear.
+    if (hasPaddedOnceRef.current) return;
+    if (rows.length !== 0) return;
+
     const padded = [...rows];
     while (padded.length < minRows) padded.push(newEmptyRow());
+    hasPaddedOnceRef.current = true;
     onChange(padded);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minRows, disabled]);
+  }, [minRows, disabled, rows.length]);
 
   const updateRow = (index: number, patch: Partial<CanalesTempPhRow>) => {
     const row = rows[index];
@@ -123,7 +129,9 @@ export default function CanalesTempPhRepeater({
   const removeRow = (index: number) => {
     const row = rows[index];
     if (!canEditRow(row, currentUserId, disabled)) return;
-    if (rows.length <= minRows && !rowHasContent(row)) return;
+    // Puedes eliminar filas vacías siempre.
+    // Si la fila tiene contenido, solo se elimina si hay más de minRows.
+    if (rowHasContent(row) && rows.length <= minRows) return;
     onChange(rows.filter((_, i) => i !== index));
   };
 
@@ -148,7 +156,6 @@ export default function CanalesTempPhRepeater({
                   {f.label}
                 </th>
               ))}
-              <th className="border border-gray-400 px-2 py-1.5 text-left font-bold min-w-[100px]">Responsable</th>
               <th className="border border-gray-400 px-1 py-1.5 w-8" />
             </tr>
           </thead>
@@ -160,7 +167,14 @@ export default function CanalesTempPhRepeater({
               return (
                 <tr key={row.id || index} className={locked ? 'bg-amber-50/60' : 'bg-white'}>
                   <td className="border border-gray-300 px-2 py-1 text-center font-semibold text-gray-700">
-                    {index + 1}
+                    <div className="flex items-center justify-center gap-1">
+                      <span>{index + 1}</span>
+                      {locked && (
+                        <span title={row.ownerName || 'Otro usuario'} className="inline-flex">
+                          <Lock className="w-3 h-3 text-amber-800" />
+                        </span>
+                      )}
+                    </div>
                   </td>
                   {ROW_FIELDS.map((f) => (
                     <td key={f.key} className="border border-gray-300 p-1">
@@ -174,20 +188,8 @@ export default function CanalesTempPhRepeater({
                       />
                     </td>
                   ))}
-                  <td className="border border-gray-300 px-2 py-1 text-[10px] text-gray-600">
-                    {locked ? (
-                      <span className="inline-flex items-center gap-1 text-amber-800">
-                        <Lock className="w-3 h-3 shrink-0" />
-                        {row.ownerName || 'Otro'}
-                      </span>
-                    ) : row.ownerName ? (
-                      <span className="text-emerald-700">{row.ownerName}</span>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
                   <td className="border border-gray-300 p-1 text-center">
-                    {editable && rowHasContent(row) && (
+                    {editable && (!rowHasContent(row) || rows.length > minRows) && (
                       <button
                         type="button"
                         onClick={() => removeRow(index)}
