@@ -1,7 +1,6 @@
 import type { FormatField } from '@/types';
-import FormField from './FormField';
+import { INPUT_CLASS } from '@/lib/formUtils';
 import CanalesTempPhRepeater, { type CanalesTempPhRow } from './CanalesTempPhRepeater';
-import { SECTION_HEADER_CLASS } from '@/lib/formUtils';
 
 interface Props {
   fields: FormatField[];
@@ -12,16 +11,12 @@ interface Props {
   currentUserName?: string;
 }
 
-const HEADER_KEYS = ['cliente'] as const;
-
-const CONTROL_GROUPS = [
-  { title: 'Control 1', keys: ['c1_cava', 'c1_temp_cava', 'c1_fecha', 'c1_hora'] },
-  { title: 'Control 2', keys: ['c2_cava', 'c2_temp_cava', 'c2_fecha', 'c2_hora'] },
-  { title: 'Control 3', keys: ['c3_cava', 'c3_temp_cava', 'c3_fecha', 'c3_hora'] },
-  { title: 'Control 4', keys: ['c4_cava', 'c4_temp_cava', 'c4_fecha', 'c4_hora'] },
+const CONTROLS = [
+  { label: 'Control 1', prefix: 'c1' },
+  { label: 'Control 2', prefix: 'c2' },
+  { label: 'Control 3', prefix: 'c3' },
+  { label: 'Control 4', prefix: 'c4' },
 ] as const;
-
-const LIB_KEYS = ['lib_cava', 'lib_temp_cava', 'lib_fecha', 'lib_hora'] as const;
 
 export default function Format21CanalesSheet({
   fields,
@@ -31,108 +26,198 @@ export default function Format21CanalesSheet({
   currentUserId,
   currentUserName,
 }: Props) {
-  const headerFields = HEADER_KEYS.map((k) => fields.find((f) => f.fieldKey === k)).filter(
-    (f): f is FormatField => Boolean(f)
-  );
-  const tiempoField = fields.find((f) => f.fieldKey === 'tiempo_almacenamiento_horas');
   const registros = fields.find((f) => f.fieldKey === 'registros');
   const obsField = fields.find((f) => f.fieldKey === 'observaciones_generales');
-
-  const fieldByKey = (key: string) => fields.find((f) => f.fieldKey === key);
+  const tiempoField = fields.find((f) => f.fieldKey === 'tiempo_almacenamiento_horas');
 
   return (
-    <div className="border border-gray-800 rounded-sm overflow-hidden space-y-0">
-      {headerFields.length > 0 && (
+    <div className="border border-gray-800 rounded-sm overflow-hidden">
+
+      {/* ── Encabezado: Cliente + rangos ── */}
+      <div className="bg-emerald-50 border-b border-gray-800 px-4 py-2 grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
         <div>
-          <div className={SECTION_HEADER_CLASS}>
-            <h3 className="text-xs font-bold uppercase text-gray-900">Encabezado</h3>
-            <p className="text-[11px] text-gray-600 mt-0.5">
-              Rango temperatura cavas: 0 °C – 4 °C · pH canales: 5,5 – 5,8
-            </p>
-          </div>
-          <div className="p-4">
-            {headerFields.map((f) => (
-              <FormField
-                key={f.fieldKey}
-                field={f}
-                value={sheetData[f.fieldKey]}
-                onChange={(v) => onUpdate(f.fieldKey, v)}
-                disabled={disabled}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="border-t border-gray-800">
-        <div className={SECTION_HEADER_CLASS}>
-          <h3 className="text-xs font-bold uppercase text-gray-900">Controles de temperatura en cava</h3>
-          <p className="text-[11px] text-gray-600 mt-0.5">Cava, T°C, fecha y hora por cada control</p>
-        </div>
-        <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {CONTROL_GROUPS.map((group) => (
-            <div key={group.title} className="border border-gray-300 rounded-sm p-3 space-y-3 bg-slate-50/50">
-              <h4 className="text-xs font-bold text-gray-900">{group.title}</h4>
-              <div className="grid grid-cols-2 gap-3">
-                {group.keys.map((key) => {
-                  const f = fieldByKey(key);
-                  if (!f) return null;
-                  return (
-                    <FormField
-                      key={f.fieldKey}
-                      field={f}
-                      value={sheetData[f.fieldKey]}
-                      onChange={(v) => onUpdate(f.fieldKey, v)}
-                      disabled={disabled}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="border-t border-gray-800">
-        <div className={SECTION_HEADER_CLASS}>
-          <h3 className="text-xs font-bold uppercase text-gray-900">Liberación de canales</h3>
-          <p className="text-[11px] text-gray-600 mt-0.5">Despacho T° &lt; 7 °C · Desposte T° &lt; 4 °C</p>
-        </div>
-        <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {LIB_KEYS.map((key) => {
-            const f = fieldByKey(key);
-            if (!f) return null;
-            return (
-              <FormField
-                key={f.fieldKey}
-                field={f}
-                value={sheetData[f.fieldKey]}
-                onChange={(v) => onUpdate(f.fieldKey, v)}
-                disabled={disabled}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {tiempoField && (
-        <div className="border-t border-gray-800 p-4">
-          <FormField
-            field={tiempoField}
-            value={sheetData[tiempoField.fieldKey]}
-            onChange={(v) => onUpdate(tiempoField.fieldKey, v)}
+          <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Cliente</label>
+          <input
+            type="text"
+            className={`${INPUT_CLASS} text-sm`}
             disabled={disabled}
+            value={String(sheetData.cliente ?? '')}
+            onChange={(e) => onUpdate('cliente', e.target.value)}
+          />
+        </div>
+        <div className="text-[10px] text-gray-600 space-y-0.5 pt-1">
+          <p>Rango temperatura de cavas: <strong>0 °C – 4 °C</strong></p>
+          <p>Rango de pH: <strong>5,5 – 5,8</strong></p>
+        </div>
+      </div>
+
+      {/* ── Tabla de controles 1-4 + Liberación (replicando el Excel) ── */}
+      <div className="overflow-x-auto border-b border-gray-800">
+        <table className="w-full text-[11px] border-collapse min-w-[860px]">
+          <thead>
+            {/* Fila de títulos de grupo */}
+            <tr className="bg-emerald-100/80">
+              <th className="border border-gray-400 px-2 py-1 text-[10px] font-bold w-[80px]" rowSpan={2} />
+              {CONTROLS.map((c) => (
+                <th key={c.prefix} className="border border-gray-400 px-2 py-1 text-[11px] font-bold text-center" colSpan={2}>
+                  {c.label}
+                </th>
+              ))}
+              <th className="border border-gray-400 px-2 py-1 text-[11px] font-bold text-center bg-emerald-200/60" colSpan={2}>
+                Liberación de canales
+              </th>
+            </tr>
+            {/* Sub-fila Cava / T°C */}
+            <tr className="bg-emerald-50/60">
+              {CONTROLS.map((c) => (
+                <>
+                  <th key={`${c.prefix}_cava`} className="border border-gray-400 px-2 py-0.5 text-[10px] font-semibold">
+                    Cava
+                  </th>
+                  <th key={`${c.prefix}_temp`} className="border border-gray-400 px-2 py-0.5 text-[10px] font-semibold">
+                    T °C
+                  </th>
+                </>
+              ))}
+              <th className="border border-gray-400 px-2 py-0.5 text-[10px] font-semibold bg-emerald-50">
+                T°C Desp. (&lt;7°C) · Desposte (&lt;4°C)
+              </th>
+              <th className="border border-gray-400 px-2 py-0.5 text-[10px] font-semibold bg-emerald-50">
+                pH
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Fecha */}
+            <tr>
+              <td className="border border-gray-400 px-2 py-1 text-[10px] font-semibold bg-gray-50 whitespace-nowrap">Fecha:</td>
+              {CONTROLS.map((c) => (
+                <>
+                  <td key={`${c.prefix}_fecha_a`} className="border border-gray-300 p-1" colSpan={2}>
+                    <input
+                      type="date"
+                      className={`${INPUT_CLASS} text-xs py-0.5 w-full`}
+                      disabled={disabled}
+                      value={String(sheetData[`${c.prefix}_fecha`] ?? '')}
+                      onChange={(e) => onUpdate(`${c.prefix}_fecha`, e.target.value)}
+                    />
+                  </td>
+                </>
+              ))}
+              <td className="border border-gray-300 p-1" colSpan={2}>
+                <input
+                  type="date"
+                  className={`${INPUT_CLASS} text-xs py-0.5 w-full`}
+                  disabled={disabled}
+                  value={String(sheetData.lib_fecha ?? '')}
+                  onChange={(e) => onUpdate('lib_fecha', e.target.value)}
+                />
+              </td>
+            </tr>
+            {/* Hora */}
+            <tr>
+              <td className="border border-gray-400 px-2 py-1 text-[10px] font-semibold bg-gray-50">Hora:</td>
+              {CONTROLS.map((c) => (
+                <>
+                  <td key={`${c.prefix}_hora_a`} className="border border-gray-300 p-1" colSpan={2}>
+                    <input
+                      type="time"
+                      className={`${INPUT_CLASS} text-xs py-0.5 w-full`}
+                      disabled={disabled}
+                      value={String(sheetData[`${c.prefix}_hora`] ?? '')}
+                      onChange={(e) => onUpdate(`${c.prefix}_hora`, e.target.value)}
+                    />
+                  </td>
+                </>
+              ))}
+              <td className="border border-gray-300 p-1" colSpan={2}>
+                <input
+                  type="time"
+                  className={`${INPUT_CLASS} text-xs py-0.5 w-full`}
+                  disabled={disabled}
+                  value={String(sheetData.lib_hora ?? '')}
+                  onChange={(e) => onUpdate('lib_hora', e.target.value)}
+                />
+              </td>
+            </tr>
+            {/* Cava + T°C en fila de datos */}
+            <tr>
+              <td className="border border-gray-400 px-2 py-1 text-[10px] font-semibold bg-gray-50">Cava / T°C:</td>
+              {CONTROLS.map((c) => (
+                <>
+                  <td key={`${c.prefix}_cava_inp`} className="border border-gray-300 p-1">
+                    <input
+                      type="text"
+                      className={`${INPUT_CLASS} text-xs py-0.5`}
+                      disabled={disabled}
+                      placeholder="Cava"
+                      value={String(sheetData[`${c.prefix}_cava`] ?? '')}
+                      onChange={(e) => onUpdate(`${c.prefix}_cava`, e.target.value)}
+                    />
+                  </td>
+                  <td key={`${c.prefix}_temp_inp`} className="border border-gray-300 p-1">
+                    <input
+                      type="text"
+                      className={`${INPUT_CLASS} text-xs py-0.5`}
+                      disabled={disabled}
+                      placeholder="T°C"
+                      value={String(sheetData[`${c.prefix}_temp_cava`] ?? '')}
+                      onChange={(e) => onUpdate(`${c.prefix}_temp_cava`, e.target.value)}
+                    />
+                  </td>
+                </>
+              ))}
+              <td className="border border-gray-300 p-1">
+                <input
+                  type="text"
+                  className={`${INPUT_CLASS} text-xs py-0.5`}
+                  disabled={disabled}
+                  placeholder="Cava"
+                  value={String(sheetData.lib_cava ?? '')}
+                  onChange={(e) => onUpdate('lib_cava', e.target.value)}
+                />
+              </td>
+              <td className="border border-gray-300 p-1">
+                <input
+                  type="text"
+                  className={`${INPUT_CLASS} text-xs py-0.5`}
+                  disabled={disabled}
+                  placeholder="T°C"
+                  value={String(sheetData.lib_temp_cava ?? '')}
+                  onChange={(e) => onUpdate('lib_temp_cava', e.target.value)}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Tiempo de almacenamiento */}
+      {tiempoField && (
+        <div className="border-b border-gray-800 px-4 py-2 flex items-center gap-3 bg-gray-50">
+          <label className="text-[11px] font-semibold text-gray-700 whitespace-nowrap">
+            {tiempoField.label}:
+          </label>
+          <input
+            type="text"
+            className={`${INPUT_CLASS} text-xs w-32`}
+            disabled={disabled}
+            value={String(sheetData[tiempoField.fieldKey] ?? '')}
+            onChange={(e) => onUpdate(tiempoField.fieldKey, e.target.value)}
           />
         </div>
       )}
 
+      {/* Tabla de canales */}
       {registros && (
-        <div className="border-t border-gray-800">
-          <div className={SECTION_HEADER_CLASS}>
-            <h3 className="text-xs font-bold uppercase text-gray-900">{registros.label}</h3>
-            {registros.helpText && (
-              <p className="text-[11px] text-gray-600 mt-0.5">{registros.helpText}</p>
-            )}
+        <div className="border-b border-gray-800">
+          <div className="bg-emerald-100/70 border-b border-gray-800 px-4 py-1.5">
+            <h3 className="text-[11px] font-bold uppercase text-gray-900">
+              Temperatura de las canales en almacenamiento
+            </h3>
+            <p className="text-[10px] text-gray-600 mt-0.5">
+              Ctrl 1–4 = temperatura en cava · T°C lib. = temperatura de liberación · pH
+            </p>
           </div>
           <div className="p-3">
             <CanalesTempPhRepeater
@@ -151,13 +236,18 @@ export default function Format21CanalesSheet({
         </div>
       )}
 
+      {/* Observaciones */}
       {obsField && (
-        <div className="border-t border-gray-800 p-4">
-          <FormField
-            field={obsField}
-            value={sheetData[obsField.fieldKey]}
-            onChange={(v) => onUpdate(obsField.fieldKey, v)}
+        <div className="px-4 py-3">
+          <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+            Observaciones
+          </label>
+          <textarea
+            className={`${INPUT_CLASS} text-xs w-full resize-y min-h-[60px]`}
             disabled={disabled}
+            value={String(sheetData[obsField.fieldKey] ?? '')}
+            onChange={(e) => onUpdate(obsField.fieldKey, e.target.value)}
+            placeholder="Observaciones generales del registro"
           />
         </div>
       )}
