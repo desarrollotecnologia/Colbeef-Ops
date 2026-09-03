@@ -55,6 +55,10 @@ export default function FillFormPage() {
     if (sub?.format?.code === 'REGISTRO_PEDILUVIOS' && sub.workDate) {
       return toWorkDateString(sub.workDate);
     }
+    // Devuelto para corrección: conservar fecha operativa original
+    if (sub?.status === 'REJECTED' && sub.workDate) {
+      return toWorkDateString(sub.workDate);
+    }
     if (editable || !sub?.workDate) return getWorkDateString();
     return toWorkDateString(sub.workDate);
   }, []);

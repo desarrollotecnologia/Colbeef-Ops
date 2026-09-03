@@ -13,6 +13,7 @@ import {
   assertWorkDateAllowed,
   getTodayWorkDate,
   isSameWorkDate,
+  shouldAdvanceWorkDateOnEdit,
 } from '../utils/workDate';
 import { getSubmissionMissingFields } from '../utils/fieldValidation';
 import { buildPdfFilename, generateSubmissionPdf } from '../services/submissionPdf';
@@ -505,13 +506,14 @@ router.get('/:id', async (req: Request, res: Response) => {
     submission.status === SubmissionStatus.DRAFT ||
     submission.status === SubmissionStatus.REJECTED;
 
-  // Formatos diarios: la fecha de trabajo sigue el día actual.
-  // Formatos multi-día (semanales): conservar fecha de inicio.
+  // Formatos diarios: borradores nuevos siguen el día actual.
+  // Rechazados: conservar fecha operativa original (trazabilidad del turno).
   if (
     isEditable &&
     !isAdmin &&
     access.isEditor &&
     !isMultiDayFormat(submission.format.code) &&
+    shouldAdvanceWorkDateOnEdit(submission.status) &&
     !isSameWorkDate(submission.workDate, getTodayWorkDate())
   ) {
     submission = await prisma.formSubmission.update({
@@ -633,7 +635,7 @@ router.put('/:id/sheets/:sheetId', requireRole(UserRole.OPERARIO), async (req: R
     workDate?: Date;
     schemaSnapshot?: ReturnType<typeof buildFormatSchemaSnapshot>;
   } = {};
-  if (!isMultiDayFormat(submission.format.code)) {
+  if (!isMultiDayFormat(submission.format.code) && shouldAdvanceWorkDateOnEdit(submission.status)) {
     draftPatch.workDate = getTodayWorkDate();
   }
   if (!submission.schemaSnapshot) {
@@ -745,7 +747,7 @@ router.post('/:id/submit', requireRole(UserRole.OPERARIO), async (req: Request, 
     });
   }
 
-  if (!isMultiDayFormat(submission.format.code)) {
+  if (!isMultiDayFormat(submission.format.code) && shouldAdvanceWorkDateOnEdit(submission.status)) {
     const today = getTodayWorkDate();
     if (!isSameWorkDate(submission.workDate, today)) {
       await prisma.formSubmission.update({

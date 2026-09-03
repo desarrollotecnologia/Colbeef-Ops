@@ -32,6 +32,11 @@ export function isSameWorkDate(a: Date, b: Date): boolean {
   return workDateToString(a) === workDateToString(b);
 }
 
+/** Solo borradores nuevos avanzan la fecha al día actual; rechazados conservan la fecha operativa. */
+export function shouldAdvanceWorkDateOnEdit(status: string): boolean {
+  return status === 'DRAFT';
+}
+
 /** 0 = domingo — usa UTC para coincidir con fechas @db.Date */
 export function isSunday(date: Date): boolean {
   return date.getUTCDay() === 0;
