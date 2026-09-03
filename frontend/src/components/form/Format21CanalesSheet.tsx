@@ -146,7 +146,7 @@ export default function Format21CanalesSheet({
                 </>
               ))}
               <td className="border border-gray-400 px-2 py-0.5 text-[10px] text-gray-600" colSpan={4}>
-                Rango de pH: 5,5 – 5,8
+                Rango de pH: 5,4 – 5,8
               </td>
             </tr>
           </thead>

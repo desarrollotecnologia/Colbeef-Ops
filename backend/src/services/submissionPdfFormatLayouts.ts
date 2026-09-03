@@ -1073,7 +1073,7 @@ export function renderCanalesTempPhSheet(
   doc.text(`Fecha cierre: ${cierre}`, MARGIN + w / 2, y, { width: w / 2 - 4, height: 10, lineBreak: false });
   y += 14;
 
-  y = drawSectionBanner(doc, y, 'Encabezado', 'Rango cavas 0–4 °C · pH 5,5–5,8 · Despacho T° < 7 °C · Desposte T° < 4 °C', true);
+  y = drawSectionBanner(doc, y, 'Encabezado', 'Rango cavas 0–4 °C · pH 5,4–5,8 · Despacho T° < 7 °C · Desposte T° < 4 °C', true);
   y = drawFieldGrid(
     doc,
     y,

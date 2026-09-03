@@ -85,7 +85,7 @@ export function getFormat21Fields(_slug: string): FieldDef[] {
         minFilledRows: 1,
         addButtonLabel: 'Añadir fila',
         ownedRows: true,
-        note: 'Rango temperatura cavas: 0 °C – 4 °C · pH: 5,5 – 5,8 · Despacho T° < 7 °C · Desposte T° < 4 °C',
+        note: 'Rango temperatura cavas: 0 °C – 4 °C · pH: 5,4 – 5,8 · Despacho T° < 7 °C · Desposte T° < 4 °C',
       },
     },
 
