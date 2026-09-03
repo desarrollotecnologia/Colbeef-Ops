@@ -1,9 +1,11 @@
 /**
- * Restaura workDate en envíos que pasaron por rechazo y quedaron con fecha del reenvío.
- * Usa la fecha del movimiento CREATED como fecha operativa original.
+ * Restaura workDate = fecha en que se empezó a llenar (createdAt del envío).
+ * Corrige envíos que pasaron por rechazo y quedaron con la fecha del reenvío.
  *
- * Uso: cd backend && npx tsx scripts/fix-workdate-after-rejection.ts
- * Opcional: npx tsx scripts/fix-workdate-after-rejection.ts --dry-run
+ * Uso:
+ *   cd backend && npm run fix:workdate-rejected
+ *   npm run fix:workdate-rejected -- --dry-run
+ *   npm run fix:workdate-rejected -- --format=MONITOREO_TITULACION_ACIDO_LACTICO --operator=Brayan
  */
 import { PrismaClient, SubmissionActivityType } from '@prisma/client';
 import { isSameWorkDate, parseWorkDate, workDateToString } from '../src/utils/workDate';
@@ -12,15 +14,28 @@ const prisma = new PrismaClient();
 const BOGOTA_TZ = 'America/Bogota';
 const dryRun = process.argv.includes('--dry-run');
 
-function activityToWorkDate(createdAt: Date): Date {
-  const ymd = createdAt.toLocaleDateString('en-CA', { timeZone: BOGOTA_TZ });
+function argValue(prefix: string): string | undefined {
+  const hit = process.argv.find((a) => a.startsWith(`${prefix}=`));
+  return hit?.slice(prefix.length + 1)?.trim();
+}
+
+function timestampToWorkDate(at: Date): Date {
+  const ymd = at.toLocaleDateString('en-CA', { timeZone: BOGOTA_TZ });
   return parseWorkDate(ymd);
 }
 
 async function main() {
+  const formatCode = argValue('--format');
+  const operatorHint = argValue('--operator');
+
   const submissions = await prisma.formSubmission.findMany({
     where: {
-      activities: { some: { type: SubmissionActivityType.REJECTED } },
+      ...(formatCode
+        ? { format: { code: formatCode } }
+        : { activities: { some: { type: SubmissionActivityType.REJECTED } } }),
+      ...(operatorHint
+        ? { operator: { fullName: { contains: operatorHint } } }
+        : {}),
     },
     include: {
       activities: { orderBy: { createdAt: 'asc' } },
@@ -32,10 +47,11 @@ async function main() {
   let fixed = 0;
 
   for (const sub of submissions) {
-    const created = sub.activities.find((a) => a.type === SubmissionActivityType.CREATED);
-    if (!created) continue;
+    const wasRejected = sub.activities.some((a) => a.type === SubmissionActivityType.REJECTED);
+    if (!wasRejected && !formatCode) continue;
 
-    const originalWorkDate = activityToWorkDate(created.createdAt);
+    // Fecha operativa = día en que se creó el envío (empezó a llenar)
+    const originalWorkDate = timestampToWorkDate(sub.createdAt);
     if (isSameWorkDate(sub.workDate, originalWorkDate)) continue;
 
     console.log(
@@ -52,7 +68,12 @@ async function main() {
     fixed += 1;
   }
 
-  console.log(`\n${fixed} envío(s) ${dryRun ? 'a corregir' : 'corregido(s)'}.`);
+  if (fixed === 0) {
+    console.log('Ningún envío requiere corrección (o no coincide el filtro).');
+  } else {
+    console.log(`\n${fixed} envío(s) ${dryRun ? 'a corregir' : 'corregido(s)'}.`);
+    console.log('Vuelva a descargar el PDF para ver la fecha actualizada en el encabezado.');
+  }
 }
 
 main()
