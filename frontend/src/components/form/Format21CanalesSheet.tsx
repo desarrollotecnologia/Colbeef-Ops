@@ -18,6 +18,37 @@ const CONTROLS = [
   { label: 'Control 4', prefix: 'c4' },
 ] as const;
 
+function TextInput({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+  type = 'text',
+  className = '',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  type?: string;
+  className?: string;
+}) {
+  return (
+    <input
+      type={type}
+      className={`${INPUT_CLASS} text-xs py-0.5 px-1 h-6 w-full ${className}`}
+      disabled={disabled}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+    />
+  );
+}
+
+function cell(v: unknown) {
+  return String(v ?? '');
+}
+
 export default function Format21CanalesSheet({
   fields,
   sheetData,
@@ -31,195 +62,184 @@ export default function Format21CanalesSheet({
   const tiempoField = fields.find((f) => f.fieldKey === 'tiempo_almacenamiento_horas');
 
   return (
-    <div className="border border-gray-800 rounded-sm overflow-hidden">
+    <div className="border border-gray-700 rounded-sm overflow-hidden bg-white">
 
-      {/* ── Encabezado: Cliente + rangos ── */}
-      <div className="bg-emerald-50 border-b border-gray-800 px-4 py-2 grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
-        <div>
-          <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Cliente</label>
-          <input
-            type="text"
-            className={`${INPUT_CLASS} text-sm`}
-            disabled={disabled}
-            value={String(sheetData.cliente ?? '')}
-            onChange={(e) => onUpdate('cliente', e.target.value)}
-          />
-        </div>
-        <div className="text-[10px] text-gray-600 space-y-0.5 pt-1">
-          <p>Rango temperatura de cavas: <strong>0 °C – 4 °C</strong></p>
-          <p>Rango de pH: <strong>5,5 – 5,8</strong></p>
-        </div>
+      {/* ── Cliente ── */}
+      <div className="border-b border-gray-700 px-3 py-1.5 flex items-center gap-2">
+        <span className="text-[11px] font-semibold text-gray-800 whitespace-nowrap">Cliente:</span>
+        <TextInput
+          value={cell(sheetData.cliente)}
+          onChange={(v) => onUpdate('cliente', v)}
+          disabled={disabled}
+          className="flex-1"
+        />
       </div>
 
-      {/* ── Tabla de controles 1-4 + Liberación (replicando el Excel) ── */}
-      <div className="overflow-x-auto border-b border-gray-800">
-        <table className="w-full text-[11px] border-collapse min-w-[860px]">
+      {/* ── Tabla de controles (replicando layout del Excel) ── */}
+      <div className="overflow-x-auto border-b border-gray-700">
+        <table className="w-full text-[11px] border-collapse" style={{ minWidth: 900 }}>
           <thead>
-            {/* Fila de títulos de grupo */}
-            <tr className="bg-emerald-100/80">
-              <th className="border border-gray-400 px-2 py-1 text-[10px] font-bold w-[80px]" rowSpan={2} />
+            {/* Fila 1: etiqueta izquierda + encabezados Control 1-4 + Liberación (Despacho/Desposte) */}
+            <tr className="bg-gray-100">
+              {/* celda izquierda: rango cavas – abarca 4 filas */}
+              <td
+                className="border border-gray-500 px-2 py-1 text-[10px] font-semibold text-center align-middle bg-gray-50"
+                rowSpan={4}
+                style={{ width: 110 }}
+              >
+                <div>Rango temperatura</div>
+                <div>de cavas:</div>
+                <div className="font-bold mt-0.5">0°C – 4°C</div>
+              </td>
               {CONTROLS.map((c) => (
-                <th key={c.prefix} className="border border-gray-400 px-2 py-1 text-[11px] font-bold text-center" colSpan={2}>
+                <th
+                  key={c.prefix}
+                  className="border border-gray-500 px-2 py-1 text-[11px] font-bold text-center"
+                  colSpan={2}
+                >
                   {c.label}
                 </th>
               ))}
-              <th className="border border-gray-400 px-2 py-1 text-[11px] font-bold text-center bg-emerald-200/60" colSpan={2}>
-                Liberación de canales
+              {/* Liberación de canales → Despacho + Desposte */}
+              <th
+                className="border border-gray-500 px-2 py-1 text-[11px] font-bold text-center bg-emerald-100"
+                colSpan={4}
+              >
+                LIBERACIÓN DE CANALES
               </th>
             </tr>
-            {/* Sub-fila Cava / T°C */}
-            <tr className="bg-emerald-50/60">
+            {/* Fila 2: sub-cols Cava/T°C para c1-c4 + Despacho / Desposte */}
+            <tr className="bg-gray-50">
               {CONTROLS.map((c) => (
                 <>
-                  <th key={`${c.prefix}_cava`} className="border border-gray-400 px-2 py-0.5 text-[10px] font-semibold">
-                    Cava
-                  </th>
-                  <th key={`${c.prefix}_temp`} className="border border-gray-400 px-2 py-0.5 text-[10px] font-semibold">
-                    T °C
-                  </th>
+                  <th key={`${c.prefix}_cava_h`} className="border border-gray-400 px-1 py-0.5 text-[10px] font-semibold w-[70px]">Cava:</th>
+                  <th key={`${c.prefix}_temp_h`} className="border border-gray-400 px-1 py-0.5 text-[10px] font-semibold w-[60px]">T °C:</th>
                 </>
               ))}
-              <th className="border border-gray-400 px-2 py-0.5 text-[10px] font-semibold bg-emerald-50">
-                T°C Desp. (&lt;7°C) · Desposte (&lt;4°C)
+              <th className="border border-gray-400 px-1 py-0.5 text-[10px] font-bold text-center bg-emerald-50" colSpan={2}>
+                Despacho<br /><span className="font-normal">T°: &lt;7°C</span>
               </th>
-              <th className="border border-gray-400 px-2 py-0.5 text-[10px] font-semibold bg-emerald-50">
-                pH
+              <th className="border border-gray-400 px-1 py-0.5 text-[10px] font-bold text-center bg-emerald-50" colSpan={2}>
+                Desposte<br /><span className="font-normal">T°: &lt;4°C</span>
               </th>
+            </tr>
+            {/* Fila 3: sub-cols Cava/T°C para liberación */}
+            <tr className="bg-gray-50/50">
+              {/* rango pH ocupa todo el ancho de Despacho + Desposte — en la celda correspondiente */}
+              {CONTROLS.map((c) => (
+                <>
+                  <td key={`${c.prefix}_cava_fill`} className="border border-gray-300 p-0" />
+                  <td key={`${c.prefix}_temp_fill`} className="border border-gray-300 p-0" />
+                </>
+              ))}
+              <th className="border border-gray-400 px-1 py-0.5 text-[10px] font-semibold w-[65px]">Cava:</th>
+              <th className="border border-gray-400 px-1 py-0.5 text-[10px] font-semibold w-[55px]">T °C:</th>
+              <th className="border border-gray-400 px-1 py-0.5 text-[10px] font-semibold">Cava:</th>
+              <th className="border border-gray-400 px-1 py-0.5 text-[10px] font-semibold">T °C:</th>
+            </tr>
+            {/* Fila 4: rango de pH */}
+            <tr className="bg-gray-50/30">
+              {CONTROLS.map((c) => (
+                <>
+                  <td key={`${c.prefix}_cv2`} className="border border-gray-300 p-0" />
+                  <td key={`${c.prefix}_tp2`} className="border border-gray-300 p-0" />
+                </>
+              ))}
+              <td className="border border-gray-400 px-2 py-0.5 text-[10px] text-gray-600" colSpan={4}>
+                Rango de pH: 5,5 – 5,8
+              </td>
             </tr>
           </thead>
           <tbody>
             {/* Fecha */}
             <tr>
-              <td className="border border-gray-400 px-2 py-1 text-[10px] font-semibold bg-gray-50 whitespace-nowrap">Fecha:</td>
+              <td className="border border-gray-500 px-2 py-0.5 text-[10px] font-semibold bg-gray-50 whitespace-nowrap">Fecha:</td>
               {CONTROLS.map((c) => (
                 <>
-                  <td key={`${c.prefix}_fecha_a`} className="border border-gray-300 p-1" colSpan={2}>
-                    <input
-                      type="date"
-                      className={`${INPUT_CLASS} text-xs py-0.5 w-full`}
-                      disabled={disabled}
-                      value={String(sheetData[`${c.prefix}_fecha`] ?? '')}
-                      onChange={(e) => onUpdate(`${c.prefix}_fecha`, e.target.value)}
-                    />
+                  <td key={`${c.prefix}_fecha_c`} className="border border-gray-300 p-0.5">
+                    <TextInput type="date" value={cell(sheetData[`${c.prefix}_fecha`])} onChange={(v) => onUpdate(`${c.prefix}_fecha`, v)} disabled={disabled} />
                   </td>
+                  <td key={`${c.prefix}_fecha_d`} className="border border-gray-300 p-0" />
                 </>
               ))}
-              <td className="border border-gray-300 p-1" colSpan={2}>
-                <input
-                  type="date"
-                  className={`${INPUT_CLASS} text-xs py-0.5 w-full`}
-                  disabled={disabled}
-                  value={String(sheetData.lib_fecha ?? '')}
-                  onChange={(e) => onUpdate('lib_fecha', e.target.value)}
-                />
+              <td className="border border-gray-300 p-0.5" colSpan={2}>
+                <TextInput type="date" value={cell(sheetData.lib_despacho_fecha)} onChange={(v) => onUpdate('lib_despacho_fecha', v)} disabled={disabled} />
+              </td>
+              <td className="border border-gray-300 p-0.5" colSpan={2}>
+                <TextInput type="date" value={cell(sheetData.lib_desposte_fecha)} onChange={(v) => onUpdate('lib_desposte_fecha', v)} disabled={disabled} />
               </td>
             </tr>
             {/* Hora */}
             <tr>
-              <td className="border border-gray-400 px-2 py-1 text-[10px] font-semibold bg-gray-50">Hora:</td>
+              <td className="border border-gray-500 px-2 py-0.5 text-[10px] font-semibold bg-gray-50">Hora:</td>
               {CONTROLS.map((c) => (
                 <>
-                  <td key={`${c.prefix}_hora_a`} className="border border-gray-300 p-1" colSpan={2}>
-                    <input
-                      type="time"
-                      className={`${INPUT_CLASS} text-xs py-0.5 w-full`}
-                      disabled={disabled}
-                      value={String(sheetData[`${c.prefix}_hora`] ?? '')}
-                      onChange={(e) => onUpdate(`${c.prefix}_hora`, e.target.value)}
-                    />
+                  <td key={`${c.prefix}_hora_c`} className="border border-gray-300 p-0.5">
+                    <TextInput type="time" value={cell(sheetData[`${c.prefix}_hora`])} onChange={(v) => onUpdate(`${c.prefix}_hora`, v)} disabled={disabled} />
                   </td>
+                  <td key={`${c.prefix}_hora_d`} className="border border-gray-300 p-0" />
                 </>
               ))}
-              <td className="border border-gray-300 p-1" colSpan={2}>
-                <input
-                  type="time"
-                  className={`${INPUT_CLASS} text-xs py-0.5 w-full`}
-                  disabled={disabled}
-                  value={String(sheetData.lib_hora ?? '')}
-                  onChange={(e) => onUpdate('lib_hora', e.target.value)}
-                />
+              <td className="border border-gray-300 p-0.5" colSpan={2}>
+                <TextInput type="time" value={cell(sheetData.lib_despacho_hora)} onChange={(v) => onUpdate('lib_despacho_hora', v)} disabled={disabled} />
+              </td>
+              <td className="border border-gray-300 p-0.5" colSpan={2}>
+                <TextInput type="time" value={cell(sheetData.lib_desposte_hora)} onChange={(v) => onUpdate('lib_desposte_hora', v)} disabled={disabled} />
               </td>
             </tr>
-            {/* Cava + T°C en fila de datos */}
+            {/* Cava + T°C */}
             <tr>
-              <td className="border border-gray-400 px-2 py-1 text-[10px] font-semibold bg-gray-50">Cava / T°C:</td>
+              <td className="border border-gray-500 px-2 py-0.5 text-[10px] font-semibold bg-gray-50" />
               {CONTROLS.map((c) => (
                 <>
-                  <td key={`${c.prefix}_cava_inp`} className="border border-gray-300 p-1">
-                    <input
-                      type="text"
-                      className={`${INPUT_CLASS} text-xs py-0.5`}
-                      disabled={disabled}
-                      placeholder="Cava"
-                      value={String(sheetData[`${c.prefix}_cava`] ?? '')}
-                      onChange={(e) => onUpdate(`${c.prefix}_cava`, e.target.value)}
-                    />
+                  <td key={`${c.prefix}_cava_v`} className="border border-gray-300 p-0.5">
+                    <TextInput value={cell(sheetData[`${c.prefix}_cava`])} onChange={(v) => onUpdate(`${c.prefix}_cava`, v)} disabled={disabled} placeholder="Cava" />
                   </td>
-                  <td key={`${c.prefix}_temp_inp`} className="border border-gray-300 p-1">
-                    <input
-                      type="text"
-                      className={`${INPUT_CLASS} text-xs py-0.5`}
-                      disabled={disabled}
-                      placeholder="T°C"
-                      value={String(sheetData[`${c.prefix}_temp_cava`] ?? '')}
-                      onChange={(e) => onUpdate(`${c.prefix}_temp_cava`, e.target.value)}
-                    />
+                  <td key={`${c.prefix}_temp_v`} className="border border-gray-300 p-0.5">
+                    <TextInput value={cell(sheetData[`${c.prefix}_temp_cava`])} onChange={(v) => onUpdate(`${c.prefix}_temp_cava`, v)} disabled={disabled} placeholder="T°C" />
                   </td>
                 </>
               ))}
-              <td className="border border-gray-300 p-1">
-                <input
-                  type="text"
-                  className={`${INPUT_CLASS} text-xs py-0.5`}
-                  disabled={disabled}
-                  placeholder="Cava"
-                  value={String(sheetData.lib_cava ?? '')}
-                  onChange={(e) => onUpdate('lib_cava', e.target.value)}
-                />
+              <td className="border border-gray-300 p-0.5">
+                <TextInput value={cell(sheetData.lib_despacho_cava)} onChange={(v) => onUpdate('lib_despacho_cava', v)} disabled={disabled} placeholder="Cava" />
               </td>
-              <td className="border border-gray-300 p-1">
-                <input
-                  type="text"
-                  className={`${INPUT_CLASS} text-xs py-0.5`}
-                  disabled={disabled}
-                  placeholder="T°C"
-                  value={String(sheetData.lib_temp_cava ?? '')}
-                  onChange={(e) => onUpdate('lib_temp_cava', e.target.value)}
-                />
+              <td className="border border-gray-300 p-0.5">
+                <TextInput value={cell(sheetData.lib_despacho_temp)} onChange={(v) => onUpdate('lib_despacho_temp', v)} disabled={disabled} placeholder="T°C" />
+              </td>
+              <td className="border border-gray-300 p-0.5">
+                <TextInput value={cell(sheetData.lib_desposte_cava)} onChange={(v) => onUpdate('lib_desposte_cava', v)} disabled={disabled} placeholder="Cava" />
+              </td>
+              <td className="border border-gray-300 p-0.5">
+                <TextInput value={cell(sheetData.lib_desposte_temp)} onChange={(v) => onUpdate('lib_desposte_temp', v)} disabled={disabled} placeholder="T°C" />
               </td>
             </tr>
+            {/* Tiempo de almacenamiento — dentro de la tabla como en el Excel */}
+            {tiempoField && (
+              <tr>
+                <td
+                  className="border border-gray-500 px-2 py-1 text-[10px] font-semibold bg-gray-50 text-center"
+                  colSpan={9}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <span>Tiempo de almacenamiento del producto en refrigeración (horas):</span>
+                    <TextInput
+                      value={cell(sheetData[tiempoField.fieldKey])}
+                      onChange={(v) => onUpdate(tiempoField.fieldKey, v)}
+                      disabled={disabled}
+                      className="w-24 inline-block"
+                    />
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Tiempo de almacenamiento */}
-      {tiempoField && (
-        <div className="border-b border-gray-800 px-4 py-2 flex items-center gap-3 bg-gray-50">
-          <label className="text-[11px] font-semibold text-gray-700 whitespace-nowrap">
-            {tiempoField.label}:
-          </label>
-          <input
-            type="text"
-            className={`${INPUT_CLASS} text-xs w-32`}
-            disabled={disabled}
-            value={String(sheetData[tiempoField.fieldKey] ?? '')}
-            onChange={(e) => onUpdate(tiempoField.fieldKey, e.target.value)}
-          />
-        </div>
-      )}
-
-      {/* Tabla de canales */}
+      {/* ── Tabla de registros de canales ── */}
       {registros && (
-        <div className="border-b border-gray-800">
-          <div className="bg-emerald-100/70 border-b border-gray-800 px-4 py-1.5">
-            <h3 className="text-[11px] font-bold uppercase text-gray-900">
-              Temperatura de las canales en almacenamiento
-            </h3>
-            <p className="text-[10px] text-gray-600 mt-0.5">
-              Ctrl 1–4 = temperatura en cava · T°C lib. = temperatura de liberación · pH
-            </p>
-          </div>
-          <div className="p-3">
+        <div className="border-b border-gray-700">
+          <div className="px-3 py-2">
             <CanalesTempPhRepeater
               options={registros.options ?? {}}
               value={
@@ -236,16 +256,14 @@ export default function Format21CanalesSheet({
         </div>
       )}
 
-      {/* Observaciones */}
+      {/* ── Observaciones ── */}
       {obsField && (
-        <div className="px-4 py-3">
-          <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-            Observaciones
-          </label>
+        <div className="px-3 py-2">
+          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Observaciones:</label>
           <textarea
-            className={`${INPUT_CLASS} text-xs w-full resize-y min-h-[60px]`}
+            className={`${INPUT_CLASS} text-xs w-full resize-y min-h-[56px]`}
             disabled={disabled}
-            value={String(sheetData[obsField.fieldKey] ?? '')}
+            value={cell(sheetData[obsField.fieldKey])}
             onChange={(e) => onUpdate(obsField.fieldKey, e.target.value)}
             placeholder="Observaciones generales del registro"
           />

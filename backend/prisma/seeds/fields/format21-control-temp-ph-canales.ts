@@ -45,10 +45,15 @@ export function getFormat21Fields(_slug: string): FieldDef[] {
     dateField('c4_fecha', 'Fecha', 42, { groupName: 'Control 4' }),
     timeField('c4_hora', 'Hora', 43, { groupName: 'Control 4' }),
 
-    textField('lib_cava', 'Cava', 50, { groupName: 'Liberación de canales' }),
-    textField('lib_temp_cava', 'T°C cava', 51, { groupName: 'Liberación de canales' }),
-    dateField('lib_fecha', 'Fecha', 52, { groupName: 'Liberación de canales' }),
-    timeField('lib_hora', 'Hora', 53, { groupName: 'Liberación de canales' }),
+    textField('lib_despacho_cava', 'Cava despacho', 50, { groupName: 'Liberación — Despacho' }),
+    textField('lib_despacho_temp', 'T°C despacho', 51, { groupName: 'Liberación — Despacho' }),
+    dateField('lib_despacho_fecha', 'Fecha despacho', 52, { groupName: 'Liberación — Despacho' }),
+    timeField('lib_despacho_hora', 'Hora despacho', 53, { groupName: 'Liberación — Despacho' }),
+
+    textField('lib_desposte_cava', 'Cava desposte', 55, { groupName: 'Liberación — Desposte' }),
+    textField('lib_desposte_temp', 'T°C desposte', 56, { groupName: 'Liberación — Desposte' }),
+    dateField('lib_desposte_fecha', 'Fecha desposte', 57, { groupName: 'Liberación — Desposte' }),
+    timeField('lib_desposte_hora', 'Hora desposte', 58, { groupName: 'Liberación — Desposte' }),
 
     textField('tiempo_almacenamiento_horas', 'Tiempo de almacenamiento en refrigeración (horas)', 60, {
       groupName: 'Referencia',
