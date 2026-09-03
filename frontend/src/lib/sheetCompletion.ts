@@ -138,6 +138,7 @@ export function isFieldComplete(
       optsLayout === 'lactico_titulacion_formato' ||
       optsLayout === 'lactico_monitoreo_formato' ||
       optsLayout === 'visceras_cava_formato' ||
+      optsLayout === 'canales_temp_ph_formato' ||
       options.ownedRows;
 
     if (isOwned) {
@@ -162,7 +163,13 @@ export function isFieldComplete(
             String(r.c2_fecha ?? '').trim() ||
             String(r.c2_temp ?? '').trim() ||
             String(r.c3_fecha ?? '').trim() ||
-            String(r.c3_temp ?? '').trim()
+            String(r.c3_temp ?? '').trim() ||
+            String(r.temp_c1 ?? '').trim() ||
+            String(r.temp_c2 ?? '').trim() ||
+            String(r.temp_c3 ?? '').trim() ||
+            String(r.temp_c4 ?? '').trim() ||
+            String(r.temp_liberacion ?? '').trim() ||
+            String(r.ph ?? '').trim()
         );
       });
       const minFilled = options.minFilledRows ?? (field.required ? 1 : 0);
@@ -192,6 +199,9 @@ export function isFieldComplete(
             controlOk(2, false) &&
             controlOk(3, false)
           );
+        }
+        if (layout === 'canales_temp_ph_formato') {
+          return Boolean(String(r.codigo ?? '').trim());
         }
         // ácido láctico
         const cncOk = String(r.cumple ?? '') === 'C' || String(r.no_cumple ?? '') === 'NC';

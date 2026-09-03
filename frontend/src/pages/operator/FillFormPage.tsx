@@ -14,6 +14,7 @@ import { applyAutoFields, recalcDependentFields } from '@/lib/autoFill';
 import { formatWorkDateShort, getWorkDateString, toWorkDateString } from '@/lib/workDate';
 import { downloadSubmissionPdf } from '@/lib/downloadPdf';
 import { getIncompleteFields, isSheetComplete } from '@/lib/sheetCompletion';
+import { isMultiDayFormat } from '@/lib/multiDayFormats';
 import { ENFORCE_REQUIRED_FIELDS } from '@/lib/formUtils';
 import type { Format, FormSubmission, FormatField, MissingField } from '@/types';
 
@@ -51,8 +52,8 @@ export default function FillFormPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const getEffectiveWorkDate = useCallback((sub: FormSubmission | null, editable: boolean) => {
-    // Formatos multi-día (semanales): conservar fecha de inicio del borrador
-    if (sub?.format?.code === 'REGISTRO_PEDILUVIOS' && sub.workDate) {
+    // Formatos multi-día: conservar fecha de inicio del borrador
+    if (isMultiDayFormat(sub?.format?.code) && sub?.workDate) {
       return toWorkDateString(sub.workDate);
     }
     // Devuelto para corrección: conservar fecha operativa original
@@ -360,7 +361,7 @@ export default function FillFormPage() {
         <p className="text-gray-500 text-sm">
           Hoja {currentSheetIndex + 1} de {sheets.length}: {currentSheet?.name}
           {' · '}
-          {submission.format?.code === 'REGISTRO_PEDILUVIOS' ? (
+          {isMultiDayFormat(submission.format?.code) ? (
             <>
               Fecha inicio: {formatWorkDateShort(effectiveWorkDate)}
               {submission.submittedAt && (

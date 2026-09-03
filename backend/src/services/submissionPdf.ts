@@ -1,7 +1,7 @@
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { getDayKey, slugifyPoint } from '../utils/dayKey';
-import { renderDecomisosSheet, renderLacticoFormatoSheet, renderPediluviosCambiosSheet, renderVehiculosSheet, renderViscerasCavaSheet } from './submissionPdfFormatLayouts';
+import { renderDecomisosSheet, renderCanalesTempPhSheet, renderLacticoFormatoSheet, renderPediluviosCambiosSheet, renderVehiculosSheet, renderViscerasCavaSheet } from './submissionPdfFormatLayouts';
 import {
   MARGIN,
   contentBottom,
@@ -116,6 +116,7 @@ const LANDSCAPE_FORMAT_CODES = new Set([
   'TITULACION_ACIDO_LACTICO',
   'MONITOREO_TITULACION_ACIDO_LACTICO',
   'TEMP_VISCERAS_CAVA',
+  'CONTROL_TEMP_PH_CANALES',
 ]);
 
 function needsLandscape(fields: FormatField[]): boolean {
@@ -2392,6 +2393,12 @@ function renderSheetPage(
       ensureSpace: (yy, needed) => ensurePageSpace(doc, ctx, yy, needed),
       sheetName: sheet.name,
     });
+  } else if (code === 'CONTROL_TEMP_PH_CANALES') {
+    y = renderCanalesTempPhSheet(doc, sheetData, y, {
+      ensureSpace: (yy, needed) => ensurePageSpace(doc, ctx, yy, needed),
+      fechaInicio: submission.workDate,
+      fechaCierre: submission.submittedAt,
+    });
   } else {
     for (const field of fields) {
       y = renderField(doc, ctx, field, sheetData[field.fieldKey], y, sheetData);
@@ -2407,6 +2414,7 @@ function renderSheetPage(
   }
   if (
     code === 'REGISTRO_PEDILUVIOS' ||
+    code === 'CONTROL_TEMP_PH_CANALES' ||
     code === 'TITULACION_ACIDO_LACTICO' ||
     code === 'MONITOREO_TITULACION_ACIDO_LACTICO' ||
     code === 'TEMP_VISCERAS_CAVA'

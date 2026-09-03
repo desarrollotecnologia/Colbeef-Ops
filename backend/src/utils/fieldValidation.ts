@@ -179,7 +179,7 @@ export function isFieldComplete(
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
 
-    if (options.layout === 'pediluvios_cambios_repeater' || options.layout === 'lactico_titulacion_formato' || options.layout === 'lactico_monitoreo_formato' || options.layout === 'visceras_cava_formato' || options.ownedRows) {
+    if (options.layout === 'pediluvios_cambios_repeater' || options.layout === 'lactico_titulacion_formato' || options.layout === 'lactico_monitoreo_formato' || options.layout === 'visceras_cava_formato' || options.layout === 'canales_temp_ph_formato' || options.ownedRows) {
       const filled = rows.filter((row) => {
         const r = row as Record<string, unknown>;
         return [
@@ -188,6 +188,7 @@ export function isFieldComplete(
           'codigo', 'c1_fecha', 'c1_hora_inicio', 'c1_hora_final', 'c1_temp',
           'c2_fecha', 'c2_hora_inicio', 'c2_hora_final', 'c2_temp',
           'c3_fecha', 'c3_hora_inicio', 'c3_hora_final', 'c3_temp',
+          'temp_c1', 'temp_c2', 'temp_c3', 'temp_c4', 'temp_liberacion', 'ph',
         ].some((k) => String(r[k] ?? '').trim() !== '');
       });
       const minFilled = (options as { minFilledRows?: number }).minFilledRows ?? (field.required ? 1 : 0);
@@ -212,6 +213,9 @@ export function isFieldComplete(
             controlOk(2, false) &&
             controlOk(3, false)
           );
+        }
+        if (options.layout === 'canales_temp_ph_formato') {
+          return Boolean(String(r.codigo ?? '').trim());
         }
         const cncOk = String(r.cumple ?? '') === 'C' || String(r.no_cumple ?? '') === 'NC';
         if (!(String(r.fecha ?? '').trim() && String(r.hora ?? '').trim() && String(r.volumen_naoh ?? '').trim() && cncOk)) {

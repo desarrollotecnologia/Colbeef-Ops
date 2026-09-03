@@ -210,6 +210,15 @@ export const FORMAT_CATALOG = [
       { sheetOrder: 2, name: 'Vísceras blancas', slug: 'visceras-blancas' },
     ],
   },
+  {
+    code: 'CONTROL_TEMP_PH_CANALES',
+    name: 'Control de temperatura y pH de canales',
+    documentCode: 'AC-FR-034',
+    sheetCount: 1,
+    sortOrder: 21,
+    noSunday: true,
+    sheets: [{ sheetOrder: 1, name: 'Control temperatura canales', slug: 'principal' }],
+  },
 ] as const;
 
 export type FormatCode = (typeof FORMAT_CATALOG)[number]['code'];

@@ -81,7 +81,7 @@ export interface FieldConfig {
 }
 
 export interface FieldOptions {
-  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'producto_terminado_lotes' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater' | 'pc_operativo_table' | 'pediluvios_cambios_repeater' | 'lactico_titulacion_formato' | 'lactico_monitoreo_formato' | 'visceras_cava_formato';
+  layout?: 'day_schedule_table' | 'formal_measure_table' | 'formal_repeater_table' | 'cloro_residual_repeater' | 'lactico_titration_repeater' | 'card_repeater' | 'producto_terminado_lotes' | 'poes_operativo_table' | 'poes_bpm_table' | 'pc_inocuidad_repeater' | 'pc_operativo_table' | 'pediluvios_cambios_repeater' | 'lactico_titulacion_formato' | 'lactico_monitoreo_formato' | 'visceras_cava_formato' | 'canales_temp_ph_formato';
   tableType?: 'cloro' | 'esterilizadores' | 'temperaturas' | 'titulacion' | 'equipos' | 'pediluvios' | 'monitoreo';
   pediluviosLayout?: 'operativo' | 'simple';
   schedule?: Record<string, string[]>;

@@ -1,6 +1,7 @@
 import FormatSheetHeader from './FormatSheetHeader';
 import FormatSignatures from './FormatSignatures';
 import SheetFields from './SheetFields';
+import { isMultiDayFormat } from '@/lib/multiDayFormats';
 import Card, { CardBody } from '@/components/Card';
 import type { FormSubmission, FormatSheet, SubmissionStatus } from '@/types';
 
@@ -48,12 +49,12 @@ export default function FormatSubmissionViewer({
   const fields = currentSheet?.fields ?? [];
   const sheetData = sheetDataById[currentSheet?.id ?? ''] ?? {};
   const formatCode = submission.format?.code;
-  const isPediluvios = formatCode === 'REGISTRO_PEDILUVIOS';
+  const isMultiDay = isMultiDayFormat(formatCode);
   const isLactico =
     formatCode === 'TITULACION_ACIDO_LACTICO' ||
     formatCode === 'MONITOREO_TITULACION_ACIDO_LACTICO';
   const isVisceras = formatCode === 'TEMP_VISCERAS_CAVA';
-  const hideElaboro = isPediluvios || isLactico || isVisceras;
+  const hideElaboro = isMultiDay || isLactico || isVisceras;
   const isOwner =
     submission.myRole === 'OWNER' ||
     submission.operatorId === currentUserId;
@@ -93,10 +94,10 @@ export default function FormatSubmissionViewer({
         documentCode={submission.format?.documentCode}
         workDate={workDate}
         operatorName={operatorName}
-        dateMode={isPediluvios ? 'inicio_cierre' : 'default'}
+        dateMode={isMultiDay ? 'inicio_cierre' : 'default'}
         fechaInicio={workDate}
         fechaCierre={submission.submittedAt ?? null}
-        hideOperator={isPediluvios}
+        hideOperator={isMultiDay}
       />
 
       <Card>

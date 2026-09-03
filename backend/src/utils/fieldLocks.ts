@@ -67,6 +67,13 @@ function rowHasContent(row: OwnedRow): boolean {
     'c3_hora_inicio',
     'c3_hora_final',
     'c3_temp',
+    'codigo',
+    'temp_c1',
+    'temp_c2',
+    'temp_c3',
+    'temp_c4',
+    'temp_liberacion',
+    'ph',
   ];
   return keys.some((k) => {
     const v = row[k];

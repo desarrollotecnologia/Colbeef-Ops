@@ -29,6 +29,7 @@ import Format16InocuidadSheet from './Format16InocuidadSheet';
 import Format17PediluviosSheet from './Format17PediluviosSheet';
 import Format18AcidoLacticoSheet from './Format18AcidoLacticoSheet';
 import Format20ViscerasCavaSheet from './Format20ViscerasCavaSheet';
+import Format21CanalesSheet from './Format21CanalesSheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const LEGEND_FOOTER = (
@@ -91,6 +92,21 @@ export default function SheetFields({
     return (
       <div className="space-y-6">
         <Format20ViscerasCavaSheet
+          fields={visible}
+          sheetData={sheetData}
+          onUpdate={onUpdate}
+          disabled={disabled}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+        />
+      </div>
+    );
+  }
+
+  if (registrosLayout === 'canales_temp_ph_formato') {
+    return (
+      <div className="space-y-6">
+        <Format21CanalesSheet
           fields={visible}
           sheetData={sheetData}
           onUpdate={onUpdate}

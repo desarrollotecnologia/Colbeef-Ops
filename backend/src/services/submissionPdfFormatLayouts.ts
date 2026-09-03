@@ -1046,6 +1046,165 @@ export function renderViscerasCavaSheet(
   return y + 6;
 }
 
+function canalesRowFilled(row: Record<string, unknown>): boolean {
+  return ['codigo', 'temp_c1', 'temp_c2', 'temp_c3', 'temp_c4', 'temp_liberacion', 'ph'].some(
+    (k) => String(row[k] ?? '').trim() !== ''
+  );
+}
+
+/** AC-FR-034 — control temperatura y pH de canales (multi-día, landscape). */
+export function renderCanalesTempPhSheet(
+  doc: PdfDoc,
+  sheetData: Record<string, unknown>,
+  startY: number,
+  opts: {
+    ensureSpace: (y: number, needed: number) => number;
+    fechaInicio: Date;
+    fechaCierre?: Date | null;
+  }
+): number {
+  let y = startY;
+  const w = pageWidth(doc) - MARGIN * 2;
+
+  const inicio = formatWorkDateSafe(opts.fechaInicio);
+  const cierre = opts.fechaCierre ? formatWorkDateSafe(opts.fechaCierre) : '—';
+  doc.fontSize(7).font('Helvetica-Bold').fillColor('#111');
+  doc.text(`Fecha inicio: ${inicio}`, MARGIN, y, { width: w / 2 - 4, height: 10, lineBreak: false });
+  doc.text(`Fecha cierre: ${cierre}`, MARGIN + w / 2, y, { width: w / 2 - 4, height: 10, lineBreak: false });
+  y += 14;
+
+  y = drawSectionBanner(doc, y, 'Encabezado', 'Rango cavas 0–4 °C · pH 5,5–5,8 · Despacho T° < 7 °C · Desposte T° < 4 °C', true);
+  y = drawFieldGrid(
+    doc,
+    y,
+    [
+      { label: 'Cliente', value: str(sheetData.cliente) },
+      { label: 'Tiempo almacenamiento (h)', value: str(sheetData.tiempo_almacenamiento_horas) },
+    ],
+    2,
+    true
+  );
+
+  for (let n = 1; n <= 4; n++) {
+    const pairs = [
+      { label: `Ctrl ${n} — Cava`, value: str(sheetData[`c${n}_cava`]) },
+      { label: `Ctrl ${n} — T°C cava`, value: str(sheetData[`c${n}_temp_cava`]) },
+      { label: `Ctrl ${n} — Fecha`, value: str(sheetData[`c${n}_fecha`]) },
+      { label: `Ctrl ${n} — Hora`, value: str(sheetData[`c${n}_hora`]) },
+    ];
+    y = drawSectionBanner(doc, y, `Control ${n}`, undefined, true);
+    y = drawFieldGrid(doc, y, pairs, 4, true);
+  }
+
+  y = drawSectionBanner(doc, y, 'Liberación de canales', undefined, true);
+  y = drawFieldGrid(
+    doc,
+    y,
+    [
+      { label: 'Cava', value: str(sheetData.lib_cava) },
+      { label: 'T°C cava', value: str(sheetData.lib_temp_cava) },
+      { label: 'Fecha', value: str(sheetData.lib_fecha) },
+      { label: 'Hora', value: str(sheetData.lib_hora) },
+    ],
+    4,
+    true
+  );
+
+  y = drawSectionBanner(doc, y, 'Registro de canales', 'Temperatura en almacenamiento y liberación', true);
+
+  const cols: { key: string; label: string; width: number }[] = [
+    { key: 'item', label: 'N°', width: 0.04 },
+    { key: 'codigo', label: 'Código', width: 0.14 },
+    { key: 'temp_c1', label: 'Ctrl 1', width: 0.1 },
+    { key: 'temp_c2', label: 'Ctrl 2', width: 0.1 },
+    { key: 'temp_c3', label: 'Ctrl 3', width: 0.1 },
+    { key: 'temp_c4', label: 'Ctrl 4', width: 0.1 },
+    { key: 'temp_liberacion', label: 'T°C lib.', width: 0.1 },
+    { key: 'ph', label: 'pH', width: 0.08 },
+    { key: 'responsable', label: 'Responsable', width: 0.24 },
+  ];
+
+  const allRows = Array.isArray(sheetData.registros) ? (sheetData.registros as Record<string, unknown>[]) : [];
+  const rows = allRows.filter(canalesRowFilled);
+  const dataRows = rows.length > 0 ? rows : [{}];
+
+  const drawHeader = (yy: number) => {
+    const headerH = 16;
+    doc.rect(MARGIN, yy, w, headerH).fill('#d9ead3');
+    doc.strokeColor('#666').lineWidth(0.4).rect(MARGIN, yy, w, headerH).stroke();
+    let x = MARGIN;
+    for (const col of cols) {
+      const cw = w * col.width;
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#222').text(col.label, x + 2, yy + 4, {
+        width: cw - 4,
+        height: 10,
+        lineBreak: false,
+        ellipsis: true,
+      });
+      x += cw;
+    }
+    return yy + headerH;
+  };
+
+  y = opts.ensureSpace(y, 40);
+  y = drawHeader(y);
+
+  dataRows.forEach((row, idx) => {
+    const cellTexts = [
+      String(idx + 1),
+      str(row.codigo),
+      str(row.temp_c1),
+      str(row.temp_c2),
+      str(row.temp_c3),
+      str(row.temp_c4),
+      str(row.temp_liberacion),
+      str(row.ph),
+      str(row.ownerName || ''),
+    ];
+
+    let rowH = 12;
+    for (let i = 0; i < cols.length; i++) {
+      const cw = w * cols[i].width;
+      const h = doc.fontSize(6).font('Helvetica').heightOfString(cellTexts[i] === '—' ? ' ' : cellTexts[i], {
+        width: cw - 4,
+      });
+      rowH = Math.max(rowH, Math.min(36, h + 6));
+    }
+
+    const nextY = opts.ensureSpace(y, rowH + 4);
+    if (nextY !== y) y = drawHeader(nextY);
+
+    doc.strokeColor('#999').lineWidth(0.3).rect(MARGIN, y, w, rowH).stroke();
+    let x = MARGIN;
+    for (let i = 0; i < cols.length; i++) {
+      const cw = w * cols[i].width;
+      const text = cellTexts[i];
+      if (isBlankPdfValue(text) || text === '—') {
+        drawClosedBlank(doc, x + 2, y + 3, cw - 4, rowH - 6);
+      } else {
+        doc.fontSize(6).font('Helvetica').fillColor('#111').text(text, x + 2, y + 3, {
+          width: cw - 4,
+          height: rowH - 5,
+          ellipsis: true,
+          lineGap: 0,
+        });
+      }
+      x += cw;
+    }
+    y += rowH;
+  });
+
+  const obs = str(sheetData.observaciones_generales);
+  if (!isBlankPdfValue(obs) && obs !== '—') {
+    y = opts.ensureSpace(y, 30);
+    y = drawSectionBanner(doc, y, 'Observaciones', undefined, true);
+    doc.fontSize(7).font('Helvetica').fillColor('#111').text(obs, MARGIN, y, { width: w });
+    y += doc.heightOfString(obs, { width: w }) + 6;
+  }
+
+  return y + 6;
+}
+
 export function drawCompactSheetHeader(
   doc: PdfDoc,
   submission: { format: { name: string; documentCode: string | null }; workDate: Date; operator: { fullName: string } },

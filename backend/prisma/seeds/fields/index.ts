@@ -19,6 +19,7 @@ import { getFormat17Fields } from './format17-pediluvios-cambios';
 import { getFormat18Fields } from './format18-titulacion-acido-lactico';
 import { getFormat19Fields } from './format19-monitoreo-titulacion-acido-lactico';
 import { getFormat20Fields } from './format20-temp-visceras-cava';
+import { getFormat21Fields } from './format21-control-temp-ph-canales';
 
 type FieldResolver = (slug: string) => FieldDef[];
 
@@ -43,6 +44,7 @@ const RESOLVERS: Record<string, FieldResolver> = {
   TITULACION_ACIDO_LACTICO: getFormat18Fields,
   MONITOREO_TITULACION_ACIDO_LACTICO: getFormat19Fields,
   TEMP_VISCERAS_CAVA: getFormat20Fields,
+  CONTROL_TEMP_PH_CANALES: getFormat21Fields,
 };
 
 export function getFieldsForSheet(formatCode: string, sheetSlug: string): FieldDef[] {
