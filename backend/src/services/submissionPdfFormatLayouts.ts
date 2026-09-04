@@ -1119,7 +1119,7 @@ export function renderCanalesTempPhSheet(
     { key: 'temp_c2', label: 'Ctrl 2', width: 0.1 },
     { key: 'temp_c3', label: 'Ctrl 3', width: 0.1 },
     { key: 'temp_c4', label: 'Ctrl 4', width: 0.1 },
-    { key: 'temp_liberacion', label: 'T°C lib.', width: 0.1 },
+    { key: 'temp_liberacion', label: 'T° despacho', width: 0.1 },
     { key: 'ph', label: 'pH', width: 0.08 },
   ];
 

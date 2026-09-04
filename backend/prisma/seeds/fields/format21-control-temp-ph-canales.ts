@@ -17,7 +17,7 @@ const REGISTRO_COLS: FieldDef[] = [
   textField('temp_c2', 'Control 2', 2, { groupName: 'Temp. almacenamiento' }),
   textField('temp_c3', 'Control 3', 3, { groupName: 'Temp. almacenamiento' }),
   textField('temp_c4', 'Control 4', 4, { groupName: 'Temp. almacenamiento' }),
-  textField('temp_liberacion', 'T°C liberación', 5, { groupName: 'Liberación' }),
+  textField('temp_liberacion', 'T° despacho', 5, { groupName: 'Liberación' }),
   textField('ph', 'pH', 6, { groupName: 'Liberación' }),
 ];
 

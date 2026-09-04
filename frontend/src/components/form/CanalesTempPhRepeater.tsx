@@ -23,7 +23,7 @@ const ROW_FIELDS: { key: keyof CanalesTempPhRow; label: string; minW?: string }[
   { key: 'temp_c2', label: 'Ctrl 2', minW: 'min-w-[72px]' },
   { key: 'temp_c3', label: 'Ctrl 3', minW: 'min-w-[72px]' },
   { key: 'temp_c4', label: 'Ctrl 4', minW: 'min-w-[72px]' },
-  { key: 'temp_liberacion', label: 'T°C lib.', minW: 'min-w-[80px]' },
+  { key: 'temp_liberacion', label: 'T° despacho', minW: 'min-w-[90px]' },
   { key: 'ph', label: 'pH', minW: 'min-w-[64px]' },
 ];
 
