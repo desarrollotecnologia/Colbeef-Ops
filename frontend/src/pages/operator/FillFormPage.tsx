@@ -14,7 +14,7 @@ import { applyAutoFields, recalcDependentFields } from '@/lib/autoFill';
 import { formatWorkDateShort, getWorkDateString, toWorkDateString } from '@/lib/workDate';
 import { downloadSubmissionPdf } from '@/lib/downloadPdf';
 import { getIncompleteFields, isSheetComplete } from '@/lib/sheetCompletion';
-import { isMultiDayFormat } from '@/lib/multiDayFormats';
+import { isMultiDayFormat, isCollaboratorsCanInviteFormat } from '@/lib/multiDayFormats';
 import { ENFORCE_REQUIRED_FIELDS } from '@/lib/formUtils';
 import type { Format, FormSubmission, FormatField, MissingField } from '@/types';
 
@@ -402,8 +402,14 @@ export default function FillFormPage() {
       {isPersisted && (
         <CollaborationPanel
           submission={submission}
-          isOwner={submission.myRole === 'OWNER' || submission.operatorId === user?.id}
-          canManage={
+          canInvite={
+            canEdit &&
+            (submission.myRole === 'OWNER' ||
+              submission.operatorId === user?.id ||
+              (submission.myRole === 'COLLABORATOR' &&
+                isCollaboratorsCanInviteFormat(submission.format?.code)))
+          }
+          canRemove={
             canEdit && (submission.myRole === 'OWNER' || submission.operatorId === user?.id)
           }
           onUpdated={(updated) => {

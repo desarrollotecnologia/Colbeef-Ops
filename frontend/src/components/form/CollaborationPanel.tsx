@@ -6,19 +6,26 @@ import type { FormSubmission, UserBrief } from '@/types';
 
 interface Props {
   submission: FormSubmission;
-  isOwner: boolean;
-  canManage: boolean;
+  /** Puede agregar colaboradores (dueño, o colaborador en formatos especiales). */
+  canInvite: boolean;
+  /** Puede quitar colaboradores (solo dueño). */
+  canRemove: boolean;
   onUpdated: (submission: FormSubmission) => void;
 }
 
-export default function CollaborationPanel({ submission, isOwner, canManage, onUpdated }: Props) {
+export default function CollaborationPanel({
+  submission,
+  canInvite,
+  canRemove,
+  onUpdated,
+}: Props) {
   const [candidates, setCandidates] = useState<UserBrief[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadCandidates = async () => {
-    if (!canManage || !submission.id) return;
+    if (!canInvite || !submission.id) return;
     try {
       const { data } = await api.get<UserBrief[]>(`/submissions/${submission.id}/collaborator-candidates`);
       setCandidates(data);
@@ -101,7 +108,7 @@ export default function CollaborationPanel({ submission, isOwner, canManage, onU
                   (agregó {c.addedBy.fullName})
                 </span>
               </span>
-              {isOwner && canManage && (
+              {canRemove && (
                 <button
                   type="button"
                   onClick={() => removeCollaborator(c.userId)}
@@ -117,7 +124,7 @@ export default function CollaborationPanel({ submission, isOwner, canManage, onU
         </ul>
       )}
 
-      {isOwner && canManage && (
+      {canInvite && (
         <div className="mt-3 flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
           <div className="flex-1">
             <label className="block text-xs font-medium text-sky-800 mb-1">Agregar operario</label>

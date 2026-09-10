@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, CheckCircle, XCircle, AlertCircle, Trash2, Download, Users } from 'lucide-react';
 import api from '@/lib/api';
@@ -8,7 +8,8 @@ import Button from '@/components/Button';
 import { downloadSubmissionPdf } from '@/lib/downloadPdf';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatWorkDateShort, formatTimeBogota, getWorkDateString, toWorkDateString } from '@/lib/workDate';
-import type { FormSubmission } from '@/types';
+import { isMultiDayFormat } from '@/lib/multiDayFormats';
+import type { FormSubmission, SubmissionStatus } from '@/types';
 
 const statusConfig = {
   DRAFT: { label: 'Borrador', color: 'bg-gray-100 text-gray-700', icon: Clock },
@@ -19,6 +20,14 @@ const statusConfig = {
     color: 'bg-red-100 text-red-800 ring-2 ring-red-300',
     icon: XCircle,
   },
+};
+
+/** Orden en Mis envíos: borradores → rechazados → pendientes → aprobados */
+const STATUS_SORT_ORDER: Record<SubmissionStatus, number> = {
+  DRAFT: 0,
+  REJECTED: 1,
+  PENDING_REVIEW: 2,
+  APPROVED: 3,
 };
 
 export default function OperatorSubmissions() {
@@ -51,6 +60,18 @@ export default function OperatorSubmissions() {
 
   const today = getWorkDateString();
 
+  const sortedSubmissions = useMemo(() => {
+    return [...submissions].sort((a, b) => {
+      const orderA = STATUS_SORT_ORDER[a.status] ?? 99;
+      const orderB = STATUS_SORT_ORDER[b.status] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      // Más recientes primero dentro del mismo estado
+      const dateA = a.updatedAt || a.createdAt || '';
+      const dateB = b.updatedAt || b.createdAt || '';
+      return dateB.localeCompare(dateA);
+    });
+  }, [submissions]);
+
   return (
     <Layout>
       <div className="mb-6">
@@ -62,7 +83,7 @@ export default function OperatorSubmissions() {
         <div className="flex justify-center py-20">
           <div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full" />
         </div>
-      ) : submissions.length === 0 ? (
+      ) : sortedSubmissions.length === 0 ? (
         <Card>
           <CardBody className="text-center py-12 text-gray-500">
             No tiene envíos registrados aún
@@ -70,11 +91,13 @@ export default function OperatorSubmissions() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {submissions.map((sub) => {
+          {sortedSubmissions.map((sub) => {
             const cfg = statusConfig[sub.status];
             const Icon = cfg.icon;
             const workDateStr = toWorkDateString(sub.workDate);
-            const isOldDraft = sub.status === 'DRAFT' && workDateStr !== today;
+            const isMultiDay = isMultiDayFormat(sub.format?.code);
+            const isOldDraft =
+              sub.status === 'DRAFT' && workDateStr !== today && !isMultiDay;
             const isCollaborator = sub.myRole === 'COLLABORATOR';
             const isRejected = sub.status === 'REJECTED';
 

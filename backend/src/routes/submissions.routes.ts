@@ -26,7 +26,7 @@ import { assertOperatorCanAccessFormat } from '../utils/formatAccess';
 import { getSubmissionAccess, assertCanEditSubmission } from '../utils/submissionAccess';
 import { mergeSheetDataWithLocks } from '../utils/fieldLocks';
 import { logSubmissionActivity } from '../utils/submissionActivity';
-import { isMultiDayFormat, isOwnerOnlySubmitFormat } from '../utils/multiDayFormats';
+import { isMultiDayFormat, isOwnerOnlySubmitFormat, isCollaboratorsCanInviteFormat } from '../utils/multiDayFormats';
 import { clipSheetsToFormatCount } from '../utils/formatSheets';
 
 const router = Router();
@@ -278,8 +278,8 @@ router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Respo
 router.get('/:id/collaborator-candidates', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
   const submissionId = paramId(req.params.id);
   const access = await getSubmissionAccess(submissionId, req.user!.userId, req.user!.role);
-  if (!access.ok || access.role !== 'OWNER') {
-    return res.status(403).json({ error: 'Solo el dueño puede gestionar colaboradores' });
+  if (!access.ok) {
+    return res.status(403).json({ error: 'Sin acceso a este envío' });
   }
 
   const submission = await prisma.formSubmission.findUnique({
@@ -288,9 +288,17 @@ router.get('/:id/collaborator-candidates', requireRole(UserRole.OPERARIO), async
       formatId: true,
       operatorId: true,
       collaborators: { select: { userId: true } },
+      format: { select: { code: true } },
     },
   });
   if (!submission) return res.status(404).json({ error: 'Envío no encontrado' });
+
+  const canInvite =
+    access.role === 'OWNER' ||
+    (access.role === 'COLLABORATOR' && isCollaboratorsCanInviteFormat(submission.format.code));
+  if (!canInvite) {
+    return res.status(403).json({ error: 'Solo el dueño puede gestionar colaboradores' });
+  }
 
   const excludeIds = [submission.operatorId, ...submission.collaborators.map((c) => c.userId)];
 
@@ -316,12 +324,22 @@ router.post('/:id/collaborators', requireRole(UserRole.OPERARIO), async (req: Re
   if (!userId) return res.status(400).json({ error: 'userId es obligatorio' });
 
   const access = await getSubmissionAccess(submissionId, req.user!.userId, req.user!.role);
-  if (!access.ok || access.role !== 'OWNER') {
-    return res.status(403).json({ error: 'Solo el dueño puede agregar colaboradores' });
+  if (!access.ok) {
+    return res.status(403).json({ error: 'Sin acceso a este envío' });
   }
 
-  const submission = await prisma.formSubmission.findUnique({ where: { id: submissionId } });
+  const submission = await prisma.formSubmission.findUnique({
+    where: { id: submissionId },
+    include: { format: { select: { code: true } } },
+  });
   if (!submission) return res.status(404).json({ error: 'Envío no encontrado' });
+
+  const canInvite =
+    access.role === 'OWNER' ||
+    (access.role === 'COLLABORATOR' && isCollaboratorsCanInviteFormat(submission.format.code));
+  if (!canInvite) {
+    return res.status(403).json({ error: 'Solo el dueño puede agregar colaboradores' });
+  }
 
   if (submission.status !== SubmissionStatus.DRAFT && submission.status !== SubmissionStatus.REJECTED) {
     return res.status(400).json({ error: 'Solo se pueden agregar colaboradores en borrador o rechazado' });

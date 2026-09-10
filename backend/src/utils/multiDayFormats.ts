@@ -5,6 +5,16 @@ export function isMultiDayFormat(formatCode: string | null | undefined): boolean
   return Boolean(formatCode && MULTI_DAY_FORMAT_CODES.has(formatCode));
 }
 
+/**
+ * Formatos donde un colaborador también puede invitar a otros colaboradores.
+ * Quitar colaboradores sigue siendo solo del dueño.
+ */
+export const COLLABORATORS_CAN_INVITE_CODES = new Set(['CONTROL_TEMP_PH_CANALES']);
+
+export function isCollaboratorsCanInviteFormat(formatCode: string | null | undefined): boolean {
+  return Boolean(formatCode && COLLABORATORS_CAN_INVITE_CODES.has(formatCode));
+}
+
 /** Solo el dueño (quien inició) puede entregar a revisión. */
 export const OWNER_ONLY_SUBMIT_CODES = new Set(['MONITOREO_TITULACION_ACIDO_LACTICO']);
 
