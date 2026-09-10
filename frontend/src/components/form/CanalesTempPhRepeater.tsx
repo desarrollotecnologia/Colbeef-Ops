@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Lock, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { FieldOptions } from '@/types';
 import { INPUT_CLASS } from '@/lib/formUtils';
 import Button from '@/components/Button';
 
 export type CanalesTempPhRow = {
   id?: string;
-  ownerUserId?: string | null;
-  ownerName?: string | null;
   codigo?: string;
   temp_c1?: string;
   temp_c2?: string;
@@ -32,8 +30,6 @@ interface Props {
   value: CanalesTempPhRow[];
   onChange: (v: CanalesTempPhRow[]) => void;
   disabled?: boolean;
-  currentUserId?: string;
-  currentUserName?: string;
 }
 
 function newRowId(): string {
@@ -53,8 +49,6 @@ function newRowId(): string {
 function newEmptyRow(): CanalesTempPhRow {
   return {
     id: newRowId(),
-    ownerUserId: null,
-    ownerName: null,
     codigo: '',
     temp_c1: '',
     temp_c2: '',
@@ -69,19 +63,11 @@ function rowHasContent(row: CanalesTempPhRow): boolean {
   return ROW_FIELDS.some((f) => String(row[f.key] ?? '').trim() !== '');
 }
 
-function canEditRow(row: CanalesTempPhRow, userId?: string, disabled?: boolean): boolean {
-  if (disabled || !userId) return false;
-  if (!row.ownerUserId) return true;
-  return row.ownerUserId === userId;
-}
-
 export default function CanalesTempPhRepeater({
   options,
   value,
   onChange,
   disabled,
-  currentUserId,
-  currentUserName,
 }: Props) {
   const minRows = options.minRows ?? 5;
   const maxRows = options.maxRows ?? 48;
@@ -90,8 +76,6 @@ export default function CanalesTempPhRepeater({
 
   useEffect(() => {
     if (disabled) return;
-    // Solo inicializamos filas vacías cuando el repetidor viene vacío.
-    // Así el usuario puede eliminar filas vacías sin que el sistema las vuelva a crear.
     if (hasPaddedOnceRef.current) return;
     if (rows.length !== 0) return;
 
@@ -103,22 +87,12 @@ export default function CanalesTempPhRepeater({
   }, [minRows, disabled, rows.length]);
 
   const updateRow = (index: number, patch: Partial<CanalesTempPhRow>) => {
-    const row = rows[index];
-    if (!canEditRow(row, currentUserId, disabled)) return;
-
-    const next = rows.map((r, i) => {
-      if (i !== index) return r;
-      const merged: CanalesTempPhRow = { ...r, ...patch, id: r.id || newRowId() };
-      if (rowHasContent(merged) && currentUserId) {
-        merged.ownerUserId = currentUserId;
-        merged.ownerName = currentUserName ?? '';
-      } else if (!rowHasContent(merged)) {
-        merged.ownerUserId = null;
-        merged.ownerName = null;
-      }
-      return merged;
-    });
-    onChange(next);
+    if (disabled) return;
+    onChange(
+      rows.map((r, i) =>
+        i === index ? { ...r, ...patch, id: r.id || newRowId() } : r
+      )
+    );
   };
 
   const addRow = () => {
@@ -127,10 +101,8 @@ export default function CanalesTempPhRepeater({
   };
 
   const removeRow = (index: number) => {
+    if (disabled) return;
     const row = rows[index];
-    if (!canEditRow(row, currentUserId, disabled)) return;
-    // Puedes eliminar filas vacías siempre.
-    // Si la fila tiene contenido, solo se elimina si hay más de minRows.
     if (rowHasContent(row) && rows.length <= minRows) return;
     onChange(rows.filter((_, i) => i !== index));
   };
@@ -142,9 +114,6 @@ export default function CanalesTempPhRepeater({
           {options.note}
         </p>
       )}
-      <p className="text-xs text-slate-500">
-        Solo puede editar filas vacías o las que usted llenó. Numeración automática por fila.
-      </p>
 
       <div className="overflow-x-auto border border-gray-800 rounded-sm">
         <table className="w-full text-xs border-collapse min-w-[720px]">
@@ -160,49 +129,37 @@ export default function CanalesTempPhRepeater({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => {
-              const editable = canEditRow(row, currentUserId, disabled);
-              const locked = Boolean(row.ownerUserId && row.ownerUserId !== currentUserId);
-
-              return (
-                <tr key={row.id || index} className={locked ? 'bg-amber-50/60' : 'bg-white'}>
-                  <td className="border border-gray-300 px-2 py-1 text-center font-semibold text-gray-700">
-                    <div className="flex items-center justify-center gap-1">
-                      <span>{index + 1}</span>
-                      {locked && (
-                        <span title={row.ownerName || 'Otro usuario'} className="inline-flex">
-                          <Lock className="w-3 h-3 text-amber-800" />
-                        </span>
-                      )}
-                    </div>
+            {rows.map((row, index) => (
+              <tr key={row.id || index} className="bg-white">
+                <td className="border border-gray-300 px-2 py-1 text-center font-semibold text-gray-700">
+                  {index + 1}
+                </td>
+                {ROW_FIELDS.map((f) => (
+                  <td key={f.key} className="border border-gray-300 p-1">
+                    <input
+                      type="text"
+                      className={`${INPUT_CLASS} text-xs py-1`}
+                      disabled={disabled}
+                      value={String(row[f.key] ?? '')}
+                      onChange={(e) => updateRow(index, { [f.key]: e.target.value })}
+                      placeholder={f.label}
+                    />
                   </td>
-                  {ROW_FIELDS.map((f) => (
-                    <td key={f.key} className="border border-gray-300 p-1">
-                      <input
-                        type="text"
-                        className={`${INPUT_CLASS} text-xs py-1`}
-                        disabled={!editable}
-                        value={String(row[f.key] ?? '')}
-                        onChange={(e) => updateRow(index, { [f.key]: e.target.value })}
-                        placeholder={f.label}
-                      />
-                    </td>
-                  ))}
-                  <td className="border border-gray-300 p-1 text-center">
-                    {editable && (!rowHasContent(row) || rows.length > minRows) && (
-                      <button
-                        type="button"
-                        onClick={() => removeRow(index)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        title="Quitar fila"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+                ))}
+                <td className="border border-gray-300 p-1 text-center">
+                  {!disabled && (!rowHasContent(row) || rows.length > minRows) && (
+                    <button
+                      type="button"
+                      onClick={() => removeRow(index)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      title="Quitar fila"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

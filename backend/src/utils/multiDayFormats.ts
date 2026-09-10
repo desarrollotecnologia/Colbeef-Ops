@@ -18,7 +18,6 @@ export const OWNED_ROW_REPEATER_LAYOUTS = new Set([
   'lactico_titulacion_formato',
   'lactico_monitoreo_formato',
   'visceras_cava_formato',
-  'canales_temp_ph_formato',
 ]);
 
 /** Campo repetidor con filas de dueño (solo el autor edita su fila). */

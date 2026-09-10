@@ -111,8 +111,6 @@ export default function SheetFields({
           sheetData={sheetData}
           onUpdate={onUpdate}
           disabled={disabled}
-          currentUserId={currentUserId}
-          currentUserName={currentUserName}
         />
       </div>
     );

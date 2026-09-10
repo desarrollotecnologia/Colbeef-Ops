@@ -7,8 +7,6 @@ interface Props {
   sheetData: Record<string, unknown>;
   onUpdate: (key: string, value: unknown) => void;
   disabled?: boolean;
-  currentUserId?: string;
-  currentUserName?: string;
 }
 
 const CONTROLS = [
@@ -54,8 +52,6 @@ export default function Format21CanalesSheet({
   sheetData,
   onUpdate,
   disabled,
-  currentUserId,
-  currentUserName,
 }: Props) {
   const registros = fields.find((f) => f.fieldKey === 'registros');
   const obsField = fields.find((f) => f.fieldKey === 'observaciones_generales');
@@ -249,8 +245,6 @@ export default function Format21CanalesSheet({
               }
               onChange={(rows) => onUpdate('registros', rows)}
               disabled={disabled}
-              currentUserId={currentUserId}
-              currentUserName={currentUserName}
             />
           </div>
         </div>

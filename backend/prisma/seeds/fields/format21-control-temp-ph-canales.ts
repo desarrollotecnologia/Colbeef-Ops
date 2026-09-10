@@ -9,7 +9,7 @@ import {
 
 /**
  * AC-FR-034 — Control de temperatura y pH de canales.
- * Multi-día, colaborativo (filas con dueño), cualquier colaborador puede entregar.
+ * Multi-día; varias personas pueden llenar el mismo registro sin bloqueo por fila.
  */
 const REGISTRO_COLS: FieldDef[] = [
   textField('codigo', 'Código', 0, { required: true }),
@@ -65,8 +65,7 @@ export function getFormat21Fields(_slug: string): FieldDef[] {
         minRows: 5,
         maxRows: 48,
         groupName: 'Canales',
-        helpText:
-          'Cada usuario solo edita sus filas o filas vacías. Numeración automática. Inicia con 5 filas.',
+        helpText: 'Numeración automática. Inicia con 5 filas; se pueden añadir o quitar.',
         required: true,
       }),
       options: {
@@ -84,7 +83,6 @@ export function getFormat21Fields(_slug: string): FieldDef[] {
         maxRows: 48,
         minFilledRows: 1,
         addButtonLabel: 'Añadir fila',
-        ownedRows: true,
         note: 'Rango temperatura cavas: 0 °C – 4 °C · pH: 5,4 – 5,8 · Despacho T° < 7 °C · Desposte T° < 4 °C',
       },
     },
