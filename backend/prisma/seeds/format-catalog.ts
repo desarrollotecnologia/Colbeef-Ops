@@ -216,7 +216,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-034',
     sheetCount: 1,
     sortOrder: 21,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Control temperatura canales', slug: 'principal' }],
   },
 ] as const;
