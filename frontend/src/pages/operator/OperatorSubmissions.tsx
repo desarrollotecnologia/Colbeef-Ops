@@ -115,7 +115,15 @@ export default function OperatorSubmissions() {
                 <CardBody className="flex items-center justify-between gap-4">
                   <Link to={`/submissions/${sub.id}`} className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                      <h3 className="font-semibold">{sub.format?.name}</h3>
+                      <h3 className="font-semibold">
+                        {sub.format?.name}
+                        {sub.listCliente ? (
+                          <span className="font-semibold text-emerald-800">
+                            {' '}
+                            — {sub.listCliente}
+                          </span>
+                        ) : null}
+                      </h3>
                       {isCollaborator && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-200 text-sky-900">
                           <Users size={12} /> Colaborador

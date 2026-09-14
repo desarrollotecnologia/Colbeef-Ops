@@ -117,6 +117,33 @@ function enrichForViewer<
   };
 }
 
+/** Cliente del formato canales, para mostrar en listas. */
+function extractListCliente(submission: {
+  format?: { code?: string } | null;
+  sheets?: { data?: unknown }[];
+}): string | null {
+  if (submission.format?.code !== 'CONTROL_TEMP_PH_CANALES') return null;
+  for (const sheet of submission.sheets ?? []) {
+    const data = (sheet.data ?? {}) as Record<string, unknown>;
+    const cliente = String(data.cliente ?? '').trim();
+    if (cliente) return cliente;
+  }
+  return null;
+}
+
+function withListLabels<T extends {
+  format?: { code?: string } | null;
+  sheets?: { data?: unknown }[];
+}>(submission: T) {
+  const listCliente = extractListCliente(submission);
+  // No enviar sheets completos en listados livianos
+  const { sheets: _sheets, ...rest } = submission as T & { sheets?: unknown };
+  return {
+    ...rest,
+    listCliente,
+  };
+}
+
 // Listar envíos (operario: propios + colaboraciones; admin: todos)
 router.get('/', async (req: Request, res: Response) => {
   const { status, formatId, workDate, from, to } = req.query;
@@ -149,6 +176,7 @@ router.get('/', async (req: Request, res: Response) => {
       reviewedBy: userBrief,
       submittedBy: userBrief,
       signature: true,
+      sheets: { select: { data: true } },
       collaborators: {
         include: { user: userBrief, addedBy: userBrief },
       },
@@ -167,7 +195,9 @@ router.get('/', async (req: Request, res: Response) => {
     });
   }
 
-  res.json(submissions.map((s) => enrichForViewer(s, userId, req.user!.role)));
+  res.json(
+    submissions.map((s) => withListLabels(enrichForViewer(s, userId, req.user!.role)))
+  );
 });
 
 router.get('/pending', requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
@@ -185,10 +215,11 @@ router.get('/pending', requireRole(UserRole.ADMIN), async (req: Request, res: Re
       format: { select: { id: true, code: true, name: true, sheetCount: true } },
       operator: userBrief,
       submittedBy: userBrief,
+      sheets: { select: { data: true } },
       collaborators: { include: { user: userBrief } },
     },
   });
-  res.json(pending);
+  res.json(pending.map((s) => withListLabels(s)));
 });
 
 // Crear borrador

@@ -253,6 +253,8 @@ export interface FormSubmission {
   fieldLocks?: SubmissionFieldLock[];
   activities?: SubmissionActivity[];
   _count?: { sheets?: number; collaborators?: number };
+  /** Cliente del formato canales, para listas */
+  listCliente?: string | null;
 }
 
 export interface FormSubmissionSheet {

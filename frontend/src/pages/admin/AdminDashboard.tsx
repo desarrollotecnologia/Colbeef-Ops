@@ -76,7 +76,12 @@ export default function AdminDashboard() {
                 <Card className="hover:shadow-md transition-shadow">
                   <CardBody className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold">{sub.format?.name}</h3>
+                      <h3 className="font-semibold">
+                        {sub.format?.name}
+                        {sub.listCliente ? (
+                          <span className="text-emerald-800"> — {sub.listCliente}</span>
+                        ) : null}
+                      </h3>
                       <p className="text-sm text-gray-500">
                         {sub.operator?.fullName} — {formatWorkDateShort(toWorkDateString(sub.workDate))}
                       </p>
@@ -107,7 +112,12 @@ export default function AdminDashboard() {
                 <Card className="hover:shadow-md transition-shadow">
                   <CardBody className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold">{sub.format?.name}</h3>
+                      <h3 className="font-semibold">
+                        {sub.format?.name}
+                        {sub.listCliente ? (
+                          <span className="text-emerald-800"> — {sub.listCliente}</span>
+                        ) : null}
+                      </h3>
                       <p className="text-sm text-gray-500">
                         {formatWorkDateShort(toWorkDateString(sub.workDate))}
                       </p>

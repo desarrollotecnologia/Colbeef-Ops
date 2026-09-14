@@ -82,6 +82,7 @@ export default function AdminSearchPage() {
                   <div>
                     <Link to={`/admin/review/${sub.id}`} className="font-semibold text-primary-700 hover:underline">
                       {sub.format?.name}
+                      {sub.listCliente ? ` — ${sub.listCliente}` : ''}
                     </Link>
                     <p className="text-sm text-gray-500">
                       {sub.operator?.fullName} — {formatWorkDateShort(toWorkDateString(sub.workDate))}

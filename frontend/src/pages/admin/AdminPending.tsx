@@ -38,7 +38,12 @@ export default function AdminPending() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardBody className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-semibold text-lg">{sub.format?.name}</h3>
+                    <h3 className="font-semibold text-lg">
+                      {sub.format?.name}
+                      {sub.listCliente ? (
+                        <span className="text-emerald-800"> — {sub.listCliente}</span>
+                      ) : null}
+                    </h3>
                     <p className="text-sm text-gray-500">
                       Operario: {sub.operator?.fullName}
                     </p>
