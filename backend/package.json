@@ -12,6 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "create-user": "tsx scripts/create-user.ts",
     "fix:workdate-rejected": "tsx scripts/fix-workdate-after-rejection.ts",
+    "fix:canales-workdate-sep14": "tsx scripts/fix-canales-workdate-sep14.ts",
     "test:pdf": "tsx scripts/test-pdf.ts",
     "db:studio": "prisma studio"
   },
