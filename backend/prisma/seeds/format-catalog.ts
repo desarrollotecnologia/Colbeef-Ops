@@ -5,7 +5,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'SAI-CAL-F015',
     sheetCount: 8,
     sortOrder: 1,
-    noSunday: true,
+    noSunday: true, // tabla DAY_SCHEDULE sin valores para domingo
     sheets: [
       { sheetOrder: 1, name: 'Zona Sangría', slug: 'zona-sangria' },
       { sheetOrder: 2, name: 'Zona Intermedia', slug: 'zona-intermedia' },
@@ -23,7 +23,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-017',
     sheetCount: 4,
     sortOrder: 2,
-    noSunday: true,
+    noSunday: false,
     sheets: [
       { sheetOrder: 1, name: 'Preoperativo 1', slug: 'preoperativo-1' },
       { sheetOrder: 2, name: 'Preoperativo 2', slug: 'preoperativo-2' },
@@ -37,7 +37,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-015',
     sheetCount: 1,
     sortOrder: 3,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Despachos', slug: 'despachos' }],
   },
   {
@@ -46,7 +46,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-014',
     sheetCount: 5,
     sortOrder: 4,
-    noSunday: true,
+    noSunday: false,
     sheets: [
       { sheetOrder: 1, name: 'Diario 1', slug: 'diario-1' },
       { sheetOrder: 2, name: 'Diario 2', slug: 'diario-2' },
@@ -61,7 +61,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-016',
     sheetCount: 1,
     sortOrder: 5,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Recepción Foráneas', slug: 'principal' }],
   },
   {
@@ -70,7 +70,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-011',
     sheetCount: 1,
     sortOrder: 6,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Recepción Canales', slug: 'principal' }],
   },
   {
@@ -79,7 +79,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-022',
     sheetCount: 2,
     sortOrder: 7,
-    noSunday: true,
+    noSunday: false,
     sheets: [
       { sheetOrder: 1, name: 'Producto Refrigerado', slug: 'refrigerado' },
       { sheetOrder: 2, name: 'Producto Congelado', slug: 'congelado' },
@@ -91,7 +91,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-009',
     sheetCount: 1,
     sortOrder: 8,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Inspección', slug: 'principal' }],
   },
   {
@@ -100,7 +100,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-006',
     sheetCount: 1,
     sortOrder: 9,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Calibración', slug: 'principal' }],
   },
   {
@@ -109,7 +109,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-007',
     sheetCount: 1,
     sortOrder: 10,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Inspección', slug: 'principal' }],
   },
   {
@@ -118,7 +118,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-018',
     sheetCount: 1,
     sortOrder: 11,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Devoluciones', slug: 'principal' }],
   },
   {
@@ -127,7 +127,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-010',
     sheetCount: 1,
     sortOrder: 12,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Decomisos', slug: 'principal' }],
   },
   {
@@ -136,7 +136,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-00',
     sheetCount: 1,
     sortOrder: 13,
-    noSunday: true,
+    noSunday: true, // tabla DAY_SCHEDULE sin valores para domingo
     sheets: [{ sheetOrder: 1, name: 'Línea Operativo', slug: 'principal' }],
   },
   {
@@ -145,7 +145,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'SAI-CAL-F010',
     sheetCount: 4,
     sortOrder: 14,
-    noSunday: true,
+    noSunday: false,
     sheets: [
       { sheetOrder: 1, name: 'Área Cabezas', slug: 'cabezas' },
       { sheetOrder: 2, name: 'Patas y Manos', slug: 'patas-manos' },
@@ -159,7 +159,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-00',
     sheetCount: 1,
     sortOrder: 15,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'POES Operativo', slug: 'principal' }],
   },
   {
@@ -168,7 +168,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-00',
     sheetCount: 1,
     sortOrder: 16,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Verificación PC', slug: 'principal' }],
   },
   {
@@ -177,7 +177,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'LD-FR-004',
     sheetCount: 1,
     sortOrder: 17,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Registro pediluvios', slug: 'principal' }],
   },
   {
@@ -186,7 +186,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-033',
     sheetCount: 1,
     sortOrder: 18,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Titulación ácido láctico', slug: 'principal' }],
   },
   {
@@ -195,7 +195,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'AC-FR-010',
     sheetCount: 1,
     sortOrder: 19,
-    noSunday: true,
+    noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Monitoreo titulación ácido láctico', slug: 'principal' }],
   },
   {
@@ -204,7 +204,7 @@ export const FORMAT_CATALOG = [
     documentCode: 'SAI-CAL-F005',
     sheetCount: 2,
     sortOrder: 20,
-    noSunday: true,
+    noSunday: false,
     sheets: [
       { sheetOrder: 1, name: 'Vísceras rojas', slug: 'visceras-rojas' },
       { sheetOrder: 2, name: 'Vísceras blancas', slug: 'visceras-blancas' },
