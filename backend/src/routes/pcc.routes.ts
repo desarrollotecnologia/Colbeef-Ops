@@ -205,36 +205,143 @@ router.post('/verificar', async (req: Request, res: Response) => {
   }
 });
 
+const HISTORIAL_PAGE_SIZE = 20;
+
+function mapHistorialRow(r: {
+  id: string;
+  idProducto: string;
+  externalInsId: string;
+  cumpleMediaCanal1: boolean;
+  cumpleMediaCanal2: boolean;
+  observacion: string | null;
+  accionCorrectiva: string | null;
+  responsablePuesto: string | null;
+  snapshotExterno: unknown;
+  createdAt: Date;
+  user: { id: string; fullName: string; username: string };
+}) {
+  return {
+    id: r.id,
+    idProducto: r.idProducto,
+    externalInsId: r.externalInsId,
+    cumpleMediaCanal1: r.cumpleMediaCanal1,
+    cumpleMediaCanal2: r.cumpleMediaCanal2,
+    observacion: r.observacion,
+    accionCorrectiva: r.accionCorrectiva,
+    responsablePuesto: r.responsablePuesto,
+    propietario:
+      (r.snapshotExterno as { nombre_empresa?: string } | null)?.nombre_empresa ?? null,
+    createdAt: r.createdAt,
+    user: r.user,
+  };
+}
+
 router.get('/historial', async (req: Request, res: Response) => {
   const fechaYmd =
     typeof req.query.fecha === 'string' && req.query.fecha
       ? req.query.fecha
       : fechaOperativaPccYmd();
 
-  const rows = await prisma.pccVerificacion.findMany({
-    where: { workDate: parseOperativeDate(fechaYmd) },
-    orderBy: { createdAt: 'desc' },
-    include: { user: { select: { id: true, fullName: true, username: true } } },
-  });
+  const pageRaw = parseInt(String(req.query.page ?? '1'), 10);
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+  const pageSize = HISTORIAL_PAGE_SIZE;
+  const where = { workDate: parseOperativeDate(fechaYmd) };
+
+  const [total, rows] = await Promise.all([
+    prisma.pccVerificacion.count({ where }),
+    prisma.pccVerificacion.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: { user: { select: { id: true, fullName: true, username: true } } },
+    }),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   res.json({
     fechaOperativa: fechaYmd,
-    total: rows.length,
-    registros: rows.map((r) => ({
-      id: r.id,
-      idProducto: r.idProducto,
-      externalInsId: r.externalInsId,
-      cumpleMediaCanal1: r.cumpleMediaCanal1,
-      cumpleMediaCanal2: r.cumpleMediaCanal2,
-      observacion: r.observacion,
-      accionCorrectiva: r.accionCorrectiva,
-      responsablePuesto: r.responsablePuesto,
-      propietario:
-        (r.snapshotExterno as { nombre_empresa?: string } | null)?.nombre_empresa ?? null,
-      createdAt: r.createdAt,
-      user: r.user,
-    })),
+    total,
+    page,
+    pageSize,
+    totalPages,
+    registros: rows.map(mapHistorialRow),
   });
+});
+
+router.get('/historial/excel', async (req: Request, res: Response) => {
+  const todos = req.query.todos === '1' || req.query.todos === 'true';
+  const fechaYmd =
+    typeof req.query.fecha === 'string' && req.query.fecha
+      ? req.query.fecha
+      : todos
+        ? null
+        : fechaOperativaPccYmd();
+
+  try {
+    const where = fechaYmd ? { workDate: parseOperativeDate(fechaYmd) } : {};
+    const rows = await prisma.pccVerificacion.findMany({
+      where,
+      orderBy: [{ workDate: 'desc' }, { createdAt: 'desc' }],
+      include: { user: { select: { id: true, fullName: true, username: true } } },
+    });
+
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Colbeef-Ops';
+    const ws = wb.addWorksheet('Historial PCC');
+
+    ws.columns = [
+      { header: 'Fecha y hora', key: 'fecha', width: 22 },
+      { header: 'ID producto', key: 'idProducto', width: 16 },
+      { header: 'Propietario', key: 'propietario', width: 40 },
+      { header: 'Media canal 1', key: 'mc1', width: 14 },
+      { header: 'Media canal 2', key: 'mc2', width: 14 },
+      { header: 'Responsable puesto', key: 'responsable', width: 24 },
+      { header: 'Observación', key: 'observacion', width: 36 },
+      { header: 'Acción correctiva', key: 'accion', width: 36 },
+      { header: 'Usuario registro', key: 'usuario', width: 28 },
+      { header: 'ID ins. externo', key: 'externalInsId', width: 20 },
+    ];
+
+    const headerRow = ws.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.alignment = { vertical: 'middle' };
+
+    for (const r of rows) {
+      const mapped = mapHistorialRow(r);
+      ws.addRow({
+        fecha: new Date(mapped.createdAt).toLocaleString('es-CO', { timeZone: 'America/Bogota' }),
+        idProducto: mapped.idProducto,
+        propietario: mapped.propietario || '—',
+        mc1: mapped.cumpleMediaCanal1 ? 'Cumple' : 'No cumple',
+        mc2: mapped.cumpleMediaCanal2 ? 'Cumple' : 'No cumple',
+        responsable: mapped.responsablePuesto || '—',
+        observacion: mapped.observacion || '',
+        accion: mapped.accionCorrectiva || '',
+        usuario: mapped.user.fullName,
+        externalInsId: mapped.externalInsId,
+      });
+    }
+
+    const suffix = fechaYmd ? fechaYmd.replace(/-/g, '') : 'todos';
+    const filename = `verificacion-pcc_historial_${suffix}.xlsx`;
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('[pcc/historial/excel]', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'No se pudo generar el Excel' });
+    }
+  }
 });
 
 export { userCanAccessPcc };
