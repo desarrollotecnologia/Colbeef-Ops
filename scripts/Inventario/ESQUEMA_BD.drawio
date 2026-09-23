@@ -1,0 +1,122 @@
+<mxfile host="app.diagrams.net" modified="2026-07-27T15:53:00.000Z" agent="Colbeef-Docs" version="24.0.0" type="device">
+  <diagram id="colbeef-inventario-er" name="Esquema BD - Inventario Colbeef">
+    <mxGraphModel dx="2400" dy="1600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ==================== TÍTULO ==================== -->
+        <mxCell id="titulo" value="ESQUEMA DE BASE DE DATOS — inventario_subproductos (Colbeef SAS)&#10;Diagrama entidad-relación con relaciones lógicas (por nombre)" style="text;html=1;strokeColor=none;fillColor=#800020;fontColor=#FFFFFF;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="20" width="1780" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== LEYENDA ==================== -->
+        <mxCell id="leyenda" value="&lt;b&gt;Leyenda&lt;/b&gt;&lt;br/&gt;🔑 = clave primaria (PK, AI)&lt;br/&gt;🔷 = clave única (UNIQUE)&lt;br/&gt;◇ = columna estándar&lt;br/&gt;◆ = columna nueva (v2026.07)&lt;br/&gt;&lt;br/&gt;&lt;b&gt;Colores por dominio&lt;/b&gt;&lt;br/&gt;🔵 Azul: catálogos / referencia&lt;br/&gt;🟠 Naranja: núcleo transaccional&lt;br/&gt;🟣 Púrpura: auditoría / bitácora&lt;br/&gt;⚫ Gris: LEGACY (no usada por la app)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="810" width="360" height="240" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leyenda_rel" value="&lt;b&gt;Tipo de relación:&lt;/b&gt; Todas las relaciones son LÓGICAS (por nombre), no FOREIGN KEYs físicas. El código de la app las hace cumplir a nivel de aplicación para permitir renombres cascada de productos y almacenes." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="1070" width="360" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== FILA 1: CATÁLOGOS / REFERENCIA ==================== -->
+
+        <!-- Tabla: usuarios -->
+        <mxCell id="t_usuarios" value="&lt;div style='background:#4A6FA5;color:white;padding:6px 8px;font-weight:bold;text-align:center;border-radius:4px 4px 0 0;'&gt;📋 usuarios&lt;/div&gt;&lt;div style='padding:8px 12px;text-align:left;line-height:1.7;'&gt;🔑 &lt;b&gt;id&lt;/b&gt; INT PK AI&lt;br/&gt;🔷 nombre VARCHAR(100) UNIQUE&lt;br/&gt;◇ correo VARCHAR(100)&lt;br/&gt;◇ password VARCHAR(100)&lt;br/&gt;◇ rol VARCHAR(50)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;verticalAlign=top;align=left;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="80" y="120" width="260" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- Tabla: catalogo_productos -->
+        <mxCell id="t_catalogo" value="&lt;div style='background:#4A6FA5;color:white;padding:6px 8px;font-weight:bold;text-align:center;border-radius:4px 4px 0 0;'&gt;📦 catalogo_productos&lt;/div&gt;&lt;div style='padding:8px 12px;text-align:left;line-height:1.7;'&gt;🔑 &lt;b&gt;id&lt;/b&gt; INT PK AI&lt;br/&gt;🔷 nombre VARCHAR(200) UNIQUE&lt;br/&gt;◆ vida_util_dias INT NULL&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;verticalAlign=top;align=left;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="420" y="120" width="280" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Tabla: almacenes -->
+        <mxCell id="t_almacenes" value="&lt;div style='background:#4A6FA5;color:white;padding:6px 8px;font-weight:bold;text-align:center;border-radius:4px 4px 0 0;'&gt;🏪 almacenes&lt;/div&gt;&lt;div style='padding:8px 12px;text-align:left;line-height:1.7;'&gt;🔑 &lt;b&gt;id&lt;/b&gt; INT PK AI&lt;br/&gt;🔷 nombre_almacen VARCHAR(100)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;verticalAlign=top;align=left;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="780" y="120" width="260" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Tabla: tipos_movimiento -->
+        <mxCell id="t_tipos" value="&lt;div style='background:#4A6FA5;color:white;padding:6px 8px;font-weight:bold;text-align:center;border-radius:4px 4px 0 0;'&gt;🏷️ tipos_movimiento&lt;/div&gt;&lt;div style='padding:8px 12px;text-align:left;line-height:1.7;'&gt;🔑 &lt;b&gt;id&lt;/b&gt; INT PK AI&lt;br/&gt;🔷 nombre_tipo VARCHAR(100)&lt;br/&gt;&lt;br/&gt;&lt;i style='font-size:10px;color:#666;'&gt;Valores: INGRESO DE PRODUCCION, SALIDA POR DESPACHO, MERMA, ENTRADA POR AJUSTE, DEVOLUCION&lt;/i&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;verticalAlign=top;align=left;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="120" width="280" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== FILA 2: NÚCLEO TRANSACCIONAL ==================== -->
+
+        <!-- Tabla: movimientos (grande, centrada) -->
+        <mxCell id="t_movimientos" value="&lt;div style='background:#B65A00;color:white;padding:8px 10px;font-weight:bold;text-align:center;border-radius:4px 4px 0 0;font-size:13px;'&gt;💾 movimientos &lt;i style='font-size:10px;'&gt;(núcleo transaccional)&lt;/i&gt;&lt;/div&gt;&lt;div style='padding:10px 14px;text-align:left;line-height:1.8;'&gt;🔑 &lt;b&gt;ID_MOVIMIENTOS&lt;/b&gt; INT PK AI&lt;br/&gt;◇ TIPO_DE_MOVIMIENTO VARCHAR(100) &lt;i style='color:#B65A00;'&gt;→ tipos_movimiento&lt;/i&gt;&lt;br/&gt;◇ PRODUCTO VARCHAR(100) &lt;i style='color:#B65A00;'&gt;→ catalogo_productos&lt;/i&gt;&lt;br/&gt;◇ PESO DECIMAL(10,2)&lt;br/&gt;◇ ALMACEN_ORIGEN VARCHAR(100)&lt;br/&gt;◇ ALMACEN_DESTINO VARCHAR(100) &lt;i style='color:#B65A00;'&gt;→ almacenes&lt;/i&gt;&lt;br/&gt;◇ REMISION VARCHAR(100)&lt;br/&gt;◇ FECHA DATETIME&lt;br/&gt;◆ FECHA_VENCIMIENTO DATE NULL&lt;br/&gt;◇ NOMBRE_USUARIO VARCHAR(100) &lt;i style='color:#B65A00;'&gt;→ usuarios&lt;/i&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;verticalAlign=top;align=left;fontSize=11;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="560" y="450" width="420" height="320" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== FILA 3: AUDITORÍA ==================== -->
+
+        <!-- Tabla: log_actividad -->
+        <mxCell id="t_log" value="&lt;div style='background:#6D468C;color:white;padding:6px 8px;font-weight:bold;text-align:center;border-radius:4px 4px 0 0;'&gt;📝 log_actividad&lt;/div&gt;&lt;div style='padding:8px 12px;text-align:left;line-height:1.7;'&gt;🔑 &lt;b&gt;id&lt;/b&gt; INT PK AI&lt;br/&gt;◇ nombre_usuario VARCHAR(100) &lt;i style='color:#6D468C;'&gt;→ usuarios&lt;/i&gt;&lt;br/&gt;◇ accion TEXT&lt;br/&gt;◇ fecha_hora DATETIME&lt;br/&gt;◇ rol VARCHAR(50)&lt;br/&gt;&lt;br/&gt;&lt;i style='font-size:10px;color:#666;'&gt;Bitácora general de acciones humanas.&lt;/i&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;verticalAlign=top;align=left;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="100" y="860" width="320" height="210" as="geometry" />
+        </mxCell>
+
+        <!-- Tabla: historial_movimiento -->
+        <mxCell id="t_historial" value="&lt;div style='background:#6D468C;color:white;padding:6px 8px;font-weight:bold;text-align:center;border-radius:4px 4px 0 0;'&gt;📚 historial_movimiento&lt;/div&gt;&lt;div style='padding:8px 12px;text-align:left;line-height:1.7;'&gt;🔑 &lt;b&gt;id&lt;/b&gt; INT PK AI&lt;br/&gt;◇ id_movimiento INT &lt;i style='color:#6D468C;'&gt;→ movimientos&lt;/i&gt;&lt;br/&gt;◇ fecha_hora DATETIME&lt;br/&gt;◇ nombre_usuario VARCHAR(200) &lt;i style='color:#6D468C;'&gt;→ usuarios&lt;/i&gt;&lt;br/&gt;◇ accion VARCHAR(40)&lt;br/&gt;   (CREAR / ACTUALIZAR / ELIMINAR)&lt;br/&gt;◇ detalle TEXT&lt;br/&gt;&lt;br/&gt;&lt;i style='font-size:10px;color:#666;'&gt;Idx: idx_hist_mov, idx_hist_fecha&lt;/i&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;verticalAlign=top;align=left;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="510" y="860" width="340" height="230" as="geometry" />
+        </mxCell>
+
+        <!-- Tabla: productos (LEGACY) -->
+        <mxCell id="t_productos_legacy" value="&lt;div style='background:#888;color:white;padding:6px 8px;font-weight:bold;text-align:center;border-radius:4px 4px 0 0;'&gt;⚠️ productos &lt;i style='font-size:10px;'&gt;(LEGACY)&lt;/i&gt;&lt;/div&gt;&lt;div style='padding:8px 12px;text-align:left;line-height:1.7;'&gt;🔑 &lt;b&gt;id&lt;/b&gt; INT PK&lt;br/&gt;◇ nombre_producto VARCHAR(100)&lt;br/&gt;&lt;br/&gt;&lt;i style='font-size:10px;color:#B85450;'&gt;❌ NO usada por la app actual.&lt;br/&gt;Reemplazada por catalogo_productos.&lt;br/&gt;Considere eliminarla previa copia de respaldo.&lt;/i&gt;&lt;/div&gt;" style="rounded=1;dashed=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;verticalAlign=top;align=left;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="940" y="860" width="320" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== RELACIONES (LÓGICAS, POR NOMBRE) ==================== -->
+
+        <!-- usuarios.nombre → movimientos.NOMBRE_USUARIO -->
+        <mxCell id="r_usr_mov" value="1:N&#10;por nombre" style="edgeStyle=entityRelationEdgeStyle;html=1;fontSize=10;fontStyle=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#2F5C8A;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_usuarios" target="t_movimientos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- catalogo_productos.nombre → movimientos.PRODUCTO -->
+        <mxCell id="r_cat_mov" value="1:N&#10;por nombre" style="edgeStyle=entityRelationEdgeStyle;html=1;fontSize=10;fontStyle=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#2F5C8A;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_catalogo" target="t_movimientos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- almacenes.nombre_almacen → movimientos.ALMACEN_DESTINO -->
+        <mxCell id="r_alm_mov" value="1:N&#10;por nombre" style="edgeStyle=entityRelationEdgeStyle;html=1;fontSize=10;fontStyle=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#2F5C8A;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.6;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_almacenes" target="t_movimientos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- tipos_movimiento.nombre_tipo → movimientos.TIPO_DE_MOVIMIENTO -->
+        <mxCell id="r_tip_mov" value="1:N&#10;whitelist" style="edgeStyle=entityRelationEdgeStyle;html=1;fontSize=10;fontStyle=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#2F5C8A;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_tipos" target="t_movimientos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- usuarios → log_actividad -->
+        <mxCell id="r_usr_log" value="1:N&#10;por nombre" style="edgeStyle=entityRelationEdgeStyle;html=1;fontSize=10;fontStyle=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#6D468C;strokeWidth=2;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_usuarios" target="t_log">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- movimientos → historial_movimiento -->
+        <mxCell id="r_mov_hist" value="1:N&#10;por ID_MOVIMIENTOS" style="edgeStyle=entityRelationEdgeStyle;html=1;fontSize=10;fontStyle=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#6D468C;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_movimientos" target="t_historial">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- usuarios → historial_movimiento -->
+        <mxCell id="r_usr_hist" value="1:N&#10;por nombre" style="edgeStyle=entityRelationEdgeStyle;html=1;fontSize=10;fontStyle=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#6D468C;strokeWidth=2;dashed=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="t_usuarios" target="t_historial">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="450" y="900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== NOTA DE VERSIÓN ==================== -->
+        <mxCell id="nota_ver" value="◆ = columna nueva de la versión v2026.07 (Trazabilidad de calidad y vencimientos)&#10;• movimientos.FECHA_VENCIMIENTO — fecha de caducidad del lote (solo INGRESO / AJUSTE, nullable).&#10;• catalogo_productos.vida_util_dias — días de vida útil del producto (nullable). Usado para calcular FECHA_VENCIMIENTO = FECHA + vida_util_dias." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=11;align=left;spacingLeft=12;verticalAlign=middle;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1120" width="1280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Firma -->
+        <mxCell id="firma_diag" value="Colbeef SAS © 2026 — Esquema BD v2026.07 · Generado por el equipo de desarrollo" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#666666;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1230" width="1780" height="24" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
