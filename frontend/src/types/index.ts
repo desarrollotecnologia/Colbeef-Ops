@@ -4,6 +4,7 @@ export interface User {
   fullName: string;
   role: 'ADMIN' | 'OPERARIO' | 'PANEL';
   email?: string;
+  canAccessPcc?: boolean;
 }
 
 export interface FormatSheet {

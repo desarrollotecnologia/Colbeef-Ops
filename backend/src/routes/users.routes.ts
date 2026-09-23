@@ -24,6 +24,7 @@ const userSelect = {
     select: { formatId: true, format: { select: { id: true, code: true, name: true, sortOrder: true } } },
     orderBy: { format: { sortOrder: 'asc' as const } },
   },
+  pccAccess: { select: { id: true } },
 };
 
 function mapUser(u: {
@@ -36,6 +37,7 @@ function mapUser(u: {
   createdAt: Date;
   updatedAt: Date;
   formatAccess: { formatId: string; format: { id: string; code: string; name: string; sortOrder: number } }[];
+  pccAccess: { id: string } | null;
 }) {
   return {
     id: u.id,
@@ -48,6 +50,7 @@ function mapUser(u: {
     updatedAt: u.updatedAt,
     formatIds: u.formatAccess.map((a) => a.formatId),
     formats: u.formatAccess.map((a) => a.format),
+    pccAccess: Boolean(u.pccAccess),
   };
 }
 
@@ -82,7 +85,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 router.post('/', async (req: Request, res: Response) => {
-  const { username, password, fullName, email, role, active = true, formatIds = [] } = req.body as {
+  const { username, password, fullName, email, role, active = true, formatIds = [], pccAccess = false } = req.body as {
     username?: string;
     password?: string;
     fullName?: string;
@@ -90,6 +93,7 @@ router.post('/', async (req: Request, res: Response) => {
     role?: string;
     active?: boolean;
     formatIds?: string[];
+    pccAccess?: boolean;
   };
 
   if (!username?.trim() || !password || !fullName?.trim()) {
@@ -134,6 +138,10 @@ router.post('/', async (req: Request, res: Response) => {
         roleValue === UserRole.OPERARIO && uniqueFormatIds.length > 0
           ? { create: uniqueFormatIds.map((formatId) => ({ formatId })) }
           : undefined,
+      pccAccess:
+        roleValue === UserRole.OPERARIO && Boolean(pccAccess)
+          ? { create: {} }
+          : undefined,
     },
     select: userSelect,
   });
@@ -148,12 +156,13 @@ router.patch('/:id', async (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Usuario no encontrado' });
   }
 
-  const { fullName, email, role, active, formatIds } = req.body as {
+  const { fullName, email, role, active, formatIds, pccAccess } = req.body as {
     fullName?: string;
     email?: string;
     role?: string;
     active?: boolean;
     formatIds?: string[];
+    pccAccess?: boolean;
   };
 
   let roleValue = existing.role;
@@ -216,6 +225,18 @@ router.patch('/:id', async (req: Request, res: Response) => {
         },
       }),
     ]);
+  }
+
+  if (pccAccess !== undefined) {
+    if (roleValue === UserRole.OPERARIO && Boolean(pccAccess)) {
+      await prisma.userPccAccess.upsert({
+        where: { userId: id },
+        create: { userId: id },
+        update: {},
+      });
+    } else {
+      await prisma.userPccAccess.deleteMany({ where: { userId: id } });
+    }
   }
 
   const user = await prisma.user.findUnique({ where: { id }, select: userSelect });

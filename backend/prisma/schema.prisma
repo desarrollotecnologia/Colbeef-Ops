@@ -35,6 +35,8 @@ model User {
   signatures         Signature[]
   usageEvents        UsageEvent[]
   formatAccess       UserFormatAccess[]
+  pccAccess          UserPccAccess?
+  pccVerificaciones  PccVerificacion[]
   collaborationAdded SubmissionCollaborator[] @relation("CollaborationInvitee")
   collaborationOwned SubmissionCollaborator[] @relation("CollaborationAddedBy")
   fieldLocks         SubmissionFieldLock[]
@@ -42,6 +44,43 @@ model User {
   activitiesTargeted SubmissionActivity[] @relation("ActivityTargetUser")
 
   @@map("users")
+}
+
+/** Operarios autorizados a usar el módulo Verificación PCC (lo asigna el admin). */
+model UserPccAccess {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_pcc_access")
+}
+
+/** Registro local de verificación PCC (medias canales). */
+model PccVerificacion {
+  id                   String   @id @default(uuid())
+  userId               String   @map("user_id")
+  externalInsId        String   @map("external_ins_id") @db.VarChar(64)
+  idProducto           String   @map("id_producto") @db.VarChar(96)
+  snapshotExterno      Json     @map("snapshot_externo")
+  cumpleMediaCanal1    Boolean  @map("cumple_media_canal_1")
+  cumpleMediaCanal2    Boolean  @map("cumple_media_canal_2")
+  responsablePuesto    String?  @map("responsable_puesto") @db.VarChar(191)
+  observacion          String?  @db.Text
+  accionCorrectiva     String?  @map("accion_correctiva") @db.Text
+  /** Fecha operativa del turno PCC (no necesariamente el calendario). */
+  workDate             DateTime @map("work_date") @db.Date
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([externalInsId, workDate])
+  @@index([workDate])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("pcc_verificaciones")
 }
 
 // ─── Catálogo de formatos ───────────────────────────────────────────

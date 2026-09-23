@@ -11,6 +11,8 @@ import AdminReviewPage from '@/pages/admin/AdminReviewPage';
 import AdminSearchPage from '@/pages/admin/AdminSearchPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import UsabilityDashboard from '@/pages/panel/UsabilityDashboard';
+import PccPage from '@/pages/operator/PccPage';
+import PccHistorialPage from '@/pages/operator/PccHistorialPage';
 
 function homePath(role?: string) {
   if (role === 'ADMIN') return '/admin';
@@ -22,10 +24,12 @@ function ProtectedRoute({
   children,
   adminOnly = false,
   panelOnly = false,
+  pccOnly = false,
 }: {
   children: React.ReactNode;
   adminOnly?: boolean;
   panelOnly?: boolean;
+  pccOnly?: boolean;
 }) {
   const { user, loading } = useAuth();
 
@@ -41,6 +45,9 @@ function ProtectedRoute({
   if (panelOnly && user.role !== 'PANEL') return <Navigate to={homePath(user.role)} replace />;
   if (user.role === 'PANEL' && !panelOnly) return <Navigate to="/panel" replace />;
   if (adminOnly && user.role !== 'ADMIN') return <Navigate to={homePath(user.role)} replace />;
+  if (pccOnly && !(user.role === 'ADMIN' || user.canAccessPcc)) {
+    return <Navigate to={homePath(user.role)} replace />;
+  }
 
   return <>{children}</>;
 }
@@ -72,6 +79,8 @@ export default function App() {
         <Route path="/submissions" element={<ProtectedRoute><OperatorSubmissions /></ProtectedRoute>} />
         <Route path="/formats/:formatId/new" element={<ProtectedRoute><FillFormPage /></ProtectedRoute>} />
         <Route path="/submissions/:id" element={<ProtectedRoute><FillFormPage /></ProtectedRoute>} />
+        <Route path="/pcc" element={<ProtectedRoute pccOnly><PccPage /></ProtectedRoute>} />
+        <Route path="/pcc/historial" element={<ProtectedRoute pccOnly><PccHistorialPage /></ProtectedRoute>} />
 
         {/* Admin */}
         <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />

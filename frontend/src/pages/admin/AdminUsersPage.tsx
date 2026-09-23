@@ -23,6 +23,7 @@ interface ManagedUser {
   active: boolean;
   formatIds: string[];
   formats: { id: string; code: string; name: string }[];
+  pccAccess: boolean;
 }
 
 type EditorMode = 'create' | 'edit' | null;
@@ -35,6 +36,7 @@ const emptyForm = {
   role: 'OPERARIO' as 'ADMIN' | 'OPERARIO',
   active: true,
   formatIds: [] as string[],
+  pccAccess: false,
 };
 
 export default function AdminUsersPage() {
@@ -89,6 +91,7 @@ export default function AdminUsersPage() {
       role: u.role,
       active: u.active,
       formatIds: [...u.formatIds],
+      pccAccess: Boolean(u.pccAccess),
     });
     setError('');
     setSuccess('');
@@ -132,6 +135,7 @@ export default function AdminUsersPage() {
           role: form.role,
           active: form.active,
           formatIds: form.role === 'OPERARIO' ? form.formatIds : [],
+          pccAccess: form.role === 'OPERARIO' ? form.pccAccess : false,
         });
       } else if (editingId) {
         await api.patch(`/admin/users/${editingId}`, {
@@ -140,6 +144,7 @@ export default function AdminUsersPage() {
           role: form.role,
           active: form.active,
           formatIds: form.role === 'OPERARIO' ? form.formatIds : undefined,
+          pccAccess: form.role === 'OPERARIO' ? form.pccAccess : false,
         });
       }
       closeEditor();
@@ -261,6 +266,7 @@ export default function AdminUsersPage() {
                           .slice(0, 4)
                           .map((f) => f.code)
                           .join(', ')}${u.formats.length > 4 ? '…' : ''}`}
+                    {u.pccAccess ? ' · Acceso PCC' : ''}
                   </p>
                 )}
               </div>
@@ -405,38 +411,49 @@ export default function AdminUsersPage() {
               </div>
 
               {form.role === 'OPERARIO' && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700">Formatos permitidos</label>
-                    <div className="flex gap-2 text-xs">
-                      <button type="button" className="text-primary-600 hover:underline" onClick={selectAllFormats}>
-                        Todos
-                      </button>
-                      <button type="button" className="text-gray-500 hover:underline" onClick={clearFormats}>
-                        Ninguno
-                      </button>
+                <>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.pccAccess}
+                      onChange={(e) => setForm({ ...form, pccAccess: e.target.checked })}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    Acceso a Verificación PCC
+                  </label>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Formatos permitidos</label>
+                      <div className="flex gap-2 text-xs">
+                        <button type="button" className="text-primary-600 hover:underline" onClick={selectAllFormats}>
+                          Todos
+                        </button>
+                        <button type="button" className="text-gray-500 hover:underline" onClick={clearFormats}>
+                          Ninguno
+                        </button>
+                      </div>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto divide-y">
+                      {catalog.map((f) => (
+                        <label
+                          key={f.id}
+                          className="flex items-start gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={form.formatIds.includes(f.id)}
+                            onChange={() => toggleFormat(f.id)}
+                            className="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span>
+                            <span className="font-medium text-gray-800">{f.code}</span>
+                            <span className="block text-gray-500 text-xs">{f.name}</span>
+                          </span>
+                        </label>
+                      ))}
                     </div>
                   </div>
-                  <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto divide-y">
-                    {catalog.map((f) => (
-                      <label
-                        key={f.id}
-                        className="flex items-start gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.formatIds.includes(f.id)}
-                          onChange={() => toggleFormat(f.id)}
-                          className="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <span>
-                          <span className="font-medium text-gray-800">{f.code}</span>
-                          <span className="block text-gray-500 text-xs">{f.name}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                </>
               )}
 
               <div className="flex justify-end gap-2 pt-2">
