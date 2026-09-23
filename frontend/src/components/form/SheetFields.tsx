@@ -30,6 +30,8 @@ import Format17PediluviosSheet from './Format17PediluviosSheet';
 import Format18AcidoLacticoSheet from './Format18AcidoLacticoSheet';
 import Format20ViscerasCavaSheet from './Format20ViscerasCavaSheet';
 import Format21CanalesSheet from './Format21CanalesSheet';
+import Format22BienestarSheet from './Format22BienestarSheet';
+import Format22ConsolidadoSheet from './Format22ConsolidadoSheet';
 import type { ChecklistItemData, MeasureRowData } from '@/types';
 
 const LEGEND_FOOTER = (
@@ -112,6 +114,22 @@ export default function SheetFields({
           onUpdate={onUpdate}
           disabled={disabled}
         />
+      </div>
+    );
+  }
+
+  if (registrosLayout === 'bienestar_animal_formato') {
+    return (
+      <div className="space-y-6">
+        <Format22BienestarSheet sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
+      </div>
+    );
+  }
+
+  if (registrosLayout === 'bienestar_consolidado_formato') {
+    return (
+      <div className="space-y-6">
+        <Format22ConsolidadoSheet sheetData={sheetData} onUpdate={onUpdate} disabled={disabled} />
       </div>
     );
   }

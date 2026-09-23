@@ -219,6 +219,18 @@ export const FORMAT_CATALOG = [
     noSunday: false,
     sheets: [{ sheetOrder: 1, name: 'Control temperatura canales', slug: 'principal' }],
   },
+  {
+    code: 'INSPECCION_BIENESTAR_ANIMAL',
+    name: 'Inspección de Bienestar Animal',
+    documentCode: 'AC-FR-008',
+    sheetCount: 2,
+    sortOrder: 22,
+    noSunday: false,
+    sheets: [
+      { sheetOrder: 1, name: 'Formato', slug: 'formato' },
+      { sheetOrder: 2, name: 'Consolidado mes', slug: 'consolidado-mes' },
+    ],
+  },
 ] as const;
 
 export type FormatCode = (typeof FORMAT_CATALOG)[number]['code'];

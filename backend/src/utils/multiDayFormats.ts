@@ -1,5 +1,9 @@
 /** Formatos que se diligencian a lo largo de varios días (p. ej. semanal). */
-export const MULTI_DAY_FORMAT_CODES = new Set(['REGISTRO_PEDILUVIOS', 'CONTROL_TEMP_PH_CANALES']);
+export const MULTI_DAY_FORMAT_CODES = new Set([
+  'REGISTRO_PEDILUVIOS',
+  'CONTROL_TEMP_PH_CANALES',
+  'INSPECCION_BIENESTAR_ANIMAL',
+]);
 
 export function isMultiDayFormat(formatCode: string | null | undefined): boolean {
   return Boolean(formatCode && MULTI_DAY_FORMAT_CODES.has(formatCode));

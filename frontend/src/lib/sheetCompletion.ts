@@ -133,6 +133,9 @@ export function isFieldComplete(
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
     const optsLayout = options.layout;
+    if (optsLayout === 'bienestar_animal_formato' || optsLayout === 'bienestar_consolidado_formato') {
+      return true;
+    }
     const isOwned =
       optsLayout === 'pediluvios_cambios_repeater' ||
       optsLayout === 'lactico_titulacion_formato' ||

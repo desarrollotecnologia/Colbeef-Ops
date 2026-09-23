@@ -1,7 +1,7 @@
 import type { FormatField, FormSubmission, FormatSheet, User } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { getDayKey, slugifyPoint } from '../utils/dayKey';
-import { renderDecomisosSheet, renderCanalesTempPhSheet, renderLacticoFormatoSheet, renderPediluviosCambiosSheet, renderVehiculosSheet, renderViscerasCavaSheet } from './submissionPdfFormatLayouts';
+import { renderDecomisosSheet, renderCanalesTempPhSheet, renderLacticoFormatoSheet, renderPediluviosCambiosSheet, renderVehiculosSheet, renderViscerasCavaSheet, renderBienestarAnimalSheet, renderBienestarConsolidadoSheet } from './submissionPdfFormatLayouts';
 import {
   MARGIN,
   contentBottom,
@@ -117,6 +117,7 @@ const LANDSCAPE_FORMAT_CODES = new Set([
   'MONITOREO_TITULACION_ACIDO_LACTICO',
   'TEMP_VISCERAS_CAVA',
   'CONTROL_TEMP_PH_CANALES',
+  'INSPECCION_BIENESTAR_ANIMAL',
 ]);
 
 function needsLandscape(fields: FormatField[]): boolean {
@@ -2399,6 +2400,17 @@ function renderSheetPage(
       fechaInicio: submission.workDate,
       fechaCierre: submission.submittedAt,
     });
+  } else if (code === 'INSPECCION_BIENESTAR_ANIMAL') {
+    const ensure = (yy: number, needed: number) => ensurePageSpace(doc, ctx, yy, needed);
+    if (sheet.slug === 'consolidado-mes' || /consolidado/i.test(sheet.name)) {
+      y = renderBienestarConsolidadoSheet(doc, sheetData, y, { ensureSpace: ensure });
+    } else {
+      y = renderBienestarAnimalSheet(doc, sheetData, y, {
+        ensureSpace: ensure,
+        fechaInicio: submission.workDate,
+        fechaCierre: submission.submittedAt,
+      });
+    }
   } else {
     for (const field of fields) {
       y = renderField(doc, ctx, field, sheetData[field.fieldKey], y, sheetData);

@@ -2,6 +2,7 @@
 export const MULTI_DAY_FORMAT_CODES = new Set([
   'REGISTRO_PEDILUVIOS',
   'CONTROL_TEMP_PH_CANALES',
+  'INSPECCION_BIENESTAR_ANIMAL',
 ]);
 
 export function isMultiDayFormat(code?: string | null): boolean {

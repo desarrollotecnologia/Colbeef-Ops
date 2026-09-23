@@ -11,6 +11,7 @@ import {
   str,
   type PdfDoc,
 } from './submissionPdfDraw';
+import { buildBienestarSummary, parseMarksForPdf } from '../utils/bienestarAnimal';
 
 type ChecklistItemData = {
   cnc?: string;
@@ -1201,6 +1202,219 @@ export function renderCanalesTempPhSheet(
   }
 
   return y + 6;
+}
+
+/** AC-FR-008 — hoja Formato (inspección bienestar animal). */
+export function renderBienestarAnimalSheet(
+  doc: PdfDoc,
+  sheetData: Record<string, unknown>,
+  startY: number,
+  opts: {
+    ensureSpace: (y: number, needed: number) => number;
+    fechaInicio: Date;
+    fechaCierre?: Date | null;
+  }
+): number {
+  let y = startY;
+  const w = pageWidth(doc) - MARGIN * 2;
+  const inicio = formatWorkDateSafe(opts.fechaInicio);
+  const cierre = opts.fechaCierre ? formatWorkDateSafe(opts.fechaCierre) : '—';
+
+  doc.fontSize(7).font('Helvetica-Bold').fillColor('#111');
+  doc.text(`Fecha inicio: ${inicio}`, MARGIN, y, { width: w / 2 - 4, height: 10, lineBreak: false });
+  doc.text(`Fecha cierre: ${cierre}`, MARGIN + w / 2, y, { width: w / 2 - 4, height: 10, lineBreak: false });
+  y += 14;
+
+  y = drawSectionBanner(doc, y, 'Encabezado', 'AC-FR-008 Inspección de Bienestar Animal', true);
+  y = drawFieldGrid(
+    doc,
+    y,
+    [
+      { label: 'Inspector(es)', value: str(sheetData.inspectores) },
+      { label: 'Método aturdimiento', value: str(sheetData.metodo_aturdimiento) },
+      { label: 'Aux. insensibilizado', value: str(sheetData.auxiliar_insensibilizado) },
+      { label: 'Aux. enmangado', value: str(sheetData.auxiliar_enmangado) },
+    ],
+    2,
+    true
+  );
+
+  const animalDefs = [
+    { key: 'c1_marks', obs: 'c1_obs', n: 50, title: '1. Eficacia aturdimiento' },
+    { key: 'c2_marks', obs: 'c2_obs', n: 50, title: '2. Intervalo aturdimiento–sangrado' },
+    { key: 'c3_marks', obs: 'c3_obs', n: 50, title: '3. Insensibles riel' },
+    { key: 'c4_marks', obs: 'c4_obs', n: 50, title: '4. Tiempo sangría' },
+    { key: 'c5_marks', obs: 'c5_obs', n: 50, title: '5. Resbalones manejo' },
+    { key: 'c6_marks', obs: 'c6_obs', n: 50, title: '6. Tábanos' },
+    { key: 'c7_marks', obs: 'c7_obs', n: 50, title: '7. Vocalización' },
+    { key: 'c8_marks', obs: 'c8_obs', n: 100, title: '8. Resbalones desembarco' },
+  ];
+
+  for (const a of animalDefs) {
+    y = opts.ensureSpace(y, 36);
+    const marks = parseMarksForPdf(sheetData[a.key], a.n);
+    const filled = marks.filter((m) => m).length;
+    const xCount = marks.filter((m) => m === 'X').length;
+    const pct = a.n ? ((xCount / a.n) * 100).toFixed(1) : '0.0';
+    doc.fontSize(7).font('Helvetica-Bold').fillColor('#111').text(a.title, MARGIN, y);
+    y += 10;
+    doc
+      .fontSize(6)
+      .font('Helvetica')
+      .text(`Marcas: ${filled}/${a.n} · X=${xCount} · % cumplimiento = ${pct}%`, MARGIN, y, { width: w });
+    y += 10;
+    const obs = str(sheetData[a.obs]);
+    if (!isBlankPdfValue(obs) && obs !== '—') {
+      doc.fontSize(6).text(`Obs: ${obs}`, MARGIN, y, { width: w });
+      y += doc.heightOfString(`Obs: ${obs}`, { width: w }) + 4;
+    }
+  }
+
+  y = opts.ensureSpace(y, 40);
+  y = drawSectionBanner(doc, y, 'Criterios 9–13', undefined, true);
+  y = drawFieldGrid(
+    doc,
+    y,
+    [
+      { label: '9. Actos abuso', value: str(sheetData.c9_actos_abuso) },
+      { label: '10. Desviaciones corrales', value: str(sheetData.c10_desviaciones) },
+      { label: '12. Transporte', value: str(sheetData.c12_desviaciones) },
+      { label: '13. Reposo/alim.', value: str(sheetData.c13_desviaciones) },
+    ],
+    2,
+    true
+  );
+
+  const summary = buildBienestarSummary(sheetData);
+  y = opts.ensureSpace(y, 80);
+  y = drawSectionBanner(doc, y, 'Criterios auditados', `Puntaje total: ${summary.totalLabel}`, true);
+
+  const cols = [
+    { label: 'Criterio', width: 0.5 },
+    { label: '%/valor', width: 0.15 },
+    { label: 'Calificación', width: 0.2 },
+    { label: 'Pts', width: 0.15 },
+  ];
+  const rowH = 11;
+  let x = MARGIN;
+  doc.fontSize(6).font('Helvetica-Bold');
+  for (const c of cols) {
+    const cw = w * c.width;
+    doc.rect(x, y, cw, rowH).stroke('#666');
+    doc.text(c.label, x + 2, y + 2, { width: cw - 4, height: rowH - 3, lineBreak: false });
+    x += cw;
+  }
+  y += rowH;
+
+  for (const r of summary.rows) {
+    y = opts.ensureSpace(y, rowH + 2);
+    x = MARGIN;
+    const cells = [r.label, r.pctLabel, r.calificacion, String(r.puntos)];
+    doc.fontSize(5.5).font('Helvetica');
+    cells.forEach((text, i) => {
+      const cw = w * cols[i].width;
+      doc.rect(x, y, cw, rowH).stroke('#999');
+      doc.fillColor('#111').text(text, x + 2, y + 2, {
+        width: cw - 4,
+        height: rowH - 3,
+        ellipsis: true,
+        lineBreak: false,
+      });
+      x += cw;
+    });
+    y += rowH;
+  }
+
+  const obs = str(sheetData.observaciones_adicionales);
+  if (!isBlankPdfValue(obs) && obs !== '—') {
+    y = opts.ensureSpace(y, 28);
+    y = drawSectionBanner(doc, y, 'Observaciones adicionales', undefined, true);
+    doc.fontSize(7).font('Helvetica').fillColor('#111').text(obs, MARGIN, y, { width: w });
+    y += doc.heightOfString(obs, { width: w }) + 6;
+  }
+
+  return y + 4;
+}
+
+/** AC-FR-008 — hoja Consolidado mes. */
+export function renderBienestarConsolidadoSheet(
+  doc: PdfDoc,
+  sheetData: Record<string, unknown>,
+  startY: number,
+  opts: { ensureSpace: (y: number, needed: number) => number }
+): number {
+  let y = startY;
+  const w = pageWidth(doc) - MARGIN * 2;
+  y = drawSectionBanner(doc, y, 'Consolidado mes', str(sheetData.mes_en_curso) || undefined, true);
+
+  const rows = [
+    'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9',
+    'c10_1', 'c10_2', 'c10_3', 'c10_4', 'c10_5', 'c10_6', 'c11', 'c12', 'c13',
+  ];
+  const labels: Record<string, string> = {
+    c1: '1. Aturdimiento',
+    c2: '2. Intervalo',
+    c3: '3. Insensibles',
+    c4: '4. Sangría',
+    c5: '5. Resbalones manejo',
+    c6: '6. Tábanos',
+    c7: '7. Vocalización',
+    c8: '8. Desembarco',
+    c9: '9. Abuso',
+    c10_1: '10.1 Aristas',
+    c10_2: '10.2 Densidad',
+    c10_3: '10.3 Bebederos',
+    c10_4: '10.4 Sombra',
+    c10_5: '10.5 Adyacentes',
+    c10_6: '10.6 Agua',
+    c11: '11. Acceso',
+    c12: '12. Transporte',
+    c13: '13. Reposo',
+  };
+  const weeks = ['s1', 's2', 's3', 's4', 'acum'] as const;
+  const weekLabels = ['S1', 'S2', 'S3', 'S4', 'Acum'];
+  const widths = [0.28, 0.144, 0.144, 0.144, 0.144, 0.144];
+  const rowH = 11;
+
+  let x = MARGIN;
+  doc.fontSize(6).font('Helvetica-Bold');
+  ['Criterio', ...weekLabels].forEach((label, i) => {
+    const cw = w * widths[i];
+    doc.rect(x, y, cw, rowH).stroke('#666');
+    doc.text(label, x + 2, y + 2, { width: cw - 4, height: rowH - 3, lineBreak: false });
+    x += cw;
+  });
+  y += rowH;
+
+  for (const key of rows) {
+    y = opts.ensureSpace(y, rowH + 2);
+    x = MARGIN;
+    const cells = [
+      labels[key] || key,
+      ...weeks.map((wk) => str(sheetData[`${key}_${wk}`])),
+    ];
+    doc.fontSize(5.5).font('Helvetica');
+    cells.forEach((text, i) => {
+      const cw = w * widths[i];
+      doc.rect(x, y, cw, rowH).stroke('#999');
+      doc.fillColor('#111').text(text || '—', x + 2, y + 2, {
+        width: cw - 4,
+        height: rowH - 3,
+        ellipsis: true,
+        lineBreak: false,
+      });
+      x += cw;
+    });
+    y += rowH;
+  }
+
+  y = opts.ensureSpace(y, 20);
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .text(`TOTAL CUMPLIMIENTO: ${str(sheetData.total_cumplimiento_mes) || '—'}`, MARGIN, y, { width: w });
+  y += 14;
+  return y;
 }
 
 export function drawCompactSheetHeader(

@@ -179,6 +179,13 @@ export function isFieldComplete(
   if (field.fieldType === 'REPEATER') {
     const rows = Array.isArray(value) ? value : [];
 
+    if (
+      options.layout === 'bienestar_animal_formato' ||
+      options.layout === 'bienestar_consolidado_formato'
+    ) {
+      return true;
+    }
+
     if (options.layout === 'pediluvios_cambios_repeater' || options.layout === 'lactico_titulacion_formato' || options.layout === 'lactico_monitoreo_formato' || options.layout === 'visceras_cava_formato' || options.layout === 'canales_temp_ph_formato' || options.ownedRows) {
       const filled = rows.filter((row) => {
         const r = row as Record<string, unknown>;
