@@ -22,22 +22,19 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout, isAdmin } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const canAccessPcc = isAdmin || Boolean(user?.canAccessPcc);
 
-  const navItems = [
-    ...(isAdmin
-      ? [
-          { to: '/admin', label: 'Panel', icon: LayoutDashboard },
-          { to: '/admin/pending', label: 'Pendientes', icon: ClipboardCheck },
-          { to: '/admin/search', label: 'Buscar', icon: Search },
-          { to: '/admin/users', label: 'Usuarios', icon: Users },
-        ]
-      : [
-          { to: '/', label: 'Mis Formatos', icon: FileText },
-          { to: '/submissions', label: 'Mis Envíos', icon: ClipboardCheck },
-        ]),
-    ...(canAccessPcc ? [{ to: '/pcc', label: 'Verificación PCC', icon: ShieldCheck }] : []),
-  ];
+  const navItems = isAdmin
+    ? [
+        { to: '/admin', label: 'Panel', icon: LayoutDashboard },
+        { to: '/admin/pending', label: 'Pendientes', icon: ClipboardCheck },
+        { to: '/admin/search', label: 'Buscar', icon: Search },
+        { to: '/admin/users', label: 'Usuarios', icon: Users },
+        { to: '/pcc', label: 'Verificación PCC', icon: ShieldCheck },
+      ]
+    : [
+        { to: '/', label: 'Mis Formatos', icon: FileText },
+        { to: '/submissions', label: 'Mis Envíos', icon: ClipboardCheck },
+      ];
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Layers } from 'lucide-react';
+import { FileText, Layers, ShieldCheck } from 'lucide-react';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
+import { useAuth } from '@/context/AuthContext';
 import type { Format } from '@/types';
 
 export default function OperatorDashboard() {
+  const { user, isAdmin } = useAuth();
   const [formats, setFormats] = useState<Format[]>([]);
   const [loading, setLoading] = useState(true);
+  const canAccessPcc = isAdmin || Boolean(user?.canAccessPcc);
 
   useEffect(() => {
     api.get('/formats').then(({ data }) => setFormats(data)).finally(() => setLoading(false));
@@ -32,6 +35,28 @@ export default function OperatorDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {canAccessPcc && (
+          <Link to="/pcc">
+            <Card className="hover:shadow-md hover:border-primary-300 transition-all cursor-pointer h-full">
+              <CardBody className="flex flex-col gap-3">
+                <div className="flex items-start justify-between">
+                  <div className="p-2 bg-primary-100 rounded-lg">
+                    <ShieldCheck className="text-primary-700" size={24} />
+                  </div>
+                  <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    <Layers size={14} />
+                    1 módulo
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Verificación PCC</h3>
+                  <p className="text-sm text-gray-500 mt-1">Liberación de canales</p>
+                </div>
+              </CardBody>
+            </Card>
+          </Link>
+        )}
+
         {formats.map((format) => (
           <Link key={format.id} to={`/formats/${format.id}/new`}>
             <Card className="hover:shadow-md hover:border-primary-300 transition-all cursor-pointer h-full">

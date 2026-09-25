@@ -57,6 +57,10 @@ SELECT DISTINCT ON (ins.id)
     pe.fecha_registro AS fecha_asociacion,
     pe.hora_registro AS hora_asociacion
 FROM trazabilidad_proceso.insensibilizacion ins
+LEFT JOIN trazabilidad_proceso.producto p
+    ON ins.id_producto = p.id
+LEFT JOIN trazabilidad_proceso.informacion_ingreso_detalle iid
+    ON p.numero_informacion_ingreso = iid.numero_informacion_ingreso
 LEFT JOIN trazabilidad_proceso.plan_faena_producto pfp
     ON ins.id_producto = pfp.id_producto
 LEFT JOIN trazabilidad_proceso.plan_faena_turno pft
@@ -66,6 +70,7 @@ LEFT JOIN trazabilidad_proceso.producto_empresa pe
 LEFT JOIN organizaciones.empresa e
     ON pe.id_empresa = e.id
 WHERE ins.fecha_registro IS NOT NULL
+    AND COALESCE(iid.emergencia, false) = false
     AND (
         (
             (ins.fecha_registro)::date = CAST($1 AS date)
