@@ -11,6 +11,7 @@ import {
   isTrazabilidadReady,
   type FilaInsensibilizacion,
 } from '../services/trazabilidadInsensibilizacionReader';
+import { buildPccHistorialWorkbook } from '../services/pccHistorialExcel';
 
 const router = Router();
 
@@ -287,31 +288,9 @@ router.get('/historial/excel', async (req: Request, res: Response) => {
       include: { user: { select: { id: true, fullName: true, username: true } } },
     });
 
-    const ExcelJS = (await import('exceljs')).default;
-    const wb = new ExcelJS.Workbook();
-    wb.creator = 'Colbeef-Ops';
-    const ws = wb.addWorksheet('Historial PCC');
-
-    ws.columns = [
-      { header: 'Fecha y hora', key: 'fecha', width: 22 },
-      { header: 'ID producto', key: 'idProducto', width: 16 },
-      { header: 'Propietario', key: 'propietario', width: 40 },
-      { header: 'Media canal 1', key: 'mc1', width: 14 },
-      { header: 'Media canal 2', key: 'mc2', width: 14 },
-      { header: 'Responsable puesto', key: 'responsable', width: 24 },
-      { header: 'Observación', key: 'observacion', width: 36 },
-      { header: 'Acción correctiva', key: 'accion', width: 36 },
-      { header: 'Usuario registro', key: 'usuario', width: 28 },
-      { header: 'ID ins. externo', key: 'externalInsId', width: 20 },
-    ];
-
-    const headerRow = ws.getRow(1);
-    headerRow.font = { bold: true };
-    headerRow.alignment = { vertical: 'middle' };
-
-    for (const r of rows) {
+    const excelRows = rows.map((r) => {
       const mapped = mapHistorialRow(r);
-      ws.addRow({
+      return {
         fecha: new Date(mapped.createdAt).toLocaleString('es-CO', { timeZone: 'America/Bogota' }),
         idProducto: mapped.idProducto,
         propietario: mapped.propietario || '—',
@@ -322,8 +301,13 @@ router.get('/historial/excel', async (req: Request, res: Response) => {
         accion: mapped.accionCorrectiva || '',
         usuario: mapped.user.fullName,
         externalInsId: mapped.externalInsId,
-      });
-    }
+      };
+    });
+
+    const fechaLabel = fechaYmd
+      ? fechaYmd.split('-').reverse().join('/')
+      : 'Todas';
+    const wb = await buildPccHistorialWorkbook(excelRows, { fechaLabel });
 
     const suffix = fechaYmd ? fechaYmd.replace(/-/g, '') : 'todos';
     const filename = `verificacion-pcc_historial_${suffix}.xlsx`;
