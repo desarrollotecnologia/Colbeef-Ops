@@ -152,16 +152,14 @@ router.post('/verificar', async (req: Request, res: Response) => {
   const fechaYmd = fechaOperativaPccYmd();
   const workDate = parseOperativeDate(fechaYmd);
 
-  let responsable =
+  const responsable =
     typeof responsablePuesto === 'string' && responsablePuesto.trim()
       ? responsablePuesto.trim()
       : null;
   if (!responsable) {
-    const u = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      select: { fullName: true },
+    return res.status(400).json({
+      error: 'Debe indicar el responsable (persona distinta a quien verifica)',
     });
-    responsable = u?.fullName?.trim() || null;
   }
 
   try {

@@ -77,14 +77,11 @@ export default function PccPage() {
   const [mc2, setMc2] = useState<Cumple>(null);
   const [observacion, setObservacion] = useState('');
   const [accionCorrectiva, setAccionCorrectiva] = useState('');
-  /** Se mantiene entre productos: no hay que escribirlo uno a uno. */
-  const [responsable, setResponsable] = useState(user?.fullName ?? '');
-
-  useEffect(() => {
-    if (user?.fullName && !responsable.trim()) {
-      setResponsable(user.fullName);
-    }
-  }, [user?.fullName, responsable]);
+  /**
+   * Persona distinta a quien verifica (Cumple/No cumple).
+   * Se mantiene entre productos para no escribirlo uno a uno.
+   */
+  const [responsable, setResponsable] = useState('');
 
   const resetForm = () => {
     setMc1(null);
@@ -121,9 +118,9 @@ export default function PccPage() {
       setError('Indique cumplimiento de media canal 1 y 2');
       return;
     }
-    const responsableNombre = responsable.trim() || user?.fullName || '';
+    const responsableNombre = responsable.trim();
     if (!responsableNombre) {
-      setError('Indique el nombre del responsable');
+      setError('Indique el nombre del responsable (persona distinta a quien verifica)');
       return;
     }
     setSaving(true);
@@ -225,6 +222,11 @@ export default function PccPage() {
                 </div>
 
                 <div>
+                  <p className="text-xs text-gray-500 mb-1">
+                    Verificado por:{' '}
+                    <strong className="text-gray-800">{user?.fullName || '—'}</strong>
+                    <span className="text-gray-400"> (quien marca Cumple / No cumple)</span>
+                  </p>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Responsable
                   </label>
@@ -234,11 +236,12 @@ export default function PccPage() {
                     disabled={saving}
                     value={responsable}
                     onChange={(e) => setResponsable(e.target.value)}
-                    placeholder="Se aplica a todos los siguientes"
+                    placeholder="Nombre de la persona responsable del puesto"
                     maxLength={191}
+                    required
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Se guarda automáticamente en cada verificación; no hay que escribirlo de nuevo.
+                    Otra persona. Lo escribe una vez y se reutiliza en las siguientes verificaciones.
                   </p>
                 </div>
 
