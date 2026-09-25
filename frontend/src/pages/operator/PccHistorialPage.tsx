@@ -220,9 +220,11 @@ export default function PccHistorialPage() {
                         {r.propietario || '—'} ·{' '}
                         {new Date(r.createdAt).toLocaleString('es-CO')}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">Registró: {r.user.fullName}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Verificado por: {r.user.fullName}
+                      </p>
                       {r.responsablePuesto && (
-                        <p className="text-xs text-gray-500">Puesto: {r.responsablePuesto}</p>
+                        <p className="text-xs text-gray-500">Responsable: {r.responsablePuesto}</p>
                       )}
                     </div>
                     <div className="flex gap-2 text-xs">
@@ -254,7 +256,7 @@ export default function PccHistorialPage() {
                   <th className="px-4 py-3 font-semibold">Responsable</th>
                   <th className="px-4 py-3 font-semibold">Observación</th>
                   <th className="px-4 py-3 font-semibold">Acción correctiva</th>
-                  <th className="px-4 py-3 font-semibold">Usuario</th>
+                  <th className="px-4 py-3 font-semibold">Verificado por</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

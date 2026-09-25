@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
 import Button from '@/components/Button';
+import { useAuth } from '@/context/AuthContext';
 
 type Cumple = boolean | null;
 
@@ -66,6 +67,7 @@ function CumpleToggle({
 }
 
 export default function PccPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -75,12 +77,21 @@ export default function PccPage() {
   const [mc2, setMc2] = useState<Cumple>(null);
   const [observacion, setObservacion] = useState('');
   const [accionCorrectiva, setAccionCorrectiva] = useState('');
+  /** Se mantiene entre productos: no hay que escribirlo uno a uno. */
+  const [responsable, setResponsable] = useState(user?.fullName ?? '');
+
+  useEffect(() => {
+    if (user?.fullName && !responsable.trim()) {
+      setResponsable(user.fullName);
+    }
+  }, [user?.fullName, responsable]);
 
   const resetForm = () => {
     setMc1(null);
     setMc2(null);
     setObservacion('');
     setAccionCorrectiva('');
+    // responsable se conserva a propósito
   };
 
   const loadCola = useCallback(async () => {
@@ -110,6 +121,11 @@ export default function PccPage() {
       setError('Indique cumplimiento de media canal 1 y 2');
       return;
     }
+    const responsableNombre = responsable.trim() || user?.fullName || '';
+    if (!responsableNombre) {
+      setError('Indique el nombre del responsable');
+      return;
+    }
     setSaving(true);
     setError('');
     setSuccess('');
@@ -122,6 +138,7 @@ export default function PccPage() {
         cumpleMediaCanal2: mc2,
         observacion,
         accionCorrectiva,
+        responsablePuesto: responsableNombre,
       });
       setSuccess('Verificación guardada');
       resetForm();
@@ -204,6 +221,24 @@ export default function PccPage() {
                   <p className="text-xl font-bold text-gray-900">{cola.actual.idProducto}</p>
                   <p className="text-sm text-gray-600 mt-1">
                     Propietario: <strong>{cola.actual.propietario}</strong>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Responsable
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm"
+                    disabled={saving}
+                    value={responsable}
+                    onChange={(e) => setResponsable(e.target.value)}
+                    placeholder="Se aplica a todos los siguientes"
+                    maxLength={191}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Se guarda automáticamente en cada verificación; no hay que escribirlo de nuevo.
                   </p>
                 </div>
 

@@ -153,7 +153,7 @@ export async function buildPccHistorialWorkbook(
     'Responsable puesto',
     'Observación',
     'Acción correctiva',
-    'Usuario registro',
+    'Verificado por',
     'ID ins. externo',
   ];
 

@@ -152,6 +152,18 @@ router.post('/verificar', async (req: Request, res: Response) => {
   const fechaYmd = fechaOperativaPccYmd();
   const workDate = parseOperativeDate(fechaYmd);
 
+  let responsable =
+    typeof responsablePuesto === 'string' && responsablePuesto.trim()
+      ? responsablePuesto.trim()
+      : null;
+  if (!responsable) {
+    const u = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { fullName: true },
+    });
+    responsable = u?.fullName?.trim() || null;
+  }
+
   try {
     const created = await prisma.pccVerificacion.create({
       data: {
@@ -163,7 +175,7 @@ router.post('/verificar', async (req: Request, res: Response) => {
         cumpleMediaCanal2: mc2,
         observacion: observacion?.trim() || null,
         accionCorrectiva: accionCorrectiva?.trim() || null,
-        responsablePuesto: responsablePuesto?.trim() || null,
+        responsablePuesto: responsable,
         workDate,
       },
       include: { user: { select: { id: true, fullName: true, username: true } } },
