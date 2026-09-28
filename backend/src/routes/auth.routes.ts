@@ -50,10 +50,7 @@ router.post('/login', async (req: Request, res: Response) => {
     { expiresIn: config.jwtExpiresIn as SignOptions['expiresIn'] }
   );
 
-  const pccAccess =
-    user.role === 'ADMIN'
-      ? true
-      : Boolean(await prisma.userPccAccess.findUnique({ where: { userId: user.id } }));
+  const pccAccess = user.role === 'ADMIN' || user.role === 'OPERARIO';
 
   res.json({
     token,
@@ -77,10 +74,7 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Sesión inválida' });
   }
 
-  const canAccessPcc =
-    user.role === 'ADMIN'
-      ? true
-      : Boolean(await prisma.userPccAccess.findUnique({ where: { userId: user.id } }));
+  const canAccessPcc = user.role === 'ADMIN' || user.role === 'OPERARIO';
 
   const { active: _active, ...safeUser } = user;
   res.json({ ...safeUser, canAccessPcc });

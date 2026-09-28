@@ -18,16 +18,13 @@ const router = Router();
 router.use(authenticate);
 router.use(denyPanel);
 
-async function userCanAccessPcc(userId: string, role: UserRole): Promise<boolean> {
-  if (role === UserRole.ADMIN) return true;
-  const access = await prisma.userPccAccess.findUnique({ where: { userId } });
-  return Boolean(access);
+function userCanAccessPcc(role: UserRole): boolean {
+  return role === UserRole.ADMIN || role === UserRole.OPERARIO;
 }
 
 function requirePccAccess() {
-  return async (req: Request, res: Response, next: () => void) => {
-    const ok = await userCanAccessPcc(req.user!.userId, req.user!.role);
-    if (!ok) {
+  return (req: Request, res: Response, next: () => void) => {
+    if (!userCanAccessPcc(req.user!.role)) {
       return res.status(403).json({ error: 'No tiene acceso al módulo Verificación PCC' });
     }
     next();
@@ -35,7 +32,7 @@ function requirePccAccess() {
 }
 
 router.get('/access', async (req: Request, res: Response) => {
-  const canAccess = await userCanAccessPcc(req.user!.userId, req.user!.role);
+  const canAccess = userCanAccessPcc(req.user!.role);
   res.json({
     canAccess,
     trazabilidadConfigured: isTrazabilidadReady(),

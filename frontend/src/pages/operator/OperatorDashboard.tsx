@@ -11,7 +11,7 @@ export default function OperatorDashboard() {
   const { user, isAdmin } = useAuth();
   const [formats, setFormats] = useState<Format[]>([]);
   const [loading, setLoading] = useState(true);
-  const canAccessPcc = isAdmin || Boolean(user?.canAccessPcc);
+  const canAccessPcc = isAdmin || user?.role === 'OPERARIO';
 
   useEffect(() => {
     api.get('/formats').then(({ data }) => setFormats(data)).finally(() => setLoading(false));

@@ -23,7 +23,6 @@ interface ManagedUser {
   active: boolean;
   formatIds: string[];
   formats: { id: string; code: string; name: string }[];
-  pccAccess: boolean;
 }
 
 type EditorMode = 'create' | 'edit' | null;
@@ -36,7 +35,6 @@ const emptyForm = {
   role: 'OPERARIO' as 'ADMIN' | 'OPERARIO',
   active: true,
   formatIds: [] as string[],
-  pccAccess: false,
 };
 
 export default function AdminUsersPage() {
@@ -91,7 +89,6 @@ export default function AdminUsersPage() {
       role: u.role,
       active: u.active,
       formatIds: [...u.formatIds],
-      pccAccess: Boolean(u.pccAccess),
     });
     setError('');
     setSuccess('');
@@ -135,7 +132,6 @@ export default function AdminUsersPage() {
           role: form.role,
           active: form.active,
           formatIds: form.role === 'OPERARIO' ? form.formatIds : [],
-          pccAccess: form.role === 'OPERARIO' ? form.pccAccess : false,
         });
       } else if (editingId) {
         await api.patch(`/admin/users/${editingId}`, {
@@ -144,7 +140,6 @@ export default function AdminUsersPage() {
           role: form.role,
           active: form.active,
           formatIds: form.role === 'OPERARIO' ? form.formatIds : undefined,
-          pccAccess: form.role === 'OPERARIO' ? form.pccAccess : false,
         });
       }
       closeEditor();
@@ -266,7 +261,6 @@ export default function AdminUsersPage() {
                           .slice(0, 4)
                           .map((f) => f.code)
                           .join(', ')}${u.formats.length > 4 ? '…' : ''}`}
-                    {u.pccAccess ? ' · Acceso PCC' : ''}
                   </p>
                 )}
               </div>
@@ -412,15 +406,6 @@ export default function AdminUsersPage() {
 
               {form.role === 'OPERARIO' && (
                 <>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.pccAccess}
-                      onChange={(e) => setForm({ ...form, pccAccess: e.target.checked })}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    Acceso a Verificación PCC
-                  </label>
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700">Formatos permitidos</label>

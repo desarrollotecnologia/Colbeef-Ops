@@ -45,7 +45,7 @@ function ProtectedRoute({
   if (panelOnly && user.role !== 'PANEL') return <Navigate to={homePath(user.role)} replace />;
   if (user.role === 'PANEL' && !panelOnly) return <Navigate to="/panel" replace />;
   if (adminOnly && user.role !== 'ADMIN') return <Navigate to={homePath(user.role)} replace />;
-  if (pccOnly && !(user.role === 'ADMIN' || user.canAccessPcc)) {
+  if (pccOnly && user.role !== 'ADMIN' && user.role !== 'OPERARIO') {
     return <Navigate to={homePath(user.role)} replace />;
   }
 
