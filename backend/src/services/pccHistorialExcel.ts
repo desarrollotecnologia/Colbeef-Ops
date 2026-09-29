@@ -3,7 +3,7 @@ import fs from 'fs';
 import ExcelJS from 'exceljs';
 import { resolveLogoPath } from './submissionPdfDraw';
 
-const PCC_CODE = 'AC-FR-010';
+const PCC_CODE = 'AC-FR-035';
 const PCC_VERSION = '02';
 const HEADER_BORDER_COLOR = '1E4A8C';
 const TITLE_FILL = '1B6B4A'; // verde institucional para títulos de columna
@@ -41,7 +41,7 @@ function resolvePccLogoPath(): string | null {
   return null;
 }
 
-/** Genera el workbook del historial PCC con encabezado AC-FR-010. */
+/** Genera el workbook del historial PCC con encabezado AC-FR-035. */
 export async function buildPccHistorialWorkbook(
   rows: PccExcelRow[],
   opts: { fechaLabel: string }
