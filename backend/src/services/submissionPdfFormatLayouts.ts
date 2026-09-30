@@ -1539,14 +1539,14 @@ export function renderBienestarAnimalSheet(
     const xCount = marks.filter((m) => m === 'X').length;
     const filled = marks.filter((m) => m).length;
     const p = a.n ? xCount / a.n : 0;
-    const ok = p + 1e-9 >= a.thr;
+    const ok = filled === 0 ? null : p + 1e-9 >= a.thr;
     y = ensure(y, 22 + Math.ceil(a.n / 25) * 15 + 22);
     y = drawBaCriterionBar(
       doc,
       y,
       a.title,
       a.legend,
-      `${baPct(p)} · ${ok ? 'APROBADO' : 'DESAPROBADO'}`,
+      ok === null ? 'SIN DILIGENCIAR' : `${baPct(p)} · ${ok ? 'APROBADO' : 'DESAPROBADO'}`,
       ok
     );
     y = drawBaMarksGrid(doc, y, marks);

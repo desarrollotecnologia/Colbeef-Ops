@@ -276,6 +276,7 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
       {ANIMAL_CRITERIA.map((c) => {
         const marks = parseMarks(sheetData[c.marksKey], c.sampleSize);
         const pct = percentFromMarks(marks, c.sampleSize);
+        const empty = !marks.some((m) => m);
         const ok = cumplePct(pct, c.threshold);
         return (
           <div key={c.id} className="border-b border-gray-800 p-3 space-y-2">
@@ -292,9 +293,11 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
                   {marks.filter((m) => m === 'X').length} X ÷ {c.sampleSize} (CONTAR.SI "X" / {c.sampleSize})
                 </div>
                 <div
-                  className={`text-[11px] font-semibold ${ok ? 'text-emerald-700' : 'text-red-700'}`}
+                  className={`text-[11px] font-semibold ${
+                    empty ? 'text-gray-500' : ok ? 'text-emerald-700' : 'text-red-700'
+                  }`}
                 >
-                  {ok ? 'APROBADO / CUMPLE' : 'DESAPROBADO / NO CUMPLE'}
+                  {empty ? 'SIN DILIGENCIAR' : ok ? 'APROBADO / CUMPLE' : 'DESAPROBADO / NO CUMPLE'}
                 </div>
               </div>
             </div>

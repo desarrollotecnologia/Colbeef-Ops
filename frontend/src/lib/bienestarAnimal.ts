@@ -254,6 +254,10 @@ export function buildBienestarSummary(data: Record<string, unknown>): {
 
   for (const c of ANIMAL_CRITERIA) {
     const marks = parseMarks(data[c.marksKey], c.sampleSize);
+    if (!marks.some((m) => m)) {
+      rows.push({ id: `c${c.id}`, label: c.title, pctLabel: '—', calificacion: '—', puntos: 0 });
+      continue;
+    }
     const pct = percentFromMarks(marks, c.sampleSize);
     const ok = cumplePct(pct, c.threshold);
     rows.push({

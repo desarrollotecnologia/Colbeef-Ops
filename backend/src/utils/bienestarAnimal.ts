@@ -97,6 +97,10 @@ export function buildBienestarSummary(data: Record<string, unknown>): {
   const rows: SummaryRow[] = [];
   for (const c of ANIMAL) {
     const marks = parseMarks(data[c.key], c.n);
+    if (!marks.some((m) => m)) {
+      rows.push({ id: `c${c.id}`, label: c.label, pctLabel: '—', calificacion: '—', puntos: 0 });
+      continue;
+    }
     const p = pct(marks, c.n);
     const ok = p + 1e-9 >= c.thr;
     rows.push({
