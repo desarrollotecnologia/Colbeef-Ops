@@ -448,7 +448,15 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
               {summary.rows.map((r) => (
                 <tr key={r.id}>
                   <td className="border border-gray-300 px-2 py-1">{r.label}</td>
-                  <td className="border border-gray-300 px-2 py-1 text-center font-semibold">
+                  <td
+                    className={`border border-gray-300 px-2 py-1 text-center font-semibold ${
+                      r.pctLabel === 'CUMPLE'
+                        ? 'text-emerald-700'
+                        : r.pctLabel === 'NO CUMPLE'
+                          ? 'text-red-700'
+                          : ''
+                    }`}
+                  >
                     {r.pctLabel}
                   </td>
                   <td

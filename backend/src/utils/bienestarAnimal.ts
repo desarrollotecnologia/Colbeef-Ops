@@ -130,13 +130,13 @@ export function buildBienestarSummary(data: Record<string, unknown>): {
         if (r[item.key] === 'C') c++;
         else if (r[item.key] === 'NC') nc++;
       }
-      // Tabla de corrales: CUMPLE solo si ningún corral marcado quedó en NC.
+      // Cada punto se evalúa con su columna de la tabla de corrales: un solo NC → NO CUMPLE.
       if (c + nc > 0) {
         const ok = nc === 0;
         rows.push({
           id: item.id,
           label: item.label,
-          pctLabel: `${c} C / ${nc} NC`,
+          pctLabel: ok ? 'CUMPLE' : 'NO CUMPLE',
           calificacion: ok ? 'CUMPLE' : 'NO CUMPLE',
           puntos: ok ? 1 : 0,
         });
