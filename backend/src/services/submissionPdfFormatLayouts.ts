@@ -11,7 +11,14 @@ import {
   str,
   type PdfDoc,
 } from './submissionPdfDraw';
-import { buildBienestarSummary, parseMarksForPdf } from '../utils/bienestarAnimal';
+import {
+  buildBienestarSummary,
+  CORRAL_ITEM_KEYS,
+  CORRALES_KEY,
+  cumpleSiNo,
+  parseCorralRows,
+  parseMarksForPdf,
+} from '../utils/bienestarAnimal';
 
 type ChecklistItemData = {
   cnc?: string;
@@ -1204,6 +1211,255 @@ export function renderCanalesTempPhSheet(
   return y + 6;
 }
 
+const BA_GREEN = '#166534';
+const BA_GREEN_LIGHT = '#dcfce7';
+const BA_RED = '#b91c1c';
+const BA_RED_LIGHT = '#fee2e2';
+const BA_AMBER_LIGHT = '#fef3c7';
+const BA_AMBER = '#92400e';
+const BA_GRAY_LIGHT = '#f3f4f6';
+
+const BA_ANIMAL = [
+  {
+    key: 'c1_marks',
+    obs: 'c1_obs',
+    n: 50,
+    thr: 0.96,
+    title: '1. Eficacia de aturdimiento al primer disparo',
+    legend: 'X: aturdido correctamente · E: falla del equipo · P: deficiente puntería',
+  },
+  {
+    key: 'c2_marks',
+    obs: 'c2_obs',
+    n: 50,
+    thr: 1,
+    title: '2. Intervalo de tiempo entre el aturdimiento y el corte de grandes vasos',
+    legend: 'X: cumple tiempo · F: falla (aturdimiento/tiempo)',
+  },
+  {
+    key: 'c3_marks',
+    obs: 'c3_obs',
+    n: 50,
+    thr: 1,
+    title: '3. Animales insensibles en el riel de sangrado',
+    legend: 'X: insensible · S: sensible',
+  },
+  {
+    key: 'c4_marks',
+    obs: 'c4_obs',
+    n: 50,
+    thr: 1,
+    title: '4. Tiempo de sangría posterior al corte de grandes vasos',
+    legend: 'X: cumple tiempo · F: falla',
+  },
+  {
+    key: 'c5_marks',
+    obs: 'c5_obs',
+    n: 50,
+    thr: 0.98,
+    title: '5. Resbalones y caídas durante el manejo',
+    legend: 'X: sin resbalón/caída · R: resbaló · C: cayó',
+  },
+  {
+    key: 'c6_marks',
+    obs: 'c6_obs',
+    n: 50,
+    thr: 0.75,
+    title: '6. Uso de tábanos eléctricos',
+    legend: 'X: no se usó tábano · T: se usó tábano',
+  },
+  {
+    key: 'c7_marks',
+    obs: 'c7_obs',
+    n: 50,
+    thr: 0.96,
+    title: '7. Vocalización',
+    legend: 'X: no vocalizó · V: vocalizó',
+  },
+  {
+    key: 'c8_marks',
+    obs: 'c8_obs',
+    n: 50,
+    thr: 0.98,
+    title: '8. Resbalones y caídas durante el desembarco',
+    legend: 'X: no resbaló/cayó · R: resbaló · C: cayó',
+  },
+] as const;
+
+const BA_CORRAL_TEXTS: Record<string, string> = {
+  c10_1: 'Pisos, paredes, bebederos y divisiones presentan aristas, salientes o punzantes',
+  c10_2: 'Densidad animal adecuada',
+  c10_3: 'Bebederos en funcionamiento',
+  c10_4: 'Sombra en buen estado',
+  c10_5: 'Áreas adyacentes presentan materiales extraños, aristas o salientes punzantes',
+  c10_6: 'Se cuenta con acceso a agua limpia',
+};
+
+function baPct(p: number): string {
+  return `${(p * 100).toFixed(1)}%`;
+}
+
+function baColors(ok: boolean | null) {
+  if (ok === null) return { bg: BA_GRAY_LIGHT, fg: '#4b5563', border: '#d1d5db' };
+  return ok
+    ? { bg: BA_GREEN_LIGHT, fg: BA_GREEN, border: '#86efac' }
+    : { bg: BA_RED_LIGHT, fg: BA_RED, border: '#fca5a5' };
+}
+
+function drawBaBadge(
+  doc: PdfDoc,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  text: string,
+  ok: boolean | null,
+  fontSize = 6
+): void {
+  const c = baColors(ok);
+  doc.lineWidth(0.5).roundedRect(x, y, w, h, 2).fillAndStroke(c.bg, c.border);
+  doc
+    .fontSize(fontSize)
+    .font('Helvetica-Bold')
+    .fillColor(c.fg)
+    .text(text, x + 1, y + (h - fontSize) / 2 + 0.5, {
+      width: w - 2,
+      height: fontSize + 2,
+      align: 'center',
+      lineBreak: false,
+      ellipsis: true,
+    });
+}
+
+/** Barra de título de un criterio con insignia de resultado a la derecha. */
+function drawBaCriterionBar(
+  doc: PdfDoc,
+  y: number,
+  title: string,
+  subtitle: string | undefined,
+  resultText: string,
+  ok: boolean | null
+): number {
+  const w = pageWidth(doc) - MARGIN * 2;
+  const h = subtitle ? 22 : 16;
+  const badgeW = 104;
+  doc.rect(MARGIN, y, w, h).fill('#f0fdf4');
+  doc.rect(MARGIN, y, 3, h).fill(BA_GREEN);
+  doc.lineWidth(0.4).strokeColor('#bbf7d0').rect(MARGIN, y, w, h).stroke();
+  const textW = w - badgeW - 16;
+  doc
+    .fontSize(7.5)
+    .font('Helvetica-Bold')
+    .fillColor('#111')
+    .text(title, MARGIN + 8, y + 4, { width: textW, height: 9, lineBreak: false, ellipsis: true });
+  if (subtitle) {
+    doc
+      .fontSize(5.8)
+      .font('Helvetica')
+      .fillColor('#4b5563')
+      .text(subtitle, MARGIN + 8, y + 13, { width: textW, height: 8, lineBreak: false, ellipsis: true });
+  }
+  drawBaBadge(doc, MARGIN + w - badgeW - 4, y + 3, badgeW, h - 6, resultText, ok, 6.5);
+  return y + h + 4;
+}
+
+/** Cuadrícula de 25 casillas por fila, como en el formato impreso. */
+function drawBaMarksGrid(doc: PdfDoc, y: number, marks: string[]): number {
+  const w = pageWidth(doc) - MARGIN * 2;
+  const perRow = 25;
+  const cw = w / perRow;
+  const ch = 15;
+  marks.forEach((m, i) => {
+    const x = MARGIN + (i % perRow) * cw;
+    const cy = y + Math.floor(i / perRow) * ch;
+    const fill = m === 'X' ? BA_GREEN_LIGHT : m ? BA_AMBER_LIGHT : '#ffffff';
+    doc.rect(x, cy, cw, ch).fill(fill);
+    doc.lineWidth(0.3).strokeColor('#9ca3af').rect(x, cy, cw, ch).stroke();
+    doc
+      .fontSize(3.8)
+      .font('Helvetica')
+      .fillColor('#6b7280')
+      .text(String(i + 1), x + 1.2, cy + 1.2, { width: cw - 2, height: 5, lineBreak: false });
+    if (m) {
+      doc
+        .fontSize(7)
+        .font('Helvetica-Bold')
+        .fillColor(m === 'X' ? BA_GREEN : BA_AMBER)
+        .text(m, x, cy + 5.5, { width: cw, height: 8, align: 'center', lineBreak: false });
+    }
+  });
+  return y + Math.ceil(marks.length / perRow) * ch + 3;
+}
+
+function drawBaObs(
+  doc: PdfDoc,
+  y: number,
+  value: unknown,
+  ensureSpace: (y: number, needed: number) => number
+): number {
+  const obs = str(value);
+  if (isBlankPdfValue(obs)) return y;
+  const w = pageWidth(doc) - MARGIN * 2;
+  const text = `Observaciones: ${obs}`;
+  const h = doc.fontSize(6.5).font('Helvetica').heightOfString(text, { width: w - 8 }) + 6;
+  y = ensureSpace(y, h + 2);
+  doc.rect(MARGIN, y, w, h).fill('#fafafa');
+  doc.lineWidth(0.3).strokeColor('#e5e7eb').rect(MARGIN, y, w, h).stroke();
+  doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#374151').text('Observaciones: ', MARGIN + 4, y + 3, {
+    width: w - 8,
+    continued: true,
+  });
+  doc.font('Helvetica').fillColor('#111').text(obs);
+  return y + h + 3;
+}
+
+/** Fila pregunta · respuesta SI/NO · resultado. */
+function drawBaQuestionRow(
+  doc: PdfDoc,
+  y: number,
+  question: string,
+  answer: string,
+  ok: boolean | null,
+  ensureSpace: (y: number, needed: number) => number
+): number {
+  const w = pageWidth(doc) - MARGIN * 2;
+  const ansW = 44;
+  const resW = 104;
+  const qW = w - ansW - resW - 12;
+  const textH = doc.fontSize(6.5).font('Helvetica').heightOfString(question, { width: qW - 6 });
+  const h = Math.max(16, textH + 7);
+  y = ensureSpace(y, h + 2);
+  doc.lineWidth(0.3).strokeColor('#d1d5db').rect(MARGIN, y, w, h).stroke();
+  doc.fontSize(6.5).font('Helvetica').fillColor('#111').text(question, MARGIN + 4, y + (h - textH) / 2, {
+    width: qW - 6,
+  });
+  const bh = 11;
+  drawBaBadge(doc, MARGIN + qW, y + (h - bh) / 2, ansW, bh, answer || '—', null, 6.5);
+  drawBaBadge(
+    doc,
+    MARGIN + qW + ansW + 8,
+    y + (h - bh) / 2,
+    resW,
+    bh,
+    ok === null ? 'SIN DILIGENCIAR' : ok ? 'CUMPLE' : 'NO CUMPLE',
+    ok,
+    6.5
+  );
+  return y + h;
+}
+
+function baSiNo(sheetData: Record<string, unknown>, key: string): { answer: string; ok: boolean | null } {
+  const raw = String(sheetData[key] ?? '').trim().toUpperCase();
+  if (!raw) return { answer: '', ok: null };
+  return { answer: raw, ok: cumpleSiNo(key, raw) };
+}
+
+function drawBaNote(doc: PdfDoc, y: number, text: string): number {
+  const w = pageWidth(doc) - MARGIN * 2;
+  doc.fontSize(5.8).font('Helvetica-Oblique').fillColor('#4b5563').text(text, MARGIN + 2, y + 1, { width: w - 4 });
+  return y + doc.heightOfString(text, { width: w - 4 }) + 4;
+}
+
 /** AC-FR-008 — hoja Formato (inspección bienestar animal). */
 export function renderBienestarAnimalSheet(
   doc: PdfDoc,
@@ -1217,13 +1473,43 @@ export function renderBienestarAnimalSheet(
 ): number {
   let y = startY;
   const w = pageWidth(doc) - MARGIN * 2;
+  const ensure = opts.ensureSpace;
   const inicio = formatWorkDateSafe(opts.fechaInicio);
   const cierre = opts.fechaCierre ? formatWorkDateSafe(opts.fechaCierre) : '—';
+  const summary = buildBienestarSummary(sheetData);
 
-  doc.fontSize(7).font('Helvetica-Bold').fillColor('#111');
-  doc.text(`Fecha inicio: ${inicio}`, MARGIN, y, { width: w / 2 - 4, height: 10, lineBreak: false });
-  doc.text(`Fecha cierre: ${cierre}`, MARGIN + w / 2, y, { width: w / 2 - 4, height: 10, lineBreak: false });
-  y += 14;
+  // Franja superior: fechas + puntaje total
+  const stripH = 26;
+  doc.rect(MARGIN, y, w, stripH).fill(BA_GRAY_LIGHT);
+  doc.lineWidth(0.4).strokeColor('#d1d5db').rect(MARGIN, y, w, stripH).stroke();
+  const scoreW = 130;
+  const halfW = (w - scoreW) / 2;
+  const infoCell = (label: string, value: string, x: number) => {
+    doc.fontSize(5.8).font('Helvetica-Bold').fillColor('#6b7280').text(label, x + 6, y + 4, {
+      width: halfW - 10,
+      lineBreak: false,
+    });
+    doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#111').text(value, x + 6, y + 13, {
+      width: halfW - 10,
+      height: 10,
+      lineBreak: false,
+      ellipsis: true,
+    });
+  };
+  infoCell('FECHA INICIO', inicio, MARGIN);
+  infoCell('FECHA CIERRE', cierre, MARGIN + halfW);
+  doc.rect(MARGIN + w - scoreW, y, scoreW, stripH).fill(BA_GREEN);
+  doc.fontSize(5.8).font('Helvetica-Bold').fillColor('#bbf7d0').text('PUNTAJE TOTAL OBTENIDO', MARGIN + w - scoreW, y + 4, {
+    width: scoreW,
+    align: 'center',
+    lineBreak: false,
+  });
+  doc.fontSize(11).font('Helvetica-Bold').fillColor('#ffffff').text(summary.totalLabel, MARGIN + w - scoreW, y + 12, {
+    width: scoreW,
+    align: 'center',
+    lineBreak: false,
+  });
+  y += stripH + 6;
 
   y = drawSectionBanner(doc, y, 'Encabezado', 'AC-FR-008 Inspección de Bienestar Animal', true);
   y = drawFieldGrid(
@@ -1231,107 +1517,295 @@ export function renderBienestarAnimalSheet(
     y,
     [
       { label: 'Inspector(es)', value: str(sheetData.inspectores) },
-      { label: 'Método aturdimiento', value: str(sheetData.metodo_aturdimiento) },
-      { label: 'Aux. insensibilizado', value: str(sheetData.auxiliar_insensibilizado) },
-      { label: 'Aux. enmangado', value: str(sheetData.auxiliar_enmangado) },
+      { label: 'Método de aturdimiento', value: str(sheetData.metodo_aturdimiento) },
+      { label: 'Auxiliar de línea responsable del insensibilizado', value: str(sheetData.auxiliar_insensibilizado) },
+      { label: 'Auxiliar de corrales responsable de enmangado', value: str(sheetData.auxiliar_enmangado) },
     ],
     2,
     true
   );
 
-  const animalDefs = [
-    { key: 'c1_marks', obs: 'c1_obs', n: 50, title: '1. Eficacia aturdimiento' },
-    { key: 'c2_marks', obs: 'c2_obs', n: 50, title: '2. Intervalo aturdimiento–sangrado' },
-    { key: 'c3_marks', obs: 'c3_obs', n: 50, title: '3. Insensibles riel' },
-    { key: 'c4_marks', obs: 'c4_obs', n: 50, title: '4. Tiempo sangría' },
-    { key: 'c5_marks', obs: 'c5_obs', n: 50, title: '5. Resbalones manejo' },
-    { key: 'c6_marks', obs: 'c6_obs', n: 50, title: '6. Tábanos' },
-    { key: 'c7_marks', obs: 'c7_obs', n: 50, title: '7. Vocalización' },
-    { key: 'c8_marks', obs: 'c8_obs', n: 100, title: '8. Resbalones desembarco' },
-  ];
-
-  for (const a of animalDefs) {
-    y = opts.ensureSpace(y, 36);
+  // Criterios 1–8
+  y = ensure(y, 90);
+  y = drawSectionBanner(
+    doc,
+    y,
+    'Criterios evaluados por animal',
+    '% de cumplimiento = CONTAR.SI("X") / muestra · verde: cumple (X) · ámbar: falla',
+    true
+  );
+  for (const a of BA_ANIMAL) {
     const marks = parseMarksForPdf(sheetData[a.key], a.n);
-    const filled = marks.filter((m) => m).length;
     const xCount = marks.filter((m) => m === 'X').length;
-    const pct = a.n ? ((xCount / a.n) * 100).toFixed(1) : '0.0';
-    doc.fontSize(7).font('Helvetica-Bold').fillColor('#111').text(a.title, MARGIN, y);
-    y += 10;
+    const filled = marks.filter((m) => m).length;
+    const p = a.n ? xCount / a.n : 0;
+    const ok = p + 1e-9 >= a.thr;
+    y = ensure(y, 22 + Math.ceil(a.n / 25) * 15 + 22);
+    y = drawBaCriterionBar(
+      doc,
+      y,
+      a.title,
+      a.legend,
+      `${baPct(p)} · ${ok ? 'APROBADO' : 'DESAPROBADO'}`,
+      ok
+    );
+    y = drawBaMarksGrid(doc, y, marks);
     doc
       .fontSize(6)
       .font('Helvetica')
-      .text(`Marcas: ${filled}/${a.n} · X=${xCount} · % cumplimiento = ${pct}%`, MARGIN, y, { width: w });
+      .fillColor('#374151')
+      .text(
+        `Animales marcados: ${filled}/${a.n}  ·  Cumplen (X): ${xCount}  ·  Fallas: ${filled - xCount}  ·  ` +
+          `% cumplimiento = ${xCount} / ${a.n} = ${baPct(p)}  ·  Mínimo para aprobar: ${Math.round(a.thr * 100)}%`,
+        MARGIN + 2,
+        y,
+        { width: w - 4, height: 8, lineBreak: false, ellipsis: true }
+      );
     y += 10;
-    const obs = str(sheetData[a.obs]);
-    if (!isBlankPdfValue(obs) && obs !== '—') {
-      doc.fontSize(6).text(`Obs: ${obs}`, MARGIN, y, { width: w });
-      y += doc.heightOfString(`Obs: ${obs}`, { width: w }) + 4;
-    }
+    y = drawBaObs(doc, y, sheetData[a.obs], ensure);
+    y += 5;
   }
 
-  y = opts.ensureSpace(y, 40);
-  y = drawSectionBanner(doc, y, 'Criterios 9–13', undefined, true);
-  y = drawFieldGrid(
+  // Criterio 9
+  y = ensure(y, 60);
+  y = drawSectionBanner(doc, y, 'Criterios de verificación', 'Respuesta SI/NO y resultado según el formato', true);
+  const c9 = baSiNo(sheetData, 'c9_actos_abuso');
+  y = drawBaCriterionBar(doc, y, '9. Actos de abuso', 'Tolerancia cero para actos de abuso voluntarios', c9.ok === null ? 'SIN DILIGENCIAR' : c9.ok ? 'APROBADO' : 'DESAPROBADO', c9.ok);
+  y = drawBaQuestionRow(doc, y, '¿Se presentaron actos de abuso?', c9.answer, c9.ok, ensure);
+  y = drawBaObs(doc, y + 3, sheetData.c9_obs, ensure);
+  y += 6;
+
+  // Criterio 10
+  const c10 = baSiNo(sheetData, 'c10_desviaciones');
+  y = ensure(y, 90);
+  y = drawBaCriterionBar(
     doc,
     y,
-    [
-      { label: '9. Actos abuso', value: str(sheetData.c9_actos_abuso) },
-      { label: '10. Desviaciones corrales', value: str(sheetData.c10_desviaciones) },
-      { label: '12. Transporte', value: str(sheetData.c12_desviaciones) },
-      { label: '13. Reposo/alim.', value: str(sheetData.c13_desviaciones) },
-    ],
-    2,
-    true
+    '10. Estado de corrales',
+    'C: Cumple · NC: No cumple · Tolerancia cero desviaciones',
+    c10.ok === null ? 'SIN DILIGENCIAR' : c10.ok ? 'APROBADO' : 'DESAPROBADO',
+    c10.ok
   );
-
-  const summary = buildBienestarSummary(sheetData);
-  y = opts.ensureSpace(y, 80);
-  y = drawSectionBanner(doc, y, 'Criterios auditados', `Puntaje total: ${summary.totalLabel}`, true);
-
-  const cols = [
-    { label: 'Criterio', width: 0.5 },
-    { label: '%/valor', width: 0.15 },
-    { label: 'Calificación', width: 0.2 },
-    { label: 'Pts', width: 0.15 },
-  ];
-  const rowH = 11;
-  let x = MARGIN;
-  doc.fontSize(6).font('Helvetica-Bold');
-  for (const c of cols) {
-    const cw = w * c.width;
-    doc.rect(x, y, cw, rowH).stroke('#666');
-    doc.text(c.label, x + 2, y + 2, { width: cw - 4, height: rowH - 3, lineBreak: false });
-    x += cw;
+  for (const k of CORRAL_ITEM_KEYS) {
+    const num = k.replace('c', '').replace('_', '.');
+    doc.fontSize(5.8).font('Helvetica-Bold').fillColor('#111').text(`${num} `, MARGIN + 4, y, { continued: true });
+    doc.font('Helvetica').fillColor('#374151').text(BA_CORRAL_TEXTS[k], { width: w - 8 });
+    y = doc.y + 1;
   }
-  y += rowH;
+  y += 3;
 
-  for (const r of summary.rows) {
-    y = opts.ensureSpace(y, rowH + 2);
-    x = MARGIN;
-    const cells = [r.label, r.pctLabel, r.calificacion, String(r.puntos)];
-    doc.fontSize(5.5).font('Helvetica');
-    cells.forEach((text, i) => {
-      const cw = w * cols[i].width;
-      doc.rect(x, y, cw, rowH).stroke('#999');
-      doc.fillColor('#111').text(text, x + 2, y + 2, {
-        width: cw - 4,
-        height: rowH - 3,
-        ellipsis: true,
+  const corralRows = parseCorralRows(sheetData[CORRALES_KEY]);
+  if (corralRows.length > 0) {
+    const cRowH = 13;
+    const cWidths = [0.05, 0.12, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.38];
+    const header = ['N°', 'Corrales', '10.1', '10.2', '10.3', '10.4', '10.5', '10.6', 'Observaciones'];
+    const drawCorralHeader = () => {
+      let cx = MARGIN;
+      doc.rect(MARGIN, y, w, cRowH).fill(BA_GREEN);
+      header.forEach((text, i) => {
+        const cw = w * cWidths[i];
+        doc.lineWidth(0.3).strokeColor('#14532d').rect(cx, y, cw, cRowH).stroke();
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#ffffff').text(text, cx + 2, y + 3.5, {
+          width: cw - 4,
+          height: 8,
+          align: 'center',
+          lineBreak: false,
+        });
+        cx += cw;
+      });
+      y += cRowH;
+    };
+    y = ensure(y, cRowH * 3);
+    drawCorralHeader();
+    corralRows.forEach((r, idx) => {
+      const nextY = ensure(y, cRowH + 2);
+      if (nextY !== y) {
+        y = nextY;
+        drawCorralHeader();
+      }
+      let cx = MARGIN;
+      const cells = [String(idx + 1), r.corral || '—', ...CORRAL_ITEM_KEYS.map((k) => r[k] || ''), r.obs || ''];
+      cells.forEach((text, i) => {
+        const cw = w * cWidths[i];
+        const isMark = i >= 2 && i <= 7;
+        if (isMark && text) doc.rect(cx, y, cw, cRowH).fill(text === 'C' ? BA_GREEN_LIGHT : BA_RED_LIGHT);
+        else if (idx % 2 === 1) doc.rect(cx, y, cw, cRowH).fill('#f9fafb');
+        doc.lineWidth(0.3).strokeColor('#9ca3af').rect(cx, y, cw, cRowH).stroke();
+        doc
+          .fontSize(isMark ? 6.5 : 6)
+          .font(isMark || i === 0 ? 'Helvetica-Bold' : 'Helvetica')
+          .fillColor(isMark ? (text === 'C' ? BA_GREEN : BA_RED) : '#111')
+          .text(text || (isMark ? '—' : ''), cx + 2, y + 3.5, {
+            width: cw - 4,
+            height: 8,
+            align: i === 8 ? 'left' : 'center',
+            lineBreak: false,
+            ellipsis: true,
+          });
+        cx += cw;
+      });
+      y += cRowH;
+    });
+    y += 4;
+  }
+  y = drawBaQuestionRow(doc, y, '¿Se presentaron desviaciones?', c10.answer, c10.ok, ensure);
+  y = drawBaNote(doc, y + 2, 'Nota: Durante las inspecciones del mes se debe cubrir la revisión total de los corrales, más el corral de observación.');
+  y = drawBaObs(doc, y, sheetData.c10_obs, ensure);
+  y += 6;
+
+  // Criterio 11
+  const c11Items = [
+    { key: 'c11_vias', q: 'Las vías o carreteras de acceso se evidencian en buen estado, sin baches o desniveles' },
+    { key: 'c11_acoples', q: 'Los desembarcaderos cuentan con acoples que garantizan la correcta posición de los vehículos' },
+    { key: 'c11_antideslizante', q: 'Los desembarcaderos cuentan con piso antideslizante' },
+    { key: 'c11_aristas', q: 'Los pisos y barandas presentan aristas, salientes o punzantes' },
+  ];
+  const c11Res = c11Items.map((it) => baSiNo(sheetData, it.key));
+  const c11Ok = c11Res.every((r) => r.ok !== null) ? c11Res.every((r) => r.ok) : null;
+  y = ensure(y, 90);
+  y = drawBaCriterionBar(
+    doc,
+    y,
+    '11. Estado de instalaciones de acceso a corrales',
+    'Pisos, barandas y rutas de ingreso · Tolerancia cero',
+    c11Ok === null ? 'SIN DILIGENCIAR' : c11Ok ? 'APROBADO' : 'DESAPROBADO',
+    c11Ok
+  );
+  c11Items.forEach((it, i) => {
+    y = drawBaQuestionRow(doc, y, it.q, c11Res[i].answer, c11Res[i].ok, ensure);
+  });
+  y = drawBaObs(doc, y + 3, sheetData.c11_obs, ensure);
+  y += 6;
+
+  // Criterios 12 y 13
+  const c12 = baSiNo(sheetData, 'c12_desviaciones');
+  y = ensure(y, 60);
+  y = drawBaCriterionBar(
+    doc,
+    y,
+    '12. Bienestar animal asociado al transporte',
+    'Tolerancia cero: animales caídos o muertos en la inspección de portería',
+    c12.ok === null ? 'SIN DILIGENCIAR' : c12.ok ? 'APROBADO' : 'DESAPROBADO',
+    c12.ok
+  );
+  y = drawBaQuestionRow(doc, y, '¿Se presentaron desviaciones de Bienestar Animal por transporte?', c12.answer, c12.ok, ensure);
+  y = drawBaObs(doc, y + 3, sheetData.c12_obs, ensure);
+  y += 6;
+
+  const c13 = baSiNo(sheetData, 'c13_desviaciones');
+  y = ensure(y, 60);
+  y = drawBaCriterionBar(
+    doc,
+    y,
+    '13. Cumplimiento en tiempos de reposo y alimentación',
+    'Tolerancia cero respecto a tiempos de reposo y alimentación',
+    c13.ok === null ? 'SIN DILIGENCIAR' : c13.ok ? 'APROBADO' : 'DESAPROBADO',
+    c13.ok
+  );
+  y = drawBaQuestionRow(
+    doc,
+    y,
+    '¿Se presentaron desviaciones de Bienestar Animal por tiempos de reposo y alimentación?',
+    c13.answer,
+    c13.ok,
+    ensure
+  );
+  y = drawBaObs(doc, y + 3, sheetData.c13_obs, ensure);
+  y += 8;
+
+  const obsAdicionales = str(sheetData.observaciones_adicionales);
+  if (!isBlankPdfValue(obsAdicionales)) {
+    y = ensure(y, 30);
+    y = drawSectionBanner(doc, y, 'Observaciones adicionales', undefined, true);
+    doc.fontSize(7).font('Helvetica').fillColor('#111').text(obsAdicionales, MARGIN, y, { width: w });
+    y += doc.heightOfString(obsAdicionales, { width: w }) + 8;
+  }
+
+  // Resumen: criterios auditados
+  const rowH = 12;
+  const cols = [
+    { label: 'N°', width: 0.07, align: 'center' as const },
+    { label: 'Criterio auditado', width: 0.5, align: 'left' as const },
+    { label: '% obtenido', width: 0.14, align: 'center' as const },
+    { label: 'Calificación', width: 0.17, align: 'center' as const },
+    { label: 'Puntaje', width: 0.12, align: 'center' as const },
+  ];
+  const drawSummaryHeader = () => {
+    let x = MARGIN;
+    doc.rect(MARGIN, y, w, rowH + 2).fill(BA_GREEN);
+    for (const c of cols) {
+      const cw = w * c.width;
+      doc.lineWidth(0.3).strokeColor('#14532d').rect(x, y, cw, rowH + 2).stroke();
+      doc.fontSize(6.3).font('Helvetica-Bold').fillColor('#ffffff').text(c.label, x + 3, y + 4, {
+        width: cw - 6,
+        height: 8,
+        align: c.align,
         lineBreak: false,
       });
       x += cw;
+    }
+    y += rowH + 2;
+  };
+  y = ensure(y, 30 + (summary.rows.length + 1) * rowH + 40);
+  y = drawSectionBanner(doc, y, 'Criterios auditados', 'Resumen de calificación del formato', true);
+  drawSummaryHeader();
+
+  summary.rows.forEach((r, idx) => {
+    const nextY = ensure(y, rowH + 2);
+    if (nextY !== y) {
+      y = nextY;
+      drawSummaryHeader();
+    }
+    const ok = r.calificacion === 'CUMPLE' ? true : r.calificacion === 'NO CUMPLE' ? false : null;
+    const num = r.id.replace('c', '').replace('_', '.');
+    const counts = idx < 16;
+    const cells = [num, r.label, r.pctLabel, r.calificacion, counts ? String(r.puntos) : `${r.puntos}*`];
+    let x = MARGIN;
+    if (idx % 2 === 1) doc.rect(MARGIN, y, w, rowH).fill('#f9fafb');
+    cells.forEach((text, i) => {
+      const cw = w * cols[i].width;
+      if (i === 3 && ok !== null) doc.rect(x, y, cw, rowH).fill(baColors(ok).bg);
+      doc.lineWidth(0.3).strokeColor('#d1d5db').rect(x, y, cw, rowH).stroke();
+      doc
+        .fontSize(6)
+        .font(i === 3 || i === 0 ? 'Helvetica-Bold' : 'Helvetica')
+        .fillColor(i === 3 ? baColors(ok).fg : '#111')
+        .text(text, x + 3, y + 3.5, {
+          width: cw - 6,
+          height: 8,
+          align: cols[i].align,
+          lineBreak: false,
+          ellipsis: true,
+        });
+      x += cw;
     });
     y += rowH;
-  }
+  });
 
-  const obs = str(sheetData.observaciones_adicionales);
-  if (!isBlankPdfValue(obs) && obs !== '—') {
-    y = opts.ensureSpace(y, 28);
-    y = drawSectionBanner(doc, y, 'Observaciones adicionales', undefined, true);
-    doc.fontSize(7).font('Helvetica').fillColor('#111').text(obs, MARGIN, y, { width: w });
-    y += doc.heightOfString(obs, { width: w }) + 6;
-  }
+  const sumPts = summary.rows.slice(0, 16).reduce((a, r) => a + r.puntos, 0);
+  y = ensure(y, 30);
+  const totalH = 18;
+  doc.rect(MARGIN, y, w, totalH).fill(BA_GREEN_LIGHT);
+  doc.lineWidth(0.6).strokeColor(BA_GREEN).rect(MARGIN, y, w, totalH).stroke();
+  doc
+    .fontSize(7.5)
+    .font('Helvetica-Bold')
+    .fillColor(BA_GREEN)
+    .text(`PUNTAJE TOTAL OBTENIDO  (${sumPts} / 18)`, MARGIN + 8, y + 5.5, {
+      width: w * 0.7,
+      lineBreak: false,
+    });
+  doc.fontSize(10).text(summary.totalLabel, MARGIN + w * 0.7, y + 4, {
+    width: w * 0.3 - 8,
+    align: 'right',
+    lineBreak: false,
+  });
+  y += totalH + 3;
+  y = drawBaNote(
+    doc,
+    y,
+    '* Puntaje total = suma de los criterios 1 a 11 / 18 (fórmula del formato AC-FR-008). Los criterios 12 y 13 se califican pero no suman al puntaje.'
+  );
 
   return y + 4;
 }

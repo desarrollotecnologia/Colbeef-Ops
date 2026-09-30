@@ -113,7 +113,7 @@ export function getFormat22Fields(slug: string): FieldDef[] {
     marksField('c7_marks', '7. Vocalización — marcas (50)', 70, 50),
     textareaField('c7_obs', '7. Observaciones', 71, { groupName: 'Criterio 7' }),
 
-    marksField('c8_marks', '8. Resbalones/caídas desembarco — marcas (100)', 80, 100),
+    marksField('c8_marks', '8. Resbalones/caídas desembarco — marcas (50)', 80, 50),
     textareaField('c8_obs', '8. Observaciones', 81, { groupName: 'Criterio 8' }),
 
     selectField('c9_actos_abuso', '9. ¿Se presentaron actos de abuso?', ['SI', 'NO'], 90, {
@@ -122,29 +122,11 @@ export function getFormat22Fields(slug: string): FieldDef[] {
     }),
     textareaField('c9_obs', '9. Observaciones', 91, { groupName: 'Criterio 9' }),
 
-    textField('c10_1_corral', '10.1 Corral #', 100, { groupName: 'Criterio 10' }),
-    selectField('c10_1', '10.1 Aristas/salientes (¿presentan?)', ['SI', 'NO'], 101, {
+    textareaField('c10_corrales', '10. Estado de corrales — tabla (C/NC por corral)', 100, {
       groupName: 'Criterio 10',
-    }),
-    textField('c10_2_corral', '10.2 Corral #', 102, { groupName: 'Criterio 10' }),
-    selectField('c10_2', '10.2 Densidad animal adecuada', ['SI', 'NO'], 103, {
-      groupName: 'Criterio 10',
-    }),
-    textField('c10_3_corral', '10.3 Corral #', 104, { groupName: 'Criterio 10' }),
-    selectField('c10_3', '10.3 Bebederos en funcionamiento', ['SI', 'NO'], 105, {
-      groupName: 'Criterio 10',
-    }),
-    textField('c10_4_corral', '10.4 Corral #', 106, { groupName: 'Criterio 10' }),
-    selectField('c10_4', '10.4 Sombra en buen estado', ['SI', 'NO'], 107, {
-      groupName: 'Criterio 10',
-    }),
-    textField('c10_5_corral', '10.5 Corral #', 108, { groupName: 'Criterio 10' }),
-    selectField('c10_5', '10.5 Áreas adyacentes con materiales/aristas', ['SI', 'NO'], 109, {
-      groupName: 'Criterio 10',
-    }),
-    textField('c10_6_corral', '10.6 Corral #', 110, { groupName: 'Criterio 10' }),
-    selectField('c10_6', '10.6 Acceso a agua limpia', ['SI', 'NO'], 111, {
-      groupName: 'Criterio 10',
+      helpText:
+        'Filas JSON {corral, c10_1..c10_6: C|NC, obs}. Cada criterio CUMPLE si ningún corral marcado está en NC.',
+      defaultValue: '[]',
     }),
     selectField('c10_desviaciones', '10. ¿Se presentaron desviaciones?', ['SI', 'NO'], 112, {
       groupName: 'Criterio 10',

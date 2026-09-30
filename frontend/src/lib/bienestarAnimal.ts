@@ -95,11 +95,11 @@ export const ANIMAL_CRITERIA: {
     title: '8. Resbalones y caídas durante el desembarco',
     marksKey: 'c8_marks',
     obsKey: 'c8_obs',
-    sampleSize: 100,
+    sampleSize: 50,
     threshold: 0.98,
     marks: ['', 'X', 'R', 'C'],
     legend: 'X: no resbaló/cayó · R: resbaló · C: cayó',
-    note: 'Aprobado con ≥ 98%. Inspeccionar 100 animales.',
+    note: 'Aprobado con ≥ 98%. Inspeccionar 50 animales.',
   },
 ];
 
@@ -136,9 +136,14 @@ export function cumplePct(pct: number, threshold: number): boolean {
 /** Criterios 9–13 y 10.x según Excel (SI/NO → CUMPLE). */
 export function cumpleSiNo(key: string, value: string): boolean {
   const v = value.trim().toUpperCase();
-  // Excel: abuso y 10.1 → CUMPLE si "NO"; resto → CUMPLE si "SI"
-  // 10.5 en Excel dice SI=CUMPLE (aunque la pregunta es negativa); se replica el Excel.
-  if (key === 'c9_actos_abuso' || key === 'c10_1' || key === 'c10_desviaciones') {
+  // Preguntas negativas ("¿se presentaron...?", "presentan aristas...") → CUMPLE si "NO".
+  // El Excel copia la fórmula SI=CUMPLE en 10.5, 12 y 13 por error; aquí se usa el sentido de la pregunta.
+  if (
+    key === 'c9_actos_abuso' ||
+    key === 'c10_1' ||
+    key === 'c10_5' ||
+    key === 'c10_desviaciones'
+  ) {
     return v === 'NO';
   }
   if (key === 'c12_desviaciones' || key === 'c13_desviaciones') {
@@ -147,12 +152,89 @@ export function cumpleSiNo(key: string, value: string): boolean {
   if (key === 'c11_aristas') {
     return v === 'NO';
   }
-  // 10.2–10.6, 11 vías/acoples/antideslizante: SI = CUMPLE en Excel
+  // 10.2, 10.3, 10.4, 10.6, 11 vías/acoples/antideslizante: SI = CUMPLE
   return v === 'SI';
 }
 
 export function scoreRow(cumple: boolean): 0 | 1 {
   return cumple ? 1 : 0;
+}
+
+/** Criterio 10 (Excel AC-FR-008): columnas de la tabla de corrales. */
+export const CORRAL_ITEMS = [
+  {
+    key: 'c10_1',
+    num: '10.1',
+    text: 'Los pisos, paredes, bebederos y divisiones de los corrales presentan aristas, salientes o punzantes.',
+  },
+  { key: 'c10_2', num: '10.2', text: 'Densidad animal adecuada.' },
+  { key: 'c10_3', num: '10.3', text: 'Bebederos en funcionamiento.' },
+  { key: 'c10_4', num: '10.4', text: 'Sombra en buen estado.' },
+  {
+    key: 'c10_5',
+    num: '10.5',
+    text: 'Áreas adyacentes al corral presentan materiales extraños, aristas o salientes punzantes.',
+  },
+  { key: 'c10_6', num: '10.6', text: 'Se cuenta con acceso a agua limpia.' },
+] as const;
+
+export type CorralItemKey = (typeof CORRAL_ITEMS)[number]['key'];
+export type CorralMark = '' | 'C' | 'NC';
+export type CorralRow = { corral: string; obs: string } & Record<CorralItemKey, CorralMark>;
+
+export const CORRALES_KEY = 'c10_corrales';
+export const CORRALES_DEFAULT_ROWS = 5;
+
+export function emptyCorralRow(): CorralRow {
+  return {
+    corral: '',
+    obs: '',
+    c10_1: '',
+    c10_2: '',
+    c10_3: '',
+    c10_4: '',
+    c10_5: '',
+    c10_6: '',
+  };
+}
+
+function toMark(v: unknown): CorralMark {
+  const s = String(v ?? '').trim().toUpperCase();
+  return s === 'C' || s === 'NC' ? s : '';
+}
+
+export function parseCorralRows(raw: unknown): CorralRow[] {
+  let arr: unknown[] = [];
+  if (Array.isArray(raw)) arr = raw;
+  else if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) arr = parsed;
+    } catch {
+      arr = [];
+    }
+  }
+  const rows = arr.map((item) => {
+    const o = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
+    const row = emptyCorralRow();
+    row.corral = String(o.corral ?? '');
+    row.obs = String(o.obs ?? '');
+    for (const it of CORRAL_ITEMS) row[it.key] = toMark(o[it.key]);
+    return row;
+  });
+  while (rows.length < CORRALES_DEFAULT_ROWS) rows.push(emptyCorralRow());
+  return rows;
+}
+
+/** Conteo de C / NC en una columna de la tabla de corrales. */
+export function corralItemCounts(rows: CorralRow[], key: CorralItemKey): { c: number; nc: number } {
+  let c = 0;
+  let nc = 0;
+  for (const r of rows) {
+    if (r[key] === 'C') c++;
+    else if (r[key] === 'NC') nc++;
+  }
+  return { c, nc };
 }
 
 export type SummaryRow = {
@@ -193,7 +275,24 @@ export function buildBienestarSummary(data: Record<string, unknown>): {
     { id: 'c10_6', label: '10.6 Acceso a agua limpia', key: 'c10_6' },
   ];
 
+  const corralRows = parseCorralRows(data[CORRALES_KEY]);
+
   for (const item of yn) {
+    if (item.key.startsWith('c10_')) {
+      const { c, nc } = corralItemCounts(corralRows, item.key as CorralItemKey);
+      // Tabla de corrales: CUMPLE solo si ningún corral marcado quedó en NC.
+      if (c + nc > 0) {
+        const ok = nc === 0;
+        rows.push({
+          id: item.id,
+          label: item.label,
+          pctLabel: `${c} C / ${nc} NC`,
+          calificacion: ok ? 'CUMPLE' : 'NO CUMPLE',
+          puntos: scoreRow(ok),
+        });
+        continue;
+      }
+    }
     const raw = String(data[item.key] ?? '').trim();
     if (!raw) {
       rows.push({

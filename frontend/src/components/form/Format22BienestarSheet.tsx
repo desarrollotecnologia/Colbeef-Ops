@@ -1,11 +1,20 @@
+import { Plus, Trash2 } from 'lucide-react';
 import { INPUT_CLASS } from '@/lib/formUtils';
 import {
   ANIMAL_CRITERIA,
+  CORRAL_ITEMS,
+  CORRALES_DEFAULT_ROWS,
+  CORRALES_KEY,
   buildBienestarSummary,
+  emptyCorralRow,
   formatPercent,
+  parseCorralRows,
   parseMarks,
   percentFromMarks,
   cumplePct,
+  type CorralItemKey,
+  type CorralMark,
+  type CorralRow,
 } from '@/lib/bienestarAnimal';
 
 interface Props {
@@ -94,6 +103,131 @@ function SiNo({
   );
 }
 
+function CumpleNc({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: CorralMark;
+  onChange: (v: CorralMark) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex gap-1 justify-center">
+      {(['C', 'NC'] as const).map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(value === opt ? '' : opt)}
+          className={`min-w-[34px] px-1.5 py-1 text-[10px] font-bold rounded border ${
+            value === opt
+              ? opt === 'C'
+                ? 'bg-emerald-600 text-white border-emerald-700'
+                : 'bg-red-600 text-white border-red-700'
+              : 'bg-white text-gray-600 border-gray-300'
+          }`}
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CorralesTable({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: unknown;
+  onChange: (next: CorralRow[]) => void;
+  disabled?: boolean;
+}) {
+  const rows = parseCorralRows(value);
+
+  const updateRow = (index: number, patch: Partial<CorralRow>) => {
+    onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto border border-gray-400">
+        <table className="w-full text-[11px] border-collapse min-w-[860px]">
+          <thead>
+            <tr className="bg-emerald-100">
+              <th className="border border-gray-400 px-1 py-1 w-10">N°</th>
+              <th className="border border-gray-400 px-1 py-1 w-24">Corrales</th>
+              {CORRAL_ITEMS.map((it) => (
+                <th key={it.key} className="border border-gray-400 px-1 py-1" title={it.text}>
+                  {it.num}
+                  <span className="block text-[9px] font-normal text-gray-600">C/NC</span>
+                </th>
+              ))}
+              <th className="border border-gray-400 px-1 py-1">Observaciones</th>
+              <th className="border border-gray-400 px-1 py-1 w-8" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i}>
+                <td className="border border-gray-300 px-1 py-1 text-center font-semibold">{i + 1}</td>
+                <td className="border border-gray-300 px-1 py-1">
+                  <input
+                    className={`${INPUT_CLASS} text-xs`}
+                    disabled={disabled}
+                    placeholder="Corral #"
+                    value={row.corral}
+                    onChange={(e) => updateRow(i, { corral: e.target.value })}
+                  />
+                </td>
+                {CORRAL_ITEMS.map((it) => (
+                  <td key={it.key} className="border border-gray-300 px-1 py-1">
+                    <CumpleNc
+                      value={row[it.key as CorralItemKey]}
+                      disabled={disabled}
+                      onChange={(v) => updateRow(i, { [it.key]: v } as Partial<CorralRow>)}
+                    />
+                  </td>
+                ))}
+                <td className="border border-gray-300 px-1 py-1">
+                  <input
+                    className={`${INPUT_CLASS} text-xs`}
+                    disabled={disabled}
+                    value={row.obs}
+                    onChange={(e) => updateRow(i, { obs: e.target.value })}
+                  />
+                </td>
+                <td className="border border-gray-300 px-1 py-1 text-center">
+                  {rows.length > CORRALES_DEFAULT_ROWS && (
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      title="Quitar fila"
+                      onClick={() => onChange(rows.filter((_, j) => j !== i))}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange([...rows, emptyCorralRow()])}
+        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded border border-emerald-600 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+      >
+        <Plus size={14} /> Añadir corral
+      </button>
+    </div>
+  );
+}
+
 export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }: Props) {
   const summary = buildBienestarSummary(sheetData);
   const str = (k: string) => String(sheetData[k] ?? '');
@@ -152,7 +286,11 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
                 <p className="text-[10px] text-gray-500">{c.note}</p>
               </div>
               <div className="text-right">
+                <div className="text-[10px] text-gray-600">Porcentaje de cumplimiento</div>
                 <div className="text-sm font-bold">{formatPercent(pct)}</div>
+                <div className="text-[10px] text-gray-500">
+                  {marks.filter((m) => m === 'X').length} X ÷ {c.sampleSize} (CONTAR.SI "X" / {c.sampleSize})
+                </div>
                 <div
                   className={`text-[11px] font-semibold ${ok ? 'text-emerald-700' : 'text-red-700'}`}
                 >
@@ -204,31 +342,26 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
       {/* 10 */}
       <div className="border-b border-gray-800 p-3 space-y-3">
         <h3 className="text-xs font-bold">10. Estado de corrales</h3>
+        <ul className="space-y-1">
+          {CORRAL_ITEMS.map((it) => (
+            <li key={it.key} className="text-[11px] text-gray-800">
+              <span className="font-bold">{it.num}</span> {it.text}
+            </li>
+          ))}
+        </ul>
         <p className="text-[10px] text-gray-600">
-          Ingrese nº de corral y marque SI/NO. 10.1: CUMPLE si NO (sin aristas). 10.2–10.6: CUMPLE si SI.
+          Ingrese el número del corral inspeccionado y en cada criterio marque{' '}
+          <strong>C: Cumple</strong> o <strong>NC: No cumple</strong>.
         </p>
-        {(
-          [
-            ['c10_1', 'c10_1_corral', '10.1 Aristas/salientes/punzantes'],
-            ['c10_2', 'c10_2_corral', '10.2 Densidad animal adecuada'],
-            ['c10_3', 'c10_3_corral', '10.3 Bebederos en funcionamiento'],
-            ['c10_4', 'c10_4_corral', '10.4 Sombra en buen estado'],
-            ['c10_5', 'c10_5_corral', '10.5 Áreas adyacentes con materiales/aristas'],
-            ['c10_6', 'c10_6_corral', '10.6 Acceso a agua limpia'],
-          ] as const
-        ).map(([key, corralKey, label]) => (
-          <div key={key} className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="font-semibold min-w-[220px]">{label}</span>
-            <input
-              className={`${INPUT_CLASS} w-20 text-xs`}
-              disabled={disabled}
-              placeholder="Corral #"
-              value={str(corralKey)}
-              onChange={(e) => onUpdate(corralKey, e.target.value)}
-            />
-            <SiNo value={str(key)} disabled={disabled} onChange={(v) => onUpdate(key, v)} />
-          </div>
-        ))}
+        <p className="text-[10px] text-gray-500">
+          Nota: Durante las inspecciones realizadas en el mes, se debe cubrir la revisión total de los
+          corrales, más el corral de observación.
+        </p>
+        <CorralesTable
+          value={sheetData[CORRALES_KEY]}
+          disabled={disabled}
+          onChange={(next) => onUpdate(CORRALES_KEY, next)}
+        />
         <div className="flex items-center gap-3">
           <span className="text-[11px] font-semibold">¿Se presentaron desviaciones?</span>
           <SiNo
@@ -237,6 +370,9 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
             onChange={(v) => onUpdate('c10_desviaciones', v)}
           />
         </div>
+        <p className="text-[10px] text-gray-600">
+          Para obtener un resultado APROBADO la tolerancia es de cero desviaciones.
+        </p>
         <textarea
           className={`${INPUT_CLASS} text-xs min-h-[48px]`}
           disabled={disabled}
