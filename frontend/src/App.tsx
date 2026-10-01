@@ -10,6 +10,8 @@ import AdminPending from '@/pages/admin/AdminPending';
 import AdminReviewPage from '@/pages/admin/AdminReviewPage';
 import AdminSearchPage from '@/pages/admin/AdminSearchPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
+import AdminChangeControlPage from '@/pages/admin/AdminChangeControlPage';
+import AdminChangeControlDetailPage from '@/pages/admin/AdminChangeControlDetailPage';
 import UsabilityDashboard from '@/pages/panel/UsabilityDashboard';
 import PccPage from '@/pages/operator/PccPage';
 import PccHistorialPage from '@/pages/operator/PccHistorialPage';
@@ -88,6 +90,8 @@ export default function App() {
         <Route path="/admin/review/:id" element={<ProtectedRoute adminOnly><AdminReviewPage /></ProtectedRoute>} />
         <Route path="/admin/search" element={<ProtectedRoute adminOnly><AdminSearchPage /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute adminOnly><AdminUsersPage /></ProtectedRoute>} />
+        <Route path="/admin/control-cambios" element={<ProtectedRoute adminOnly><AdminChangeControlPage /></ProtectedRoute>} />
+        <Route path="/admin/control-cambios/:code" element={<ProtectedRoute adminOnly><AdminChangeControlDetailPage /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to={homePath(user?.role)} replace />} />
       </Routes>

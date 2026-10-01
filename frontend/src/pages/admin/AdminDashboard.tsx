@@ -1,26 +1,49 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardCheck, FileCheck, Clock } from 'lucide-react';
+import { ClipboardCheck, FileCheck, Clock, XCircle } from 'lucide-react';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
 import { formatWorkDateShort, toWorkDateString } from '@/lib/workDate';
-import type { FormSubmission } from '@/types';
+import type { FormSubmission, RecentRejection, SubmissionStatus } from '@/types';
+
+const REJECTION_STATUS: Record<SubmissionStatus, { label: string; className: string }> = {
+  REJECTED: { label: 'En corrección', className: 'bg-red-100 text-red-800' },
+  DRAFT: { label: 'En corrección', className: 'bg-red-100 text-red-800' },
+  PENDING_REVIEW: { label: 'Reenviado — pendiente', className: 'bg-yellow-100 text-yellow-800' },
+  APPROVED: { label: 'Corregido y aprobado', className: 'bg-green-100 text-green-800' },
+};
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function AdminDashboard() {
   const [pending, setPending] = useState<FormSubmission[]>([]);
   const [recentApproved, setRecentApproved] = useState<FormSubmission[]>([]);
+  const [recentRejected, setRecentRejected] = useState<RecentRejection[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       api.get('/submissions/pending'),
       api.get('/submissions', { params: { status: 'APPROVED' } }),
-    ]).then(([pendingRes, approvedRes]) => {
+      api.get<RecentRejection[]>('/submissions/rejected/recent', { params: { limit: 10 } }),
+    ]).then(([pendingRes, approvedRes, rejectedRes]) => {
       setPending(pendingRes.data);
       setRecentApproved(approvedRes.data.slice(0, 5));
+      setRecentRejected(rejectedRes.data);
     }).finally(() => setLoading(false));
   }, []);
+
+  const inCorrection = recentRejected.filter(
+    (r) => r.submission.status === 'REJECTED' || r.submission.status === 'DRAFT'
+  ).length;
 
   if (loading) {
     return (
@@ -48,6 +71,17 @@ export default function AdminDashboard() {
             <div>
               <p className="text-2xl font-bold">{pending.length}</p>
               <p className="text-sm text-gray-500">Pendientes de revisión</p>
+            </div>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="flex items-center gap-4">
+            <div className="p-3 bg-red-100 rounded-lg">
+              <XCircle className="text-red-700" size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{inCorrection}</p>
+              <p className="text-sm text-gray-500">Rechazados en corrección</p>
             </div>
           </CardBody>
         </Card>
@@ -93,6 +127,60 @@ export default function AdminDashboard() {
                 </Card>
               </Link>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-1">
+          <XCircle size={20} /> Rechazados recientemente
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Últimos formatos devueltos y el motivo indicado, para hacer seguimiento a la corrección.
+        </p>
+        {recentRejected.length === 0 ? (
+          <Card>
+            <CardBody className="text-center py-8 text-gray-500">No hay rechazos registrados</CardBody>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {recentRejected.map((r) => {
+              const st = REJECTION_STATUS[r.submission.status];
+              return (
+                <Link key={r.id} to={`/admin/review/${r.submission.id}`}>
+                  <Card className="hover:shadow-md transition-shadow border-l-4 border-l-red-400">
+                    <CardBody className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold">
+                          {r.submission.format.name}
+                          {r.submission.format.documentCode ? (
+                            <span className="text-gray-400 font-normal text-sm">
+                              {' '}· {r.submission.format.documentCode}
+                            </span>
+                          ) : null}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {r.submission.operator.fullName} — día{' '}
+                          {formatWorkDateShort(toWorkDateString(r.submission.workDate))}
+                        </p>
+                        <p className="mt-2 text-sm text-gray-800 bg-red-50 border border-red-100 rounded-md px-3 py-2 whitespace-pre-line">
+                          <span className="font-semibold text-red-700">Motivo: </span>
+                          {r.reason || 'Sin motivo registrado'}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-400">
+                          Rechazado por {r.rejectedBy?.fullName ?? '—'} · {formatDateTime(r.rejectedAt)}
+                        </p>
+                      </div>
+                      <span
+                        className={`self-start shrink-0 text-xs px-3 py-1 rounded-full ${st.className}`}
+                      >
+                        {st.label}
+                      </span>
+                    </CardBody>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>

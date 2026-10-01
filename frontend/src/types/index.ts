@@ -193,6 +193,46 @@ export interface UserBrief {
   username?: string;
 }
 
+export interface RecentRejection {
+  id: string;
+  rejectedAt: string;
+  reason: string | null;
+  rejectedBy: UserBrief | null;
+  submission: {
+    id: string;
+    status: SubmissionStatus;
+    workDate: string;
+    format: { id: string; code: string; name: string; documentCode: string | null };
+    operator: UserBrief;
+    submittedBy: UserBrief | null;
+  };
+}
+
+export interface ChangeControlModule {
+  code: string;
+  name: string;
+  documentCode: string | null;
+  sheetCount: number | null;
+  entryCount: number;
+  currentVersion: string | null;
+  lastChangeDate: string | null;
+  lastUpdatedAt: string | null;
+}
+
+export interface ChangeLogEntry {
+  id: string;
+  formatCode: string;
+  version: string;
+  changeDate: string | null;
+  elaboro: string | null;
+  reviso: string | null;
+  aprobo: string | null;
+  descripcion: string | null;
+  sortOrder: number;
+  updatedAt: string;
+  updatedBy: UserBrief | null;
+}
+
 export interface SubmissionCollaborator {
   id: string;
   userId: string;

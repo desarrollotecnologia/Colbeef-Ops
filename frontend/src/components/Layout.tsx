@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   ShieldCheck,
+  History,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -29,6 +30,7 @@ export default function Layout({ children }: LayoutProps) {
         { to: '/admin/pending', label: 'Pendientes', icon: ClipboardCheck },
         { to: '/admin/search', label: 'Buscar', icon: Search },
         { to: '/admin/users', label: 'Usuarios', icon: Users },
+        { to: '/admin/control-cambios', label: 'Control de cambios', icon: History },
         { to: '/pcc', label: 'Verificación PCC', icon: ShieldCheck },
       ]
     : [

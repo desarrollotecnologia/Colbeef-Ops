@@ -222,6 +222,38 @@ router.get('/pending', requireRole(UserRole.ADMIN), async (req: Request, res: Re
   res.json(pending.map((s) => withListLabels(s)));
 });
 
+/** Rechazos recientes (incluye los ya corregidos o reenviados, para que el admin vea el motivo). */
+router.get('/rejected/recent', requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100);
+  const activities = await prisma.submissionActivity.findMany({
+    where: { type: SubmissionActivityType.REJECTED },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      actor: userBrief,
+      submission: {
+        select: {
+          id: true,
+          status: true,
+          workDate: true,
+          format: { select: { id: true, code: true, name: true, documentCode: true } },
+          operator: userBrief,
+          submittedBy: userBrief,
+        },
+      },
+    },
+  });
+  res.json(
+    activities.map((a) => ({
+      id: a.id,
+      rejectedAt: a.createdAt,
+      reason: a.notes,
+      rejectedBy: a.actor,
+      submission: a.submission,
+    }))
+  );
+});
+
 // Crear borrador
 router.post('/', requireRole(UserRole.OPERARIO), async (req: Request, res: Response) => {
   const { formatId } = req.body;

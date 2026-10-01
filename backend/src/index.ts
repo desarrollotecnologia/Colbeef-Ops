@@ -9,6 +9,7 @@ import submissionsRoutes from './routes/submissions.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import usersRoutes from './routes/users.routes';
 import pccRoutes from './routes/pcc.routes';
+import changeControlRoutes from './routes/changeControl.routes';
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use('/api/submissions', submissionsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin/users', usersRoutes);
 app.use('/api/pcc', pccRoutes);
+app.use('/api/admin/change-control', changeControlRoutes);
 
 if (config.nodeEnv === 'production') {
   const frontendDist = path.join(__dirname, '../../frontend/dist');
