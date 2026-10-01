@@ -8,10 +8,10 @@ import { useAuth } from '@/context/AuthContext';
 import type { Format } from '@/types';
 
 export default function OperatorDashboard() {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [formats, setFormats] = useState<Format[]>([]);
   const [loading, setLoading] = useState(true);
-  const canAccessPcc = isAdmin || user?.role === 'OPERARIO';
+  const canAccessPcc = user?.role === 'OPERARIO';
 
   useEffect(() => {
     api.get('/formats').then(({ data }) => setFormats(data)).finally(() => setLoading(false));

@@ -27,11 +27,13 @@ function ProtectedRoute({
   adminOnly = false,
   panelOnly = false,
   pccOnly = false,
+  operarioOnly = false,
 }: {
   children: React.ReactNode;
   adminOnly?: boolean;
   panelOnly?: boolean;
   pccOnly?: boolean;
+  operarioOnly?: boolean;
 }) {
   const { user, loading } = useAuth();
 
@@ -49,6 +51,9 @@ function ProtectedRoute({
   if (adminOnly && user.role !== 'ADMIN') return <Navigate to={homePath(user.role)} replace />;
   if (pccOnly && user.role !== 'ADMIN' && user.role !== 'OPERARIO') {
     return <Navigate to={homePath(user.role)} replace />;
+  }
+  if (operarioOnly && user.role !== 'OPERARIO') {
+    return <Navigate to={user.role === 'ADMIN' ? '/pcc/historial' : homePath(user.role)} replace />;
   }
 
   return <>{children}</>;
@@ -81,7 +86,7 @@ export default function App() {
         <Route path="/submissions" element={<ProtectedRoute><OperatorSubmissions /></ProtectedRoute>} />
         <Route path="/formats/:formatId/new" element={<ProtectedRoute><FillFormPage /></ProtectedRoute>} />
         <Route path="/submissions/:id" element={<ProtectedRoute><FillFormPage /></ProtectedRoute>} />
-        <Route path="/pcc" element={<ProtectedRoute pccOnly><PccPage /></ProtectedRoute>} />
+        <Route path="/pcc" element={<ProtectedRoute operarioOnly><PccPage /></ProtectedRoute>} />
         <Route path="/pcc/historial" element={<ProtectedRoute pccOnly><PccHistorialPage /></ProtectedRoute>} />
 
         {/* Admin */}

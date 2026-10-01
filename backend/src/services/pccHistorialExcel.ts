@@ -4,7 +4,9 @@ import ExcelJS from 'exceljs';
 import { resolveLogoPath } from './submissionPdfDraw';
 
 const PCC_CODE = 'AC-FR-035';
-const PCC_VERSION = '02';
+const PCC_VERSION = '01';
+/** Fecha del documento AC-FR-035 (control documental), no la del día exportado. */
+const PCC_FORMAT_DATE = '01 de mayo 2026';
 const HEADER_BORDER_COLOR = '1E4A8C';
 const TITLE_FILL = '1B6B4A'; // verde institucional para títulos de columna
 
@@ -42,10 +44,7 @@ function resolvePccLogoPath(): string | null {
 }
 
 /** Genera el workbook del historial PCC con encabezado AC-FR-035. */
-export async function buildPccHistorialWorkbook(
-  rows: PccExcelRow[],
-  opts: { fechaLabel: string }
-): Promise<ExcelJS.Workbook> {
+export async function buildPccHistorialWorkbook(rows: PccExcelRow[]): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Colbeef-Ops';
   wb.created = new Date();
@@ -112,7 +111,7 @@ export async function buildPccHistorialWorkbook(
   const meta = [
     { cell: 'H1', text: `Código: ${PCC_CODE}` },
     { cell: 'H2', text: `Versión: ${PCC_VERSION}` },
-    { cell: 'H3', text: `Fecha: ${opts.fechaLabel}` },
+    { cell: 'H3', text: `Fecha: ${PCC_FORMAT_DATE}` },
   ];
   for (const m of meta) {
     const c = ws.getCell(m.cell);

@@ -42,6 +42,14 @@ router.get('/access', async (req: Request, res: Response) => {
 
 router.use(requirePccAccess());
 
+/** Llenar la verificación es solo del operario; el admin únicamente consulta el historial. */
+function requireOperario(req: Request, res: Response, next: () => void) {
+  if (req.user!.role !== UserRole.OPERARIO) {
+    return res.status(403).json({ error: 'Solo el rol operario diligencia la Verificación PCC' });
+  }
+  next();
+}
+
 async function idsVerificadosEnTurno(fechaYmd: string): Promise<Set<string>> {
   const byWork = await prisma.pccVerificacion.findMany({
     where: { workDate: parseOperativeDate(fechaYmd) },
@@ -57,7 +65,7 @@ function pendientes(
   return externas.filter((f) => f.id_producto && !verificados.has(String(f.id)));
 }
 
-router.get('/cola', async (req: Request, res: Response) => {
+router.get('/cola', requireOperario, async (req: Request, res: Response) => {
   const fechaYmd = typeof req.query.fecha === 'string' && req.query.fecha
     ? req.query.fecha
     : fechaOperativaPccYmd();
@@ -109,7 +117,7 @@ router.get('/cola', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/verificar', async (req: Request, res: Response) => {
+router.post('/verificar', requireOperario, async (req: Request, res: Response) => {
   const {
     externalInsId,
     idProducto,
@@ -311,10 +319,7 @@ router.get('/historial/excel', async (req: Request, res: Response) => {
       };
     });
 
-    const fechaLabel = fechaYmd
-      ? fechaYmd.split('-').reverse().join('/')
-      : 'Todas';
-    const wb = await buildPccHistorialWorkbook(excelRows, { fechaLabel });
+    const wb = await buildPccHistorialWorkbook(excelRows);
 
     const suffix = fechaYmd ? fechaYmd.replace(/-/g, '') : 'todos';
     const filename = `verificacion-pcc_historial_${suffix}.xlsx`;

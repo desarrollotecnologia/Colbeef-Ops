@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Download, History } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, History } from 'lucide-react';
 import axios from 'axios';
 import api from '@/lib/api';
 import Layout from '@/components/Layout';
 import Card, { CardBody } from '@/components/Card';
 import Button from '@/components/Button';
+import { useAuth } from '@/context/AuthContext';
+
+function shiftYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return dt.toISOString().slice(0, 10);
+}
 
 type Registro = {
   id: string;
@@ -38,6 +45,8 @@ function CumpleBadge({ label, ok }: { label: string; ok: boolean }) {
 }
 
 export default function PccHistorialPage() {
+  const { user } = useAuth();
+  const isOperario = user?.role === 'OPERARIO';
   const [fecha, setFecha] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -81,6 +90,15 @@ export default function PccHistorialPage() {
   const handleFiltrar = () => {
     setPage(1);
     load({ fecha, page: 1 });
+  };
+
+  const shiftDay = (days: number) => {
+    const base = fecha || fechaOperativa;
+    if (!base) return;
+    const next = shiftYmd(base, days);
+    setFecha(next);
+    setPage(1);
+    load({ fecha: next, page: 1 });
   };
 
   const goPage = (next: number) => {
@@ -154,6 +172,11 @@ export default function PccHistorialPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <History size={26} /> Historial PCC
           </h1>
+          {!isOperario && (
+            <p className="text-sm text-gray-500">
+              Verificación PCC — Liberación de canales (solo consulta)
+            </p>
+          )}
           <p className="text-gray-500 mt-1">
             Día operativo: <strong>{fechaOperativa || '—'}</strong>
             {total > 0 && (
@@ -167,11 +190,13 @@ export default function PccHistorialPage() {
           <Button variant="outline" onClick={downloadExcel} loading={downloading} disabled={!fecha && !fechaOperativa}>
             <Download size={16} /> Descargar Excel
           </Button>
-          <Link to="/pcc">
-            <Button variant="outline">
-              <ArrowLeft size={16} /> Volver a cola
-            </Button>
-          </Link>
+          {isOperario && (
+            <Link to="/pcc">
+              <Button variant="outline">
+                <ArrowLeft size={16} /> Volver a cola
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -179,12 +204,32 @@ export default function PccHistorialPage() {
         <CardBody className="flex flex-col sm:flex-row gap-3 items-end">
           <div className="flex-1 w-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha operativa</label>
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
-            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                title="Día anterior"
+                onClick={() => shiftDay(-1)}
+                disabled={loading}
+                className="px-3 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
+              />
+              <button
+                type="button"
+                title="Día siguiente"
+                onClick={() => shiftDay(1)}
+                disabled={loading}
+                className="px-3 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
           <Button onClick={handleFiltrar} loading={loading}>
             Filtrar
