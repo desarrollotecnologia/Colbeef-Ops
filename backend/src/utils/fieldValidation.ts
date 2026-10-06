@@ -270,9 +270,10 @@ export function isFieldComplete(
       const filled = rows.filter((r) => loteHasData(r as Record<string, unknown>));
       if (field.required && filled.length === 0) return false;
 
+      const perRegistroLote = requiredCols.some((c) => c.key === 'lote');
       return filled.every((loteRaw) => {
         const lote = loteRaw as Record<string, unknown>;
-        if (!String(lote.lote ?? '').trim()) return false;
+        if (!perRegistroLote && !String(lote.lote ?? '').trim()) return false;
         const regs = Array.isArray(lote.registros) ? (lote.registros as Record<string, unknown>[]) : [];
         if (regs.length < (options.minRegistros ?? 1)) return false;
         return regs.every((row) => requiredCols.every((col) => cellOk(row[col.key], col)));

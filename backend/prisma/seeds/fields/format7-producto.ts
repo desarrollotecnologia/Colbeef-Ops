@@ -29,9 +29,10 @@ const AREAS_CONG = [
   'Contenedor externo',
 ];
 
-/** Campos de cada registro dentro de un lote (el número de lote va en el bloque padre). */
+/** Campos de cada registro dentro de un bloque; cada registro lleva su propio lote. */
 function registroColumns(areas: string[]): FieldDef[] {
   return [
+    textField('lote', 'Lote', -1, { required: true }),
     multiSelectField('area', 'Área', areas, 0, { required: true }),
     textField('producto', 'Producto', 1, { required: true }),
     dateField('fecha_produccion', 'Fecha de producción', 2, { required: true }),
@@ -57,7 +58,8 @@ export function getFormat7Fields(slug: string): FieldDef[] {
       manualOnly: true,
       sortOrder: 1,
       required: true,
-      helpText: 'Hay 4 lotes. Dentro de cada lote puede agregar más registros con la misma estructura.',
+      helpText:
+        'Hay 4 bloques de registro. Dentro de cada uno puede agregar más registros; cada registro lleva su lote.',
       options: {
         layout: 'producto_terminado_lotes',
         minLotes: 4,

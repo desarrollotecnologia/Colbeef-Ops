@@ -1256,16 +1256,23 @@ function renderProductoTerminadoLotes(
 
     y = ensurePageSpace(doc, ctx, y, 28);
     y = drawSectionBanner(doc, y, `Registro de lote ${loteIdx + 1}`, undefined, true);
-    doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#333').text('Lote:', MARGIN, y);
-    drawTextOrClosed(doc, lote.lote, MARGIN + 28, y, {
-      width: maxW - 28,
-      rowH: 10,
-      cellY: y - 1,
-      fontSize: 6.5,
-    });
-    y += 12;
+    const perRegistroLote = cols.some((c) => c.key === 'lote');
+    if (!perRegistroLote) {
+      doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#333').text('Lote:', MARGIN, y);
+      drawTextOrClosed(doc, lote.lote, MARGIN + 28, y, {
+        width: maxW - 28,
+        rowH: 10,
+        cellY: y - 1,
+        fontSize: 6.5,
+      });
+      y += 12;
+    }
 
-    regs.forEach((row, regIdx) => {
+    regs.forEach((rowRaw, regIdx) => {
+      const row =
+        perRegistroLote && regIdx === 0 && isBlankPdfValue(rowRaw.lote) && lote.lote
+          ? { ...rowRaw, lote: lote.lote }
+          : rowRaw;
       y = ensurePageSpace(doc, ctx, y, 24);
       y = drawSectionBanner(doc, y, `Registro ${regIdx + 1}`, undefined, true);
 

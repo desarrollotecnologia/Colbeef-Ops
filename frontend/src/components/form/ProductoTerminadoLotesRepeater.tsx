@@ -20,15 +20,20 @@ function emptyLote(): LoteBlock {
   return { lote: '', registros: [{}] };
 }
 
-function normalizeLotes(value: LoteBlock[], minLotes: number): LoteBlock[] {
+function normalizeLotes(value: LoteBlock[], minLotes: number, perRegistroLote: boolean): LoteBlock[] {
   const rows: LoteBlock[] = Array.isArray(value)
-    ? value.map((l) => ({
-        lote: String(l?.lote ?? ''),
-        registros:
+    ? value.map((l) => {
+        const lote = String(l?.lote ?? '');
+        const registros =
           Array.isArray(l?.registros) && l.registros.length > 0
             ? l.registros.map((r) => ({ ...r }))
-            : [{}],
-      }))
+            : [{}];
+        // Envíos anteriores guardaban el lote solo en el bloque: se muestra en el registro 1.
+        if (perRegistroLote && lote && !String(registros[0].lote ?? '').trim()) {
+          registros[0] = { ...registros[0], lote };
+        }
+        return { lote, registros };
+      })
     : [];
   while (rows.length < minLotes) rows.push(emptyLote());
   return rows;
@@ -36,11 +41,12 @@ function normalizeLotes(value: LoteBlock[], minLotes: number): LoteBlock[] {
 
 export default function ProductoTerminadoLotesRepeater({ options, value, onChange, disabled }: Props) {
   const columns = getCardRepeaterColumns(options);
+  const perRegistroLote = columns.some((c) => c.key === 'lote');
   const minLotes = options.minLotes ?? 4;
   const maxLotes = options.maxLotes ?? 4;
   const minRegistros = options.minRegistros ?? 1;
   const maxRegistros = options.maxRegistros ?? 20;
-  const lotes = normalizeLotes(value, minLotes);
+  const lotes = normalizeLotes(value, minLotes, perRegistroLote);
 
   const commit = (next: LoteBlock[]) => onChange(next);
 
@@ -55,6 +61,8 @@ export default function ProductoTerminadoLotesRepeater({ options, value, onChang
     const regs = [...(next[loteIdx].registros ?? [{}])];
     regs[regIdx] = { ...regs[regIdx], [key]: val };
     next[loteIdx] = { ...next[loteIdx], registros: regs };
+    // El lote del bloque replica el del registro 1 (lo usan la validación y envíos anteriores).
+    if (key === 'lote' && regIdx === 0) next[loteIdx].lote = String(val ?? '');
     commit(next);
   };
 
@@ -70,7 +78,9 @@ export default function ProductoTerminadoLotesRepeater({ options, value, onChang
     const regs = lotes[loteIdx].registros ?? [{}];
     if (regs.length <= minRegistros) return;
     const next = [...lotes];
-    next[loteIdx] = { ...next[loteIdx], registros: regs.filter((_, i) => i !== regIdx) };
+    const remaining = regs.filter((_, i) => i !== regIdx);
+    next[loteIdx] = { ...next[loteIdx], registros: remaining };
+    if (perRegistroLote) next[loteIdx].lote = String(remaining[0]?.lote ?? '');
     commit(next);
   };
 
@@ -83,11 +93,14 @@ export default function ProductoTerminadoLotesRepeater({ options, value, onChang
             <div className={SECTION_HEADER_CLASS}>
               <h3 className="text-xs font-bold uppercase text-gray-900">Registro de lote {loteIdx + 1}</h3>
               <p className="text-[11px] text-gray-600 mt-0.5">
-                Dentro de este lote puede agregar más registros con la misma estructura
+                {perRegistroLote
+                  ? 'Puede agregar más registros; cada registro lleva su propio lote'
+                  : 'Dentro de este lote puede agregar más registros con la misma estructura'}
               </p>
             </div>
 
             <div className="p-4 space-y-4">
+              {!perRegistroLote && (
               <div className="max-w-sm">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Lote
@@ -102,6 +115,7 @@ export default function ProductoTerminadoLotesRepeater({ options, value, onChang
                   placeholder="Número de lote"
                 />
               </div>
+              )}
 
               {registros.map((row, regIdx) => (
                 <div key={regIdx} className="border border-gray-300 rounded-md overflow-hidden bg-white">
