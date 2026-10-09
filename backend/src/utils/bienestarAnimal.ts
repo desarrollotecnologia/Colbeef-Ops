@@ -33,8 +33,11 @@ function parseMarks(raw: unknown, n: number): string[] {
   return Array.from({ length: n }, (_, i) => String(arr[i] ?? '').trim().toUpperCase());
 }
 
-function pct(marks: string[], n: number) {
-  return marks.filter((m) => m === 'X').length / n;
+/** % = X / casillas evaluadas (con cualquier marca); no siempre se evalúan las 50. */
+function pct(marks: string[], _n: number) {
+  const evaluated = marks.filter((m) => m).length;
+  if (evaluated === 0) return 0;
+  return marks.filter((m) => m === 'X').length / evaluated;
 }
 
 function fmt(p: number) {

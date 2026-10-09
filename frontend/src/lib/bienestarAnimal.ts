@@ -118,11 +118,12 @@ export function parseMarks(raw: unknown, sampleSize: number): string[] {
   return out;
 }
 
-/** Excel: COUNTIF(...,"X") / sampleSize */
-export function percentFromMarks(marks: string[], sampleSize: number): number {
-  if (sampleSize <= 0) return 0;
+/** % = X / casillas evaluadas (con cualquier marca); no siempre se evalúan las 50. */
+export function percentFromMarks(marks: string[]): number {
+  const evaluated = marks.filter((m) => m).length;
+  if (evaluated === 0) return 0;
   const xCount = marks.filter((m) => m === 'X').length;
-  return xCount / sampleSize;
+  return xCount / evaluated;
 }
 
 export function formatPercent(pct: number): string {
@@ -258,7 +259,7 @@ export function buildBienestarSummary(data: Record<string, unknown>): {
       rows.push({ id: `c${c.id}`, label: c.title, pctLabel: '—', calificacion: '—', puntos: 0 });
       continue;
     }
-    const pct = percentFromMarks(marks, c.sampleSize);
+    const pct = percentFromMarks(marks);
     const ok = cumplePct(pct, c.threshold);
     rows.push({
       id: `c${c.id}`,

@@ -235,7 +235,7 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
   return (
     <div className="border border-gray-800 rounded-sm overflow-hidden bg-white space-y-0">
       <div className="bg-emerald-50 border-b border-gray-800 px-3 py-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-        <label className="text-[11px] font-semibold text-gray-800">
+        <label className="text-[11px] font-semibold text-gray-800 md:col-span-2">
           Inspector(es)
           <input
             className={`${INPUT_CLASS} mt-0.5 text-sm`}
@@ -251,6 +251,16 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
             disabled={disabled}
             value={str('metodo_aturdimiento') || 'PISTOLA DE PERNO CAUTIVO PENETRANTE'}
             onChange={(e) => onUpdate('metodo_aturdimiento', e.target.value)}
+          />
+        </label>
+        <label className="text-[11px] font-semibold text-gray-800">
+          Presión de la pistola <span className="text-red-600">*</span>
+          <input
+            className={`${INPUT_CLASS} mt-0.5 text-sm`}
+            disabled={disabled}
+            value={str('presion_pistola')}
+            placeholder="Presión registrada"
+            onChange={(e) => onUpdate('presion_pistola', e.target.value)}
           />
         </label>
         <label className="text-[11px] font-semibold text-gray-800">
@@ -275,7 +285,8 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
 
       {ANIMAL_CRITERIA.map((c) => {
         const marks = parseMarks(sheetData[c.marksKey], c.sampleSize);
-        const pct = percentFromMarks(marks, c.sampleSize);
+        const pct = percentFromMarks(marks);
+        const evaluated = marks.filter((m) => m).length;
         const empty = !marks.some((m) => m);
         const ok = cumplePct(pct, c.threshold);
         return (
@@ -290,7 +301,7 @@ export default function Format22BienestarSheet({ sheetData, onUpdate, disabled }
                 <div className="text-[10px] text-gray-600">Porcentaje de cumplimiento</div>
                 <div className="text-sm font-bold">{formatPercent(pct)}</div>
                 <div className="text-[10px] text-gray-500">
-                  {marks.filter((m) => m === 'X').length} X ÷ {c.sampleSize} (CONTAR.SI "X" / {c.sampleSize})
+                  {marks.filter((m) => m === 'X').length} X ÷ {evaluated} evaluadas (de {c.sampleSize} casillas)
                 </div>
                 <div
                   className={`text-[11px] font-semibold ${

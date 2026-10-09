@@ -85,6 +85,10 @@ export function getFormat22Fields(slug: string): FieldDef[] {
       groupName: 'Encabezado',
       defaultValue: 'PISTOLA DE PERNO CAUTIVO PENETRANTE',
     }),
+    textField('presion_pistola', 'Presión de la pistola', 5, {
+      required: true,
+      groupName: 'Encabezado',
+    }),
     textField('auxiliar_insensibilizado', 'Auxiliar de línea responsable del insensibilizado', 3, {
       groupName: 'Encabezado',
     }),
@@ -174,7 +178,7 @@ export function getFormat22Fields(slug: string): FieldDef[] {
         layout: 'bienestar_animal_formato',
         minRows: 0,
         maxRows: 0,
-        note: 'Fórmulas Excel: % = COUNTIF(X)/muestra · umbrales 96/100/100/100/98/75/96/98% · puntaje /18',
+        note: 'Fórmulas Excel: % = X / casillas evaluadas · umbrales 96/100/100/100/98/75/96/98% · puntaje /18',
       },
     },
   ];

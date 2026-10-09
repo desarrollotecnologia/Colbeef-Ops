@@ -1518,6 +1518,7 @@ export function renderBienestarAnimalSheet(
     [
       { label: 'Inspector(es)', value: str(sheetData.inspectores) },
       { label: 'Método de aturdimiento', value: str(sheetData.metodo_aturdimiento) },
+      { label: 'Presión de la pistola', value: str(sheetData.presion_pistola) },
       { label: 'Auxiliar de línea responsable del insensibilizado', value: str(sheetData.auxiliar_insensibilizado) },
       { label: 'Auxiliar de corrales responsable de enmangado', value: str(sheetData.auxiliar_enmangado) },
     ],
@@ -1531,14 +1532,14 @@ export function renderBienestarAnimalSheet(
     doc,
     y,
     'Criterios evaluados por animal',
-    '% de cumplimiento = CONTAR.SI("X") / muestra · verde: cumple (X) · ámbar: falla',
+    '% de cumplimiento = X / casillas evaluadas · verde: cumple (X) · ámbar: falla',
     true
   );
   for (const a of BA_ANIMAL) {
     const marks = parseMarksForPdf(sheetData[a.key], a.n);
     const xCount = marks.filter((m) => m === 'X').length;
     const filled = marks.filter((m) => m).length;
-    const p = a.n ? xCount / a.n : 0;
+    const p = filled ? xCount / filled : 0;
     const ok = filled === 0 ? null : p + 1e-9 >= a.thr;
     y = ensure(y, 22 + Math.ceil(a.n / 25) * 15 + 22);
     y = drawBaCriterionBar(
@@ -1556,7 +1557,7 @@ export function renderBienestarAnimalSheet(
       .fillColor('#374151')
       .text(
         `Animales marcados: ${filled}/${a.n}  ·  Cumplen (X): ${xCount}  ·  Fallas: ${filled - xCount}  ·  ` +
-          `% cumplimiento = ${xCount} / ${a.n} = ${baPct(p)}  ·  Mínimo para aprobar: ${Math.round(a.thr * 100)}%`,
+          `% cumplimiento = ${xCount} / ${filled} = ${baPct(p)}  ·  Mínimo para aprobar: ${Math.round(a.thr * 100)}%`,
         MARGIN + 2,
         y,
         { width: w - 4, height: 8, lineBreak: false, ellipsis: true }
