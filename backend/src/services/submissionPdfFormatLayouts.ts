@@ -1104,15 +1104,31 @@ export function renderCanalesTempPhSheet(
     y = drawFieldGrid(doc, y, pairs, 4, true);
   }
 
-  y = drawSectionBanner(doc, y, 'Liberación de canales', undefined, true);
+  // Envíos anteriores guardaban una sola liberación en lib_*; se muestra como Despacho.
+  const libDespacho = (key: string, legacy: string) => str(sheetData[key] ?? sheetData[legacy]);
+  y = drawSectionBanner(doc, y, 'Liberación de canales', 'Rango de pH: 5,4 – 5,8', true);
+  y = drawSectionBanner(doc, y, 'Despacho', 'T° < 7 °C', true);
   y = drawFieldGrid(
     doc,
     y,
     [
-      { label: 'Cava', value: str(sheetData.lib_cava) },
-      { label: 'T°C cava', value: str(sheetData.lib_temp_cava) },
-      { label: 'Fecha', value: str(sheetData.lib_fecha) },
-      { label: 'Hora', value: str(sheetData.lib_hora) },
+      { label: 'Cava', value: libDespacho('lib_despacho_cava', 'lib_cava') },
+      { label: 'T°C', value: libDespacho('lib_despacho_temp', 'lib_temp_cava') },
+      { label: 'Fecha', value: libDespacho('lib_despacho_fecha', 'lib_fecha') },
+      { label: 'Hora', value: libDespacho('lib_despacho_hora', 'lib_hora') },
+    ],
+    4,
+    true
+  );
+  y = drawSectionBanner(doc, y, 'Desposte', 'T° < 4 °C', true);
+  y = drawFieldGrid(
+    doc,
+    y,
+    [
+      { label: 'Cava', value: str(sheetData.lib_desposte_cava) },
+      { label: 'T°C', value: str(sheetData.lib_desposte_temp) },
+      { label: 'Fecha', value: str(sheetData.lib_desposte_fecha) },
+      { label: 'Hora', value: str(sheetData.lib_desposte_hora) },
     ],
     4,
     true
